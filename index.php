@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <?php include './components/header_links.php'; ?>
+    <link rel="icon" href="./assets/logo/bms.png" type="image/icon type">
+    <link rel="stylesheet" href="./css/login.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="forms-container">
+            <!-- SignIn Form -->
+            <div class="form-control signin-form">
+                <form action="./endpoint/login.php" method="POST">
+                    <h2>Sign in</h2>
+                    <input type="email" name="email" placeholder="Email" required />
+                    <div class="input-wrapper">
+                        <input type="password" id="signin-password" name="password" placeholder="Password" required />
+                        <span class="toggle-password">
+                            <i style="margin-bottom: 15px;" class="fas fa-eye"></i>
+                        </span>
+                    </div>
+                    <div class="forgot-password-link">
+                        <a href="javascript:void(0);" onclick="forgotPassword()">Forgot Password?</a>
+                    </div>
+                    <button type="submit">Sign in</button>
+                </form>
+            </div>
+
+            <!-- SignUp Form -->
+            <div class="form-control signup-form">
+                <form action="./endpoint/register.php" method="POST">
+                    <h2>Create an Account</h2>
+                    <div class="input-wrapper flex-wrapper">
+                        <input type="text" name="student_firstname" placeholder="First Name" required />
+                        <input type="text" name="student_middle" placeholder="M.I." />
+                    </div>
+                    <input type="text" name="student_lastname" placeholder="Last Name" required />
+                    <input type="email" id="signup-email" name="email" placeholder="Email" required />
+                    <div class="input-wrapper">
+                        <input type="password" id="signup-password" name="password" placeholder="Password" required />
+                        <span class="toggle-password">
+                            <i style="margin-bottom: 15px;" class="fas fa-eye"></i>
+                        </span>
+                    </div>
+                    <div class="input-wrapper">
+                        <input type="password" id="signup-confirm-password" name="confirm-password"
+                            placeholder="Confirm password" required />
+                        <span class="toggle-password">
+                            <i style="margin-bottom: 15px;" class="fas fa-eye"></i>
+                        </span>
+                    </div>
+                    <button type="submit" id="signup-button" disabled>Sign up</button>
+                    <div class="password-strength" id="signup_password_strength"></div>
+                    <div class="password-strength" id="signup_instruction_text"></div>
+                </form>
+            </div>
+        </div>
+        <div class="intros-container">
+            <div class="intro-control signin-intro">
+                <div class="intro-control__inner">
+                    <img src="./assets/logo/bms.png">
+                    <button style="font-weight: bold;" id="signup-btn">No account yet? Sign up.</button>
+                </div>
+            </div>
+            <div class="intro-control signup-intro">
+                <div class="intro-control__inner">
+                    <img src="./assets/logo/bms.png">
+                    <button style="font-weight: bold;" id="signin-btn">Already have an account? Sign in.</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loader" style="display:none;"></div>
+
+    <script src="./js/script.js"></script>
+    <?php include './components/cdn_scripts.php'; ?>
+
+    <script>
+
+        <?php if (isset($_GET['login']) && $_GET['login'] === 'error'): ?>
+            window.onload = function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Login Failed',
+                    text: '<?php echo isset($_SESSION['login_error']) ? $_SESSION['login_error'] : "Invalid email or password"; ?>',
+                    confirmButtonText: 'Yes, proceed',
+                    cancelButtonText: 'Cancel',
+                    didOpen: () => {
+                        document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                        document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                    },
+                });
+                window.history.replaceState({}, document.title, window.location.pathname);
+            };
+        <?php elseif (isset($_GET['login']) && $_GET['login'] === 'not_verified'): ?>
+            window.onload = function () {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Login Failed',
+                    text: 'Your account has not been verified yet.',
+                    confirmButtonText: 'Yes, proceed',
+                    cancelButtonText: 'Cancel',
+                    didOpen: () => {
+                        document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                        document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                    },
+                });
+                window.history.replaceState({}, document.title, window.location.pathname);
+            };
+        <?php endif; ?>
+
+        function showModal(modalId) {
+            document.getElementById(modalId).style.display = "block";
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = "none";
+        }
+        // Signup form event listener
+        document.querySelector('form[action="./endpoint/register.php"]').addEventListener('submit', function (e) {
+            // Show the loader
+            document.getElementById('loader').style.display = "block";
+
+            // Disable the signup button to prevent multiple submissions
+            document.getElementById('signup-button').disabled = true;
+
+            // Optional: Hide the form while the loader is shown (if desired)
+            document.querySelector('.signup-form').style.opacity = '0.5';
+        });
+
+        const signupEmailField = document.getElementById('signup-email');
+        const signupPasswordField = document.getElementById('signup-password');
+        const signupConfirmPasswordField = document.getElementById('signup-confirm-password');
+        const signupStrengthIndicator = document.getElementById('signup_password_strength');
+        const signupInstructionText = document.getElementById('signup_instruction_text');
+        const signupButton = document.getElementById('signup-button');
+
+        // Email validation event listener
+        signupEmailField.addEventListener('input', function () {
+            const email = signupEmailField.value;
+            const emailRegex = /^[^\s@]+@gmail\.com$/;
+            if (emailRegex.test(email)) {
+                signupEmailField.setCustomValidity('');
+                signupInstructionText.textContent = '';
+                signupButton.disabled = false;
+            } else {
+                signupEmailField.setCustomValidity('Email must be a valid Gmail address');
+                signupInstructionText.style.color = '#8B0000';
+                signupInstructionText.textContent = 'Please enter a valid Gmail address.';
+                signupButton.disabled = true;
+            }
+        });
+
+
+        // Password validation event listener
+        signupPasswordField.addEventListener('input', function () {
+            const password = signupPasswordField.value;
+            const strength = checkPasswordStrength(password);
+            signupStrengthIndicator.textContent = `Password Strength: ${strength}`;
+
+            if (strength === 'Weak' || strength === 'Moderate') {
+                signupStrengthIndicator.style.color = '#8B0000';
+            } else {
+                signupStrengthIndicator.style.color = '#00247c';
+            }
+
+            if (password.length >= 8 && strength !== 'Strong') {
+                signupInstructionText.style.color = '#8B0000';
+                signupInstructionText.textContent = 'Password must include at least 2 numbers, 5 lowercase letters, and 1 uppercase letter.';
+                signupButton.disabled = true;
+            } else if (strength === 'Strong' && signupConfirmPasswordField.value === password && signupEmailField.validity.valid) {
+                signupInstructionText.textContent = '';
+                signupButton.disabled = false;
+            } else {
+                signupInstructionText.textContent = '';
+                signupButton.disabled = true;
+            }
+        });
+
+        // Confirm password match check
+        signupConfirmPasswordField.addEventListener('input', function () {
+            if (signupConfirmPasswordField.value !== signupPasswordField.value) {
+                signupConfirmPasswordField.setCustomValidity('Passwords do not match');
+                signupButton.disabled = true;
+            } else {
+                signupConfirmPasswordField.setCustomValidity('');
+                if (checkPasswordStrength(signupPasswordField.value) === 'Strong' && signupEmailField.validity.valid) {
+                    signupButton.disabled = false;
+                }
+            }
+        });
+
+        function checkPasswordStrength(password) {
+            const regexStrong = /(?=(.*[a-z]){5,})(?=.*[A-Z])(?=(.*[0-9]){2,})/;
+
+            if (password.length >= 8 && regexStrong.test(password)) {
+                return 'Strong';
+            } else if (password.length >= 6) {
+                return 'Moderate';
+            } else {
+                return 'Weak';
+            }
+        }
+
+        function forgotPassword() {
+            Swal.fire({
+                title: 'Reset Password',
+                html: `
+             <div class="swal-form">
+                <div class="form-group">
+                    <label for="fp-email" class="form-label">Email Address</label>
+                    <input type="email" id="fp-email" class="swal2-input" placeholder="Enter your email address" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fp-newpass" class="form-label">New Password</label>
+                    <input type="password" id="fp-newpass" class="swal2-input" placeholder="Enter new password" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fp-confirmpass" class="form-label">Confirm New Password</label>
+                    <input type="password" id="fp-confirmpass" class="swal2-input" placeholder="Confirm new password" required>
+                </div>
+            </div>
+            
+        `,
+                focusConfirm: false,
+                showCancelButton: true,
+                confirmButtonText: 'Reset Password',
+                cancelButtonText: 'Cancel',
+                didOpen: () => {
+                    document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                    document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                },
+                preConfirm: () => {
+                    const email = document.getElementById('fp-email').value;
+                    const newPass = document.getElementById('fp-newpass').value;
+                    const confirmPass = document.getElementById('fp-confirmpass').value;
+
+                    if (!email || !newPass || !confirmPass) {
+                        Swal.showValidationMessage('All fields are required');
+                        return false;
+                    }
+                    if (newPass !== confirmPass) {
+                        Swal.showValidationMessage('Passwords do not match');
+                        return false;
+                    }
+
+                    return { email: email, password: newPass };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('./endpoint/forgotpassword.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(result.value)
+                    })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.success) {
+                                Swal.fire('Success', 'Your password has been reset!', 'success');
+                            } else {
+                                Swal.fire('Error', data.message || 'Something went wrong', 'error');
+                            }
+                        })
+                        .catch(() => {
+                            Swal.fire('Error', 'Unable to reset password. Please try again later.', 'error');
+                        });
+                }
+            });
+        }
+
+    </script>
+</body>
+
+</html>
