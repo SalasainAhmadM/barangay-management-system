@@ -209,24 +209,24 @@
             Swal.fire({
                 title: 'Reset Password',
                 html: `
-             <div class="swal-form">
-                <div class="form-group">
-                    <label for="fp-email" class="form-label">Email Address</label>
-                    <input type="email" id="fp-email" class="swal2-input" placeholder="Enter your email address" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="fp-newpass" class="form-label">New Password</label>
-                    <input type="password" id="fp-newpass" class="swal2-input" placeholder="Enter new password" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="fp-confirmpass" class="form-label">Confirm New Password</label>
-                    <input type="password" id="fp-confirmpass" class="swal2-input" placeholder="Confirm new password" required>
-                </div>
-            </div>
-            
-        `,
+                    <div class="swal-form">
+                        <div class="form-group">
+                            <label for="fp-email" class="form-label">Email Address</label>
+                            <input type="email" id="fp-email" class="swal2-input" placeholder="Enter your email address" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="fp-newpass" class="form-label">New Password</label>
+                            <input type="password" id="fp-newpass" class="swal2-input" placeholder="Enter new password" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="fp-confirmpass" class="form-label">Confirm New Password</label>
+                            <input type="password" id="fp-confirmpass" class="swal2-input" placeholder="Confirm new password" required>
+                        </div>
+                    </div>
+                    
+                `,
                 focusConfirm: false,
                 showCancelButton: true,
                 confirmButtonText: 'Reset Password',
@@ -253,7 +253,7 @@
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    fetch('./endpoint/forgotpassword.php', {
+                    fetch('./conn/endpoint/forgotpassword.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(result.value)
