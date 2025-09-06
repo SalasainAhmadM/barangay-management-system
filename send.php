@@ -35,8 +35,8 @@ if ($_POST["provider"] === "infobip") {
 
 } else {   // Twilio
 
-    $account_id = "ACcf6ecc12d3998399b280727c771bf549";
-    $auth_token = "cadd6fb3112cca862fabcbd9988f7315";
+    $account_id = "";
+    $auth_token = "";
 
     $client = new Client($account_id, $auth_token);
 
