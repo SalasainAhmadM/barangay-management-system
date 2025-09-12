@@ -12,7 +12,7 @@
         <div class="forms-container">
             <!-- SignIn Form -->
             <div class="form-control signin-form">
-                <form action="./endpoint/login.php" method="POST">
+                <form action="./conn/endpoint/login.php" method="POST">
                     <h2>Sign in</h2>
                     <input type="email" name="email" placeholder="Email" required />
                     <div class="input-wrapper">
@@ -30,7 +30,7 @@
 
             <!-- SignUp Form -->
             <div class="form-control signup-form">
-                <form action="./endpoint/register.php" method="POST">
+                <form action="./conn/endpoint/register.php" method="POST">
                     <h2>Create an Account</h2>
                     <div class="input-wrapper flex-wrapper">
                         <input type="text" name="student_firstname" placeholder="First Name" required />
@@ -95,14 +95,27 @@
                 });
                 window.history.replaceState({}, document.title, window.location.pathname);
             };
-        <?php elseif (isset($_GET['login']) && $_GET['login'] === 'not_verified'): ?>
+        <?php elseif (isset($_GET['register']) && $_GET['register'] === 'success'): ?>
             window.onload = function () {
                 Swal.fire({
-                    icon: 'warning',
-                    title: 'Login Failed',
-                    text: 'Your account has not been verified yet.',
-                    confirmButtonText: 'Yes, proceed',
-                    cancelButtonText: 'Cancel',
+                    icon: 'success',
+                    title: 'Registration Successful',
+                    text: '<?php echo isset($_SESSION['register_success']) ? $_SESSION['register_success'] : "Your account has been created successfully!"; ?>',
+                    confirmButtonText: 'OK',
+                    didOpen: () => {
+                        document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                        document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                    },
+                });
+                window.history.replaceState({}, document.title, window.location.pathname);
+            };
+        <?php elseif (isset($_GET['auth']) && $_GET['auth'] === 'error'): ?>
+            window.onload = function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Unauthorized Access',
+                    text: 'You must log in to access that page.',
+                    confirmButtonText: 'Confirm',
                     didOpen: () => {
                         document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
                         document.body.classList.remove("swal2-shown", "swal2-height-auto");
@@ -112,6 +125,7 @@
             };
         <?php endif; ?>
 
+
         function showModal(modalId) {
             document.getElementById(modalId).style.display = "block";
         }
@@ -120,7 +134,7 @@
             document.getElementById(modalId).style.display = "none";
         }
         // Signup form event listener
-        document.querySelector('form[action="./endpoint/register.php"]').addEventListener('submit', function (e) {
+        document.querySelector('form[action="./conn/endpoint/register.php"]').addEventListener('submit', function (e) {
             // Show the loader
             document.getElementById('loader').style.display = "block";
 

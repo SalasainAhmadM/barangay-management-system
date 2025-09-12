@@ -1,3 +1,13 @@
+<?php
+session_start();
+require_once("../conn/conn.php");
+
+if (!isset($_SESSION["admin_id"])) {
+  header("Location: ../index.php?auth=error");
+  exit();
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
 

@@ -18,55 +18,55 @@
             </a>
             <span class="tooltip">Dashboard</span>
         </li>
+
         <li>
             <a href="#">
-                <i class="fa-solid fa-user"></i>
-                <span class="links_name">User</span>
+                <i class="fa-solid fa-users"></i>
+                <span class="links_name">Residents</span>
             </a>
-            <span class="tooltip">User</span>
+            <span class="tooltip">Residents</span>
         </li>
+
         <li>
             <a href="#">
-                <i class="fa-solid fa-comments"></i>
-                <span class="links_name">Messages</span>
+                <i class="fa-solid fa-file-lines"></i>
+                <span class="links_name">Requests</span>
             </a>
-            <span class="tooltip">Messages</span>
+            <span class="tooltip">Requests</span>
         </li>
+
         <li>
             <a href="#">
-                <i class="fa-solid fa-chart-pie"></i>
-                <span class="links_name">Analytics</span>
+                <i class="fa-solid fa-recycle"></i>
+                <span class="links_name">Waste Mgmt</span>
             </a>
-            <span class="tooltip">Analytics</span>
+            <span class="tooltip">Waste Management</span>
         </li>
+
         <li>
             <a href="#">
-                <i class="fa-solid fa-folder"></i>
-                <span class="links_name">File Manager</span>
+                <i class="fa-solid fa-message"></i>
+                <span class="links_name">SMS Notify</span>
             </a>
-            <span class="tooltip">Files</span>
+            <span class="tooltip">SMS Notifications</span>
         </li>
+
         <li>
             <a href="#">
-                <i class="fa-solid fa-cart-shopping"></i>
-                <span class="links_name">Order</span>
+                <i class="fa-solid fa-chart-line"></i>
+                <span class="links_name">Reports</span>
             </a>
-            <span class="tooltip">Order</span>
+            <span class="tooltip">Reports</span>
         </li>
-        <li>
-            <a href="#">
-                <i class="fa-solid fa-heart"></i>
-                <span class="links_name">Saved</span>
-            </a>
-            <span class="tooltip">Saved</span>
-        </li>
+
         <li>
             <a href="#">
                 <i class="fa-solid fa-gear"></i>
-                <span class="links_name">Setting</span>
+                <span class="links_name">Settings</span>
             </a>
-            <span class="tooltip">Setting</span>
+            <span class="tooltip">Settings</span>
         </li>
+
         <li class="profile">
             <div class="profile-details">
                 <img src="../assets/images/admin.png" alt="profileImg">
@@ -75,9 +75,28 @@
                     <div class="job">Pirate King</div>
                 </div>
             </div>
-            <i class="fa-solid fa-right-from-bracket" id="log_out"></i>
+            <a href="#" data-logout>
+                <i class="fa-solid fa-right-from-bracket" id="log_out"></i>
+            </a>
         </li>
     </ul>
 </div>
 
 <script src="../js/sidebar.js"></script>
+<script>
+    document.querySelector('[data-logout]').addEventListener('click', function (event) {
+        event.preventDefault();
+
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "You will be logged out!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Confirm'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "../components/logout.php";
+            }
+        });
+    });
+</script>
