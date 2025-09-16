@@ -30,7 +30,7 @@ if (!isset($_SESSION["user_id"])) {
 
   <?php include '../components/cdn_scripts.php'; ?>
   <?php include '../components/footer.php'; ?>
-  <?php if (isset($_SESSION["needs_contact"]) && $_SESSION["needs_contact"]): ?>
+  <!-- <?php if (isset($_SESSION["needs_contact"]) && $_SESSION["needs_contact"]): ?>
     <script>
       window.onload = function () {
         Swal.fire({
@@ -105,7 +105,7 @@ if (!isset($_SESSION["user_id"])) {
         });
       };
     </script>
-    <?php unset($_SESSION["needs_contact"]); endif; ?>
+    <?php unset($_SESSION["needs_contact"]); endif; ?> -->
 
 
 </body>

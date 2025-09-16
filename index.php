@@ -38,6 +38,8 @@
                     </div>
                     <input type="text" name="student_lastname" placeholder="Last Name" required />
                     <input type="email" id="signup-email" name="email" placeholder="Email" required />
+                    <input type="number" id="signup-contact" name="contact" placeholder="e.g. 09771029233" required />
+                    <div class="validation-text" id="signup_contact_validation"></div>
                     <div class="input-wrapper">
                         <input type="password" id="signup-password" name="password" placeholder="Password" required />
                         <span class="toggle-password">
@@ -54,6 +56,7 @@
                     <button type="submit" id="signup-button" disabled>Sign up</button>
                     <div class="password-strength" id="signup_password_strength"></div>
                     <div class="password-strength" id="signup_instruction_text"></div>
+
                 </form>
             </div>
         </div>
@@ -168,6 +171,32 @@
             }
         });
 
+        const signupContactField = document.getElementById('signup-contact');
+        const signupContactValidation = document.getElementById('signup_contact_validation');
+
+        // Contact number validation
+        signupContactField.addEventListener('input', function () {
+            const contact = signupContactField.value;
+            const contactRegex = /^09\d{9}$/; // Must start with 09 and be 11 digits long
+
+            if (contactRegex.test(contact)) {
+                signupContactField.setCustomValidity('');
+                signupContactValidation.textContent = '';
+                // Re-enable button only if all other validations are also good
+                if (
+                    checkPasswordStrength(signupPasswordField.value) === 'Strong' &&
+                    signupConfirmPasswordField.value === signupPasswordField.value &&
+                    signupEmailField.validity.valid
+                ) {
+                    signupButton.disabled = false;
+                }
+            } else {
+                signupContactField.setCustomValidity('Invalid contact number');
+                signupContactValidation.style.color = '#8B0000';
+                signupContactValidation.textContent = 'Contact must start with 09 and be exactly 11 digits.';
+                signupButton.disabled = true;
+            }
+        });
 
         // Password validation event listener
         signupPasswordField.addEventListener('input', function () {

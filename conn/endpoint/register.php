@@ -7,6 +7,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $middle_name = trim($_POST["student_middle"]);
     $last_name = trim($_POST["student_lastname"]);
     $email = trim($_POST["email"]);
+    $contact = trim($_POST["contact"]);
     $password = trim($_POST["password"]);
     $confirm_pass = trim($_POST["confirm-password"]);
 
@@ -47,9 +48,9 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
     // Insert
-    $stmt = $conn->prepare("INSERT INTO user (first_name, middle_name, last_name, email, password) 
-                            VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param("sssss", $first_name, $middle_name, $last_name, $email, $hashedPassword);
+    $stmt = $conn->prepare("INSERT INTO user (first_name, middle_name, last_name, email, contact_number, password) 
+                            VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssssss", $first_name, $middle_name, $last_name, $email, $contact, $hashedPassword);
 
     if ($stmt->execute()) {
         $_SESSION["register_success"] = "Account created successfully!";

@@ -316,6 +316,10 @@ body {
   color: #666;
 }
 
+.validation-text {
+  font-size: 12px;
+  color: #666;
+}
 
 #signup_instruction_text {
   margin-top: 5px;
