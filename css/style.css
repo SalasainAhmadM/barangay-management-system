@@ -333,6 +333,16 @@ body {
   font-weight: 500;
   margin: 18px
 }
+
+.sidebar li a.active {
+  background: #fff;
+}
+
+.sidebar li a.active .links_name,
+.sidebar li a.active i {
+  color: #00247c;
+}
+
 @media (max-width: 420px) {
   .sidebar li .tooltip{
     display: none;
@@ -396,6 +406,14 @@ a {
 
 .nav .nav-links a:hover {
   color: #0ca5b6; 
+}
+
+.nav .nav-links a.active {
+  color: #0ca5b6; 
+}
+
+.nav .nav-links a.active::after {
+  width: 100%; 
 }
 
 .nav .nav-links a::after {

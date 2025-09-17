@@ -6,24 +6,32 @@
         <span>BMS</span>
     </a>
 
+    <?php
+    $currentPage = basename($_SERVER['PHP_SELF']);
+    ?>
+
     <ul class="nav-links">
         <i class="fa-solid fa-xmark navCloseBtn"></i>
-        <li><a href="#">Home</a></li>
-        <li><a href="#">Certificates</a></li>
-        <li><a href="#">Waste Management</a></li>
-        <li><a href="#">Notifications</a></li>
+        <li><a href="index.php" class="<?= $currentPage == 'index.php' ? 'active' : '' ?>">Home</a></li>
+        <li><a href="certificates.php"
+                class="<?= $currentPage == 'certificates.php' ? 'active' : '' ?>">Certificates</a></li>
+        <li><a href="waste_management.php" class="<?= $currentPage == 'waste_management.php' ? 'active' : '' ?>">Waste
+                Management</a></li>
+        <li><a href="notifications.php"
+                class="<?= $currentPage == 'notifications.php' ? 'active' : '' ?>">Notifications</a></li>
     </ul>
+
 
     <div class="nav-right">
         <i class="fa-solid fa-magnifying-glass search-icon" id="searchIcon"></i>
 
         <div class="profile-container">
             <div class="profile-trigger">
-                <img src="../assets/images/admin.png" alt="Profile" />
+                <img src="../assets/images/user.png" alt="Profile" />
             </div>
 
             <div class="profile-dropdown">
-                <a href="#">
+                <a href="profile.php">
                     <i class="fa-solid fa-user"></i>
                     <span>Profile</span>
                 </a>

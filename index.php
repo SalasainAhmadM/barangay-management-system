@@ -38,7 +38,7 @@
                     </div>
                     <input type="text" name="student_lastname" placeholder="Last Name" required />
                     <input type="email" id="signup-email" name="email" placeholder="Email" required />
-                    <input type="number" id="signup-contact" name="contact" placeholder="e.g. 09771029233" required />
+                    <input type="number" id="signup-contact" name="contact" placeholder="Contact Number" required />
                     <div class="validation-text" id="signup_contact_validation"></div>
                     <div class="input-wrapper">
                         <input type="password" id="signup-password" name="password" placeholder="Password" required />

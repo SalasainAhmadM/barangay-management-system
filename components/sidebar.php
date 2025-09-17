@@ -5,6 +5,10 @@
         <i class="fa-solid fa-bars" id="btn"></i>
     </div>
 
+    <?php
+    $current_page = basename($_SERVER['PHP_SELF']);
+    ?>
+
     <ul class="nav-list">
         <!-- <li>
           <i class="fa-solid fa-magnifying-glass"></i>
@@ -12,7 +16,7 @@
          <span class="tooltip">Search</span>
       </li> -->
         <li>
-            <a href="#">
+            <a href="index.php" class="<?= ($current_page == 'index.php') ? 'active' : '' ?>">
                 <i class="fa-solid fa-table-columns"></i>
                 <span class="links_name">Dashboard</span>
             </a>
@@ -20,7 +24,7 @@
         </li>
 
         <li>
-            <a href="#">
+            <a href="residents.php" class="<?= ($current_page == 'residents.php') ? 'active' : '' ?>">
                 <i class="fa-solid fa-users"></i>
                 <span class="links_name">Residents</span>
             </a>
@@ -28,7 +32,8 @@
         </li>
 
         <li>
-            <a href="#">
+            <a href="request_certificates.php"
+                class="<?= ($current_page == 'request_certificates.php') ? 'active' : '' ?>">
                 <i class="fa-solid fa-file-lines"></i>
                 <span class="links_name">Requests</span>
             </a>
@@ -36,7 +41,7 @@
         </li>
 
         <li>
-            <a href="#">
+            <a href="waste_management.php" class="<?= ($current_page == 'waste_management.php') ? 'active' : '' ?>">
                 <i class="fa-solid fa-recycle"></i>
                 <span class="links_name">Waste Mgmt</span>
             </a>
@@ -44,7 +49,7 @@
         </li>
 
         <li>
-            <a href="#">
+            <a href="notifications.php" class="<?= ($current_page == 'notifications.php') ? 'active' : '' ?>">
                 <i class="fa-solid fa-message"></i>
                 <span class="links_name">SMS Notify</span>
             </a>
@@ -52,7 +57,7 @@
         </li>
 
         <li>
-            <a href="#">
+            <a href="reports.php" class="<?= ($current_page == 'reports.php') ? 'active' : '' ?>">
                 <i class="fa-solid fa-chart-line"></i>
                 <span class="links_name">Reports</span>
             </a>
@@ -60,7 +65,7 @@
         </li>
 
         <li>
-            <a href="#">
+            <a href="settings.php" class="<?= ($current_page == 'settings.php') ? 'active' : '' ?>">
                 <i class="fa-solid fa-gear"></i>
                 <span class="links_name">Settings</span>
             </a>
