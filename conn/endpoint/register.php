@@ -44,6 +44,19 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     }
     $stmt->close();
 
+    // Check if contact_number exists in user table
+    $stmt = $conn->prepare("SELECT id FROM user WHERE contact_number = ?");
+    $stmt->bind_param("s", $contact);
+    $stmt->execute();
+    $stmt->store_result();
+
+    if ($stmt->num_rows > 0) {
+        $_SESSION["register_error"] = "Contact number already registered.";
+        header("Location: ../../index.php?register=error");
+        exit();
+    }
+    $stmt->close();
+
     // Hash password
     $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 

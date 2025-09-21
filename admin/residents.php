@@ -7,11 +7,44 @@ if (!isset($_SESSION["admin_id"])) {
   exit();
 }
 
+// $residents = [];
+// try {
+//   $stmt = $conn->prepare("SELECT id, first_name, middle_name, last_name, email, contact_number, image, created_at 
+//                           FROM user 
+//                           ORDER BY created_at DESC");
+//   $stmt->execute();
+//   $result = $stmt->get_result();
+//   while ($row = $result->fetch_assoc()) {
+//     $residents[] = $row;
+//   }
+// } catch (Exception $e) {
+//   die("Error fetching residents: " . $e->getMessage());
+// }
+
+// Pagination settings
+$residentsPerPage = 8;
+$currentPage = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+$currentPage = max(1, $currentPage); // Ensure page is at least 1
+
+// Calculate offset
+$offset = ($currentPage - 1) * $residentsPerPage;
+
 $residents = [];
+$totalResidents = 0;
+
 try {
-  $stmt = $conn->prepare("SELECT id, first_name, middle_name, last_name, email, contact_number, image, created_at 
+  // Get total count for pagination
+  $countStmt = $conn->prepare("SELECT COUNT(*) as total FROM user");
+  $countStmt->execute();
+  $countResult = $countStmt->get_result();
+  $totalResidents = $countResult->fetch_assoc()['total'];
+
+  // Get residents with pagination
+  $stmt = $conn->prepare("SELECT id, first_name, middle_name, last_name, email, contact_number, image, created_at, updated_at
                           FROM user 
-                          ORDER BY created_at DESC");
+                          ORDER BY created_at DESC 
+                          LIMIT ? OFFSET ?");
+  $stmt->bind_param("ii", $residentsPerPage, $offset);
   $stmt->execute();
   $result = $stmt->get_result();
   while ($row = $result->fetch_assoc()) {
@@ -21,6 +54,10 @@ try {
   die("Error fetching residents: " . $e->getMessage());
 }
 
+// Calculate pagination info
+$totalPages = ceil($totalResidents / $residentsPerPage);
+$startRecord = $totalResidents > 0 ? $offset + 1 : 0;
+$endRecord = min($offset + $residentsPerPage, $totalResidents);
 ?>
 
 <!DOCTYPE html>
@@ -30,6 +67,150 @@ try {
   <?php include '../components/header_links.php'; ?>
   <?php include '../components/admin_side_header.php'; ?>
 </head>
+<style>
+  /* Pagination Styles */
+  .pagination-container {
+    padding: 20px;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+
+  .pagination-info {
+    color: #6b7280;
+    font-size: 14px;
+  }
+
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .pagination a,
+  .pagination span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .pagination a {
+    background: #f8fafc;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+  }
+
+  .pagination a:hover {
+    background: #00247c;
+    color: #fff;
+    border-color: #00247c;
+    transform: translateY(-1px);
+  }
+
+  .pagination .current {
+    background: #00247c;
+    color: #fff;
+    border: 1px solid #00247c;
+  }
+
+  .pagination .disabled {
+    background: #f1f5f9;
+    color: #9ca3af;
+    border: 1px solid #e5e7eb;
+    cursor: not-allowed;
+  }
+
+  .pagination-jump {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 15px;
+  }
+
+  .pagination-jump label {
+    color: #6b7280;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .pagination-jump select {
+    padding: 6px 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+    font-size: 14px;
+    cursor: pointer;
+    min-width: 60px;
+  }
+
+  .pagination-jump select:focus {
+    outline: none;
+    border-color: #00247c;
+    box-shadow: 0 0 0 2px rgba(0, 36, 124, 0.1);
+  }
+
+  /* Responsive pagination */
+  @media (max-width: 768px) {
+    .pagination-container {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+
+    .pagination-controls {
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .pagination-info {
+      text-align: center;
+      order: 2;
+    }
+
+    .pagination-jump {
+      margin-left: 0;
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 480px) {
+
+    .pagination a,
+    .pagination span {
+      min-width: 32px;
+      height: 32px;
+      font-size: 13px;
+      padding: 6px 8px;
+    }
+
+    .pagination-jump {
+      flex-direction: column;
+      gap: 4px;
+    }
+  }
+</style>
 
 <body>
   <?php include '../components/sidebar.php'; ?>
@@ -68,6 +249,7 @@ try {
               <th>Email</th>
               <th>Contact</th>
               <th>Created Date</th>
+              <th>Updated Date</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -93,6 +275,9 @@ try {
                   </td>
                   <td>
                     <div class="date-created"><?= date("M d, Y", strtotime($resident['created_at'])); ?></div>
+                  </td>
+                  <td>
+                    <div class="date-created"><?= date("M d, Y", strtotime($resident['updated_at'])); ?></div>
                   </td>
                   <td>
                     <div class="action-buttons">
@@ -164,6 +349,83 @@ try {
           </div>
         <?php endif; ?>
       </div>
+
+      <!-- Pagination -->
+      <?php if ($totalResidents > 0): ?>
+        <div class="pagination-container">
+          <div class="pagination-info">
+            Showing <?= $startRecord; ?>-<?= $endRecord; ?> of <?= $totalResidents; ?> residents
+          </div>
+
+          <div class="pagination-controls">
+            <div class="pagination">
+              <!-- Previous Button -->
+              <?php if ($currentPage > 1): ?>
+                <a href="?page=<?= $currentPage - 1; ?>" title="Previous Page">
+                  <i class="fas fa-chevron-left"></i>
+                </a>
+              <?php else: ?>
+                <span class="disabled">
+                  <i class="fas fa-chevron-left"></i>
+                </span>
+              <?php endif; ?>
+
+              <!-- Page Numbers -->
+              <?php
+              $startPage = max(1, $currentPage - 2);
+              $endPage = min($totalPages, $currentPage + 2);
+
+              // Show first page if not in range
+              if ($startPage > 1): ?>
+                <a href="?page=1">1</a>
+                <?php if ($startPage > 2): ?>
+                  <span class="disabled">...</span>
+                <?php endif; ?>
+              <?php endif; ?>
+
+              <!-- Page range -->
+              <?php for ($i = $startPage; $i <= $endPage; $i++): ?>
+                <?php if ($i == $currentPage): ?>
+                  <span class="current"><?= $i; ?></span>
+                <?php else: ?>
+                  <a href="?page=<?= $i; ?>"><?= $i; ?></a>
+                <?php endif; ?>
+              <?php endfor; ?>
+
+              <!-- Show last page if not in range -->
+              <?php if ($endPage < $totalPages): ?>
+                <?php if ($endPage < $totalPages - 1): ?>
+                  <span class="disabled">...</span>
+                <?php endif; ?>
+                <a href="?page=<?= $totalPages; ?>"><?= $totalPages; ?></a>
+              <?php endif; ?>
+
+              <!-- Next Button -->
+              <?php if ($currentPage < $totalPages): ?>
+                <a href="?page=<?= $currentPage + 1; ?>" title="Next Page">
+                  <i class="fas fa-chevron-right"></i>
+                </a>
+              <?php else: ?>
+                <span class="disabled">
+                  <i class="fas fa-chevron-right"></i>
+                </span>
+              <?php endif; ?>
+            </div>
+
+            <!-- Quick Jump -->
+            <?php if ($totalPages > 5): ?>
+              <div class="pagination-jump">
+                <label for="pageJump">Go to:</label>
+                <select id="pageJump" onchange="jumpToPage(this.value)">
+                  <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                    <option value="<?= $i; ?>" <?= $i == $currentPage ? 'selected' : ''; ?>><?= $i; ?></option>
+                  <?php endfor; ?>
+                </select>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+      <?php endif; ?>
     </div>
   </section>
 
@@ -173,6 +435,12 @@ try {
     function searchResidents() {
       const filter = document.getElementById('searchInput').value.toLowerCase();
       let found = false;
+
+      function jumpToPage(page) {
+        if (page && page !== '<?= $currentPage; ?>') {
+          window.location.href = '?page=' + page;
+        }
+      }
 
       // Search in table rows
       const rows = document.querySelectorAll("#residentsTable tbody tr");
@@ -268,36 +536,64 @@ try {
       Swal.fire({
         title: 'Add New Resident',
         html: `
-        <div class="swal-form">
-            <div class="form-group">
-                <label class="form-label">First Name</label>
-                <input type="text" class="swal2-input" id="firstName" placeholder="Enter first name" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Middle Name</label>
-                <input type="text" class="swal2-input" id="middleName" placeholder="Enter middle name">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Last Name</label>
-                <input type="text" class="swal2-input" id="lastName" placeholder="Enter last name" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Email</label>
-                <input type="email" class="swal2-input" id="email" placeholder="Enter email address" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Contact Number</label>
-                <input type="tel" class="swal2-input" id="contactNumber" placeholder="Enter contact number" required>
-            </div>
-        </div>
+      <div class="swal-form">
+          <!-- Profile Image Section -->
+          <div class="form-group profile-image-section">
+              <div class="profile-image-container">
+                  <img id="profilePreview" 
+                       src="../assets/images/user.png" 
+                       alt="Profile Preview" 
+                       class="profile-preview"
+                       onclick="document.getElementById('imageInput').click();">
+                  <div class="camera-overlay"
+                       onclick="document.getElementById('imageInput').click();">
+                      <i class="fas fa-camera"></i>
+                  </div>
+              </div>
+              <input type="file" 
+                     id="imageInput" 
+                     accept="image/*" 
+                     class="image-input-hidden"
+                     onchange="previewImage(this)">
+              <div class="upload-instruction">Click to upload profile image</div>
+          </div>
+
+          <div class="form-group">
+              <label class="form-label">First Name</label>
+              <input type="text" class="swal2-input" id="firstName" placeholder="Enter first name" required>
+          </div>
+          <div class="form-group">
+              <label class="form-label">Middle Name</label>
+              <input type="text" class="swal2-input" id="middleName" placeholder="Enter middle name">
+          </div>
+          <div class="form-group">
+              <label class="form-label">Last Name</label>
+              <input type="text" class="swal2-input" id="lastName" placeholder="Enter last name" required>
+          </div>
+          <div class="form-group">
+              <label class="form-label">Email</label>
+              <input type="email" class="swal2-input" id="email" placeholder="Enter email address" required>
+          </div>
+          <div class="form-group">
+              <label class="form-label">Contact Number</label>
+              <input type="number" class="swal2-input" id="contactNumber" placeholder="Enter contact number" required>
+          </div>
+      </div>
     `,
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'Add Resident',
-        cancelButtonText: 'Cancel',
         didOpen: () => {
-          document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
-          document.body.classList.remove("swal2-shown", "swal2-height-auto");
+          // Add hover effect to profile image
+          const profileImg = document.getElementById('profilePreview');
+          profileImg.addEventListener('mouseenter', function () {
+            this.style.transform = 'scale(1.05)';
+            this.style.borderColor = '#007bff';
+          });
+          profileImg.addEventListener('mouseleave', function () {
+            this.style.transform = 'scale(1)';
+            this.style.borderColor = '#ddd';
+          });
         },
         preConfirm: () => {
           const firstName = document.getElementById('firstName').value.trim();
@@ -305,26 +601,34 @@ try {
           const lastName = document.getElementById('lastName').value.trim();
           const email = document.getElementById('email').value.trim();
           const contactNumber = document.getElementById('contactNumber').value.trim();
+          const image = document.getElementById('imageInput').files[0];
 
           if (!firstName || !lastName || !email || !contactNumber) {
             Swal.showValidationMessage('First name, last name, email, and contact number are required');
             return false;
           }
 
-          return { firstName, middleName, lastName, email, contactNumber };
+          const formData = new FormData();
+          formData.append("firstName", firstName);
+          formData.append("middleName", middleName);
+          formData.append("lastName", lastName);
+          formData.append("email", email);
+          formData.append("contactNumber", contactNumber);
+          if (image) formData.append("image", image);
+
+          return formData;
         }
       }).then((result) => {
         if (result.isConfirmed) {
           fetch('./endpoints/add_resident.php', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(result.value)
+            body: result.value
           })
             .then(res => res.json())
             .then(data => {
               if (data.success) {
                 Swal.fire('Success', 'Resident has been added!', 'success').then(() => {
-                  location.reload(); // Refresh to show new resident
+                  location.reload();
                 });
               } else {
                 Swal.fire('Error', data.message || 'Something went wrong', 'error');
@@ -337,15 +641,217 @@ try {
       });
     }
 
+    function previewImage(input, previewId = 'profilePreview') {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const preview = document.getElementById(previewId);
+          preview.src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
 
     function viewResident(id) {
-      // Implement view resident functionality
-      window.location.href = `view_resident.php?id=${id}`;
+      fetch(`./endpoints/get_resident.php?id=${id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            const resident = data.resident;
+
+            // Format the created date
+            const createdDate = new Date(resident.created_at).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            });
+
+            // Get profile image path
+            const profileImage = resident.image ?
+              `../assets/images/user/${resident.image}` :
+              '../assets/images/user.png';
+
+            Swal.fire({
+              title: 'Resident Details',
+              html: `
+            <div class="resident-details-container">
+              <img src="${profileImage}" alt="Profile" class="resident-profile-image">
+              
+              <div class="resident-name-swal">
+                ${resident.first_name} ${resident.middle_name ? resident.middle_name + ' ' : ''}${resident.last_name}
+              </div>
+              
+              <div class="resident-email-swal">${resident.email}</div>
+              
+              <div class="resident-info-grid">
+                <div class="info-item">
+                  <div class="info-label">First Name</div>
+                  <div class="info-value">${resident.first_name}</div>
+                </div>
+                
+                ${resident.middle_name ? `
+                <div class="info-item">
+                  <div class="info-label">Middle Name</div>
+                  <div class="info-value">${resident.middle_name}</div>
+                </div>
+                ` : ''}
+                
+                <div class="info-item">
+                  <div class="info-label">Last Name</div>
+                  <div class="info-value">${resident.last_name}</div>
+                </div>
+                
+                <div class="info-item ${!resident.middle_name ? 'full-width' : ''}">
+                  <div class="info-label">Contact Number</div>
+                  <div class="info-value">${resident.contact_number}</div>
+                </div>
+                
+                <div class="info-item full-width">
+                  <div class="info-label">Member Since</div>
+                  <div class="info-value">${createdDate}</div>
+                </div>
+              </div>
+            </div>
+          `,
+              confirmButtonText: 'Close',
+              confirmButtonColor: '#007bff',
+              width: '500px',
+              showClass: {
+                popup: 'animate__animated animate__fadeInDown animate__faster'
+              },
+              hideClass: {
+                popup: 'animate__animated animate__fadeOutUp animate__faster'
+              }
+            });
+          } else {
+            Swal.fire('Error', data.message || 'Unable to fetch resident details.', 'error');
+          }
+        })
+        .catch(() => {
+          Swal.fire('Error', 'Unable to connect to server.', 'error');
+        });
     }
 
     function editResident(id) {
-      // Implement edit resident functionality
-      window.location.href = `edit_resident.php?id=${id}`;
+      fetch(`./endpoints/get_resident.php?id=${id}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            const resident = data.resident;
+            Swal.fire({
+              title: 'Edit Resident',
+              html: `
+            <div class="swal-form">
+                <!-- Profile Image Section -->
+                <div class="form-group profile-image-section">
+                    <div class="profile-image-container">
+                        <img id="editProfilePreview" 
+                             src="${resident.image ? '../assets/images/user/' + resident.image : '../assets/images/user.png'}"  
+                             alt="Profile Preview" 
+                             class="profile-preview"
+                             onclick="document.getElementById('editImageInput').click();">
+                        <div class="camera-overlay"
+                             onclick="document.getElementById('editImageInput').click();">
+                            <i class="fas fa-camera"></i>
+                        </div>
+                    </div>
+                    <input type="file" 
+                           id="editImageInput" 
+                           accept="image/*" 
+                           class="image-input-hidden"
+                           onchange="previewImage(this, 'editProfilePreview')">
+                    <div class="upload-instruction">Click to change profile image</div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">First Name</label>
+                    <input type="text" class="swal2-input" id="editFirstName" value="${resident.first_name}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Middle Name</label>
+                    <input type="text" class="swal2-input" id="editMiddleName" value="${resident.middle_name || ''}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Last Name</label>
+                    <input type="text" class="swal2-input" id="editLastName" value="${resident.last_name}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input type="email" class="swal2-input" id="editEmail" value="${resident.email}" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Contact Number</label>
+                    <input type="number" class="swal2-input" id="editContactNumber" value="${resident.contact_number}" required>
+                </div>
+            </div>
+          `,
+              showCancelButton: true,
+              confirmButtonText: 'Update',
+              cancelButtonText: 'Cancel',
+              didOpen: () => {
+                // Add hover effect to profile image
+                const profileImg = document.getElementById('editProfilePreview');
+                profileImg.addEventListener('mouseenter', function () {
+                  this.style.transform = 'scale(1.05)';
+                  this.style.borderColor = '#007bff';
+                });
+                profileImg.addEventListener('mouseleave', function () {
+                  this.style.transform = 'scale(1)';
+                  this.style.borderColor = '#ddd';
+                });
+              },
+              preConfirm: () => {
+                const firstName = document.getElementById('editFirstName').value.trim();
+                const middleName = document.getElementById('editMiddleName').value.trim();
+                const lastName = document.getElementById('editLastName').value.trim();
+                const email = document.getElementById('editEmail').value.trim();
+                const contactNumber = document.getElementById('editContactNumber').value.trim();
+                const image = document.getElementById('editImageInput').files[0];
+
+                if (!firstName || !lastName || !email || !contactNumber) {
+                  Swal.showValidationMessage('First name, last name, email, and contact number are required');
+                  return false;
+                }
+
+                const formData = new FormData();
+                formData.append("id", id);
+                formData.append("firstName", firstName);
+                formData.append("middleName", middleName);
+                formData.append("lastName", lastName);
+                formData.append("email", email);
+                formData.append("contactNumber", contactNumber);
+                if (image) formData.append("image", image);
+
+                return formData;
+              }
+            }).then((result) => {
+              if (result.isConfirmed) {
+                fetch('./endpoints/edit_resident.php', {
+                  method: 'POST',
+                  body: result.value
+                })
+                  .then(res => res.json())
+                  .then(data => {
+                    if (data.success) {
+                      Swal.fire('Success', 'Resident updated successfully!', 'success').then(() => {
+                        location.reload();
+                      });
+                    } else {
+                      Swal.fire('Error', data.message || 'Unable to update resident.', 'error');
+                    }
+                  })
+                  .catch(() => {
+                    Swal.fire('Error', 'Unable to connect to server.', 'error');
+                  });
+              }
+            });
+          } else {
+            Swal.fire('Error', data.message || 'Unable to fetch resident details.', 'error');
+          }
+        })
+        .catch(() => {
+          Swal.fire('Error', 'Unable to connect to server.', 'error');
+        });
     }
 
     function deleteResident(id) {
@@ -379,11 +885,6 @@ try {
         }
       });
     }
-
-
-    // function exportData() {
-
-    // }
 
   </script>
 
