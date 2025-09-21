@@ -771,3 +771,148 @@ a {
 }
 
 /* Footer End */
+
+/* Pagination Styles */
+  .pagination-container {
+    padding: 20px;
+    background: #fff;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+
+  .pagination-info {
+    color: #6b7280;
+    font-size: 14px;
+  }
+
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .pagination a,
+  .pagination span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 8px 12px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+
+  .pagination a {
+    background: #f8fafc;
+    color: #374151;
+    border: 1px solid #e5e7eb;
+  }
+
+  .pagination a:hover {
+    background: #00247c;
+    color: #fff;
+    border-color: #00247c;
+    transform: translateY(-1px);
+  }
+
+  .pagination .current {
+    background: #00247c;
+    color: #fff;
+    border: 1px solid #00247c;
+  }
+
+  .pagination .disabled {
+    background: #f1f5f9;
+    color: #9ca3af;
+    border: 1px solid #e5e7eb;
+    cursor: not-allowed;
+  }
+
+  .pagination-jump {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: 15px;
+  }
+
+  .pagination-jump label {
+    color: #6b7280;
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  .pagination-jump select {
+    padding: 6px 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+    font-size: 14px;
+    cursor: pointer;
+    min-width: 60px;
+  }
+
+  .pagination-jump select:focus {
+    outline: none;
+    border-color: #00247c;
+    box-shadow: 0 0 0 2px rgba(0, 36, 124, 0.1);
+  }
+
+  /* Responsive pagination */
+  @media (max-width: 768px) {
+    .pagination-container {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
+
+    .pagination-controls {
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .pagination-info {
+      text-align: center;
+      order: 2;
+    }
+
+    .pagination-jump {
+      margin-left: 0;
+      justify-content: center;
+    }
+  }
+
+  @media (max-width: 480px) {
+
+    .pagination a,
+    .pagination span {
+      min-width: 32px;
+      height: 32px;
+      font-size: 13px;
+      padding: 6px 8px;
+    }
+
+    .pagination-jump {
+      flex-direction: column;
+      gap: 4px;
+    }
+  }
+
+  /* Pagination Styles End */

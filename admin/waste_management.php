@@ -13,6 +13,7 @@ if (!isset($_SESSION["admin_id"])) {
 
 <head>
     <?php include '../components/header_links.php'; ?>
+    <?php include '../components/admin_side_header.php'; ?>
 </head>
 
 <body>
