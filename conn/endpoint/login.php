@@ -42,7 +42,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $_SESSION["user_id"] = $user["id"];
             $_SESSION["user_name"] = $user["first_name"] . " " . $user["middle_name"] . ". " . $user["last_name"];
             $_SESSION["user_email"] = $user["email"];
-            // $_SESSION["needs_contact"] = empty($user["contact_number"]);
+            $_SESSION["needs_details"] = (empty($user["date_of_birth"]) || empty($user["gender"]));
 
             header("Location: ../../user/index.php");
             exit();
