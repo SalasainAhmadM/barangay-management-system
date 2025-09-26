@@ -165,6 +165,294 @@ body {
   font-size: 12px;
 }
 
+/* Enhanced SweetAlert Styles for Wide 3-Column Layout */
+
+/* Wide modal styles - only affects modals with .swal-wide class */
+.swal2-popup.swal-wide {
+    width: 90vw !important;
+    max-width: 900px !important;
+    padding: 25px !important;
+}
+
+.swal2-popup.swal-wide .swal2-html-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: left !important;
+}
+
+/* Profile image section for wide modals */
+.swal-form-wide .profile-image-section {
+    grid-column: 1 / -1; /* Spans all columns */
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+    padding-bottom: 25px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.swal-form-wide .profile-image-container {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.swal-form-wide .profile-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid #e5e7eb;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.swal-form-wide .profile-preview:hover {
+    transform: scale(1.05);
+    border-color: #3b82f6;
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+}
+
+.swal-form-wide .camera-overlay {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.swal-form-wide .camera-overlay:hover {
+    background: #2563eb;
+    transform: scale(1.1);
+}
+
+.swal-form-wide .camera-overlay i {
+    font-size: 14px;
+}
+
+.swal-form-wide .image-input-hidden {
+    display: none;
+}
+
+.swal-form-wide .upload-instruction {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #6b7280;
+    text-align: center;
+    font-style: italic;
+}
+
+/* 3-column grid layout for wide forms */
+.swal-form-wide {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 20px;
+    text-align: left;
+    padding: 0;
+}
+
+.swal-form-wide .form-group {
+    margin-bottom: 0;
+}
+
+.swal-form-wide .form-group.full-width {
+    grid-column: 1 / -1; /* Spans all 3 columns */
+}
+
+.swal-form-wide .form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+    text-align: left;
+}
+
+.swal-form-wide .swal2-input{
+    width: 100% !important;
+    padding: 12px 16px !important;
+    border: 2px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    background-color: #fafafa !important;
+}
+
+.swal-form-wide .swal2-select {
+    width: 100% !important;
+    padding: 8px 16px !important;
+    border: 2px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    background-color: #fafafa !important;
+}
+.swal-form-wide .swal2-input:focus,
+.swal-form-wide .swal2-select:focus {
+    border-color: #3b82f6 !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+    outline: none !important;
+}
+
+.swal-form-wide .swal2-input::placeholder {
+    color: #9ca3af !important;
+    font-size: 14px !important;
+}
+
+/* Enhanced select styling for wide forms */
+.swal-form-wide .swal2-select {
+    appearance: none !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e") !important;
+    background-position: right 12px center !important;
+    background-repeat: no-repeat !important;
+    background-size: 16px 12px !important;
+    padding-right: 48px !important;
+    cursor: pointer !important;
+}
+
+.swal-form-wide .swal2-select option {
+    padding: 8px 12px !important;
+    font-family: "Poppins", sans-serif !important;
+    font-size: 14px !important;
+    color: #374151 !important;
+    background-color: #ffffff !important;
+}
+
+.swal-form-wide .swal2-select option:first-child {
+    color: #9ca3af !important;
+}
+
+/* Responsive design for wide forms */
+@media (max-width: 768px) {
+    .swal2-popup.swal-wide {
+        width: 95vw !important;
+        max-width: none !important;
+        padding: 20px !important;
+    }
+    
+    .swal-form-wide {
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+    }
+    
+    .swal-form-wide .profile-preview {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .swal-form-wide .camera-overlay {
+        width: 30px;
+        height: 30px;
+        bottom: 5px;
+        right: 5px;
+    }
+    
+    .swal-form-wide .camera-overlay i {
+        font-size: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .swal-form-wide {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .swal2-popup.swal-wide {
+        padding: 15px !important;
+    }
+}
+
+/* Animation enhancements for wide modals */
+.swal2-popup.swal-wide.swal2-show {
+    animation: swal2-show-wide 0.3s ease-out;
+}
+
+@keyframes swal2-show-wide {
+    0% {
+        transform: scale(0.7);
+        opacity: 0;
+    }
+    45% {
+        transform: scale(1.05);
+        opacity: 1;
+    }
+    80% {
+        transform: scale(0.95);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Section dividers for better organization */
+.swal-form-wide .section-divider {
+    grid-column: 1 / -1;
+    border-top: 1px solid #e5e7eb;
+    margin: 20px 0 10px 0;
+    padding-top: 20px;
+}
+
+.swal-form-wide .section-title {
+    grid-column: 1 / -1;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 15px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+/* Enhanced button styling for wide modals */
+.swal2-popup.swal-wide .swal2-actions {
+    margin-top: 30px !important;
+    justify-content: center !important;
+    gap: 15px !important;
+}
+
+.swal2-popup.swal-wide .swal2-confirm,
+.swal2-popup.swal-wide .swal2-cancel {
+    padding: 12px 30px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    border-radius: 8px !important;
+    min-width: 120px !important;
+}
+
+/* Keep original styles for regular modals unchanged */
+.swal-form:not(.swal-form-wide) {
+    text-align: left;
+    padding: 10px 0;
+}
+
+.swal-form:not(.swal-form-wide) .form-group {
+    margin-bottom: 20px;
+}
+
+.swal-form:not(.swal-form-wide) .form-label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #374151;
+    font-size: 14px;
+    text-align: left;
+}
+
 /* Profile Image Upload Styles End*/
 
 /* Sidebar */

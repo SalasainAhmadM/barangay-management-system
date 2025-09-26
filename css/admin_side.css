@@ -624,14 +624,212 @@
 }
 /*Table Styles End */
 
-/* View Resident Details Styles */
-  .resident-details-container {
+.swal2-popup.swal-view-simple {
+    width: 90vw !important;
+    max-width: 1000px !important;
+    padding: 25px !important;
+}
+
+.swal2-popup.swal-view-simple .swal2-html-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    text-align: left !important;
+}
+
+.resident-details-container-simple {
+    max-width: none;
+    margin: 0;
+    text-align: left;
+}
+
+/* Profile Header Styles */
+.profile-header-simple {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 25px;
+    padding: 20px;
+    background: #00247c;
+    color: white;
+    border-radius: 8px;
+}
+
+.resident-profile-image-simple {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid #0ca5b6;
+}
+
+.profile-info-simple {
+    flex: 1;
+}
+
+.resident-name-simple {
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.resident-email-simple {
+    font-size: 14px;
+    margin-bottom: 10px;
+    opacity: 0.9;
+}
+
+.resident-status-badge-simple {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Section Headers */
+.section-header-simple {
+    font-size: 16px;
+    font-weight: 600;
+    color: #00247c;
+    margin: 20px 0 10px 0;
+    padding-bottom: 5px;
+    border-bottom: 2px solid #0ca5b6;
+}
+
+/* 3-Column Grid for Info Items */
+.resident-info-grid-simple {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.info-item-simple {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 3px solid #0ca5b6;
+}
+
+.info-label-simple {
+    font-size: 12px;
+    font-weight: 600;
+    color: #00247c;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 5px;
+}
+
+.info-value-simple {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+    line-height: 1.4;
+    word-break: break-word;
+}
+
+/* Full width items */
+.info-item-simple.full-width {
+    grid-column: 1 / -1;
+}
+
+/* Status badges within info items */
+.info-value-simple .status-badge-simple {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+/* Status colors using specified colors */
+.status-active, .status-badge-simple.status-active, .resident-status-badge-simple.status-active {
+    background-color: #0ca5b6;
+    color: white;
+}
+
+.status-inactive, .status-badge-simple.status-inactive, .resident-status-badge-simple.status-inactive {
+    background-color: #6c757d;
+    color: white;
+}
+
+.status-moved, .status-badge-simple.status-moved, .resident-status-badge-simple.status-moved {
+    background-color: #00247c;
+    color: white;
+}
+
+/* Button styling for simple view modal */
+.swal2-popup.swal-view-simple .swal2-actions {
+    margin-top: 25px !important;
+    justify-content: center !important;
+}
+
+.swal2-popup.swal-view-simple .swal2-confirm {
+    padding: 10px 25px !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    border-radius: 6px !important;
+    min-width: 100px !important;
+    background: #00247c !important;
+    border: none !important;
+}
+
+.swal2-popup.swal-view-simple .swal2-confirm:hover {
+    background: #0ca5b6 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .swal2-popup.swal-view-simple {
+        width: 95vw !important;
+        padding: 20px !important;
+    }
+    
+    .resident-info-grid-simple {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .profile-header-simple {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+}
+
+@media (max-width: 768px) {
+    .resident-info-grid-simple {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .swal2-popup.swal-view-simple {
+        padding: 15px !important;
+    }
+    
+    .resident-profile-image-simple {
+        width: 80px;
+        height: 80px;
+    }
+    
+    .resident-name-simple {
+        font-size: 20px;
+    }
+    
+    .section-header-simple {
+        font-size: 14px;
+    }
+  }
+/* Keep original styles for regular view modals unchanged */
+.resident-details-container:not(.resident-details-container-wide) {
     text-align: center;
     max-width: 400px;
     margin: 0 auto;
-  }
+}
 
-  .resident-profile-image {
+/* Original styles preserved for backwards compatibility */
+.resident-profile-image:not(.resident-profile-image-wide) {
     width: 120px;
     height: 120px;
     border-radius: 50%;
@@ -640,68 +838,26 @@
     margin: 0 auto 20px auto;
     display: block;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  }
+}
 
-  .resident-name-swal {
+.resident-name-swal:not(.resident-name-wide) {
     font-size: 24px;
     font-weight: 600;
     color: #2c3e50;
     margin-bottom: 5px;
-  }
+}
 
-  .resident-email-swal {
+.resident-email-swal:not(.resident-email-wide) {
     font-size: 16px;
     color: #6c757d;
     margin-bottom: 25px;
     font-style: italic;
-  }
+}
 
-  .resident-info-grid {
+.resident-info-grid:not(.resident-info-grid-wide) {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 15px;
     text-align: left;
     margin-top: 20px;
-  }
-
-  .info-item {
-    padding: 12px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border-left: 3px solid #007bff;
-  }
-
-  .info-label {
-    font-size: 12px;
-    font-weight: 600;
-    color: #6c757d;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 5px;
-  }
-
-  .info-value {
-    font-size: 14px;
-    color: #2c3e50;
-    font-weight: 500;
-  }
-
-  .info-item.full-width {
-    grid-column: 1 / -1;
-  }
-
-  /* Responsive adjustments */
-  @media (max-width: 480px) {
-    .resident-info-grid {
-      grid-template-columns: 1fr;
-    }
-
-    .resident-profile-image {
-      width: 100px;
-      height: 100px;
-    }
-
-    .resident-name {
-      font-size: 20px;
-    }
-  }
+}

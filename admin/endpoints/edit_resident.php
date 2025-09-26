@@ -8,6 +8,14 @@ $middleName = trim($_POST["middleName"] ?? "");
 $lastName = trim($_POST["lastName"] ?? "");
 $email = trim($_POST["email"] ?? "");
 $contactNumber = trim($_POST["contactNumber"] ?? "");
+$dateOfBirth = $_POST["dateOfBirth"] ?? null;
+$gender = $_POST["gender"] ?? null;
+$civilStatus = $_POST["civilStatus"] ?? null;
+$occupation = trim($_POST["occupation"] ?? "");
+$houseNumber = trim($_POST["houseNumber"] ?? "");
+$streetName = trim($_POST["streetName"] ?? "");
+$barangay = trim($_POST["barangay"] ?? "Baliwasan");
+$status = $_POST["status"] ?? "active";
 
 // Validate required fields
 if ($id <= 0 || empty($firstName) || empty($lastName) || empty($email) || empty($contactNumber)) {
@@ -66,17 +74,56 @@ try {
         }
     }
 
-    // ✅ Update resident
+    // ✅ Update resident with ALL fields
     if ($imageFileName) {
         $stmt = $conn->prepare("UPDATE user 
-            SET first_name = ?, middle_name = ?, last_name = ?, email = ?, contact_number = ?, image = ?, updated_at = NOW() 
+            SET first_name = ?, middle_name = ?, last_name = ?, email = ?, contact_number = ?, 
+                date_of_birth = ?, gender = ?, civil_status = ?, occupation = ?, 
+                house_number = ?, street_name = ?, barangay = ?, status = ?, 
+                image = ?, updated_at = NOW() 
             WHERE id = ?");
-        $stmt->bind_param("ssssssi", $firstName, $middleName, $lastName, $email, $contactNumber, $imageFileName, $id);
+        $stmt->bind_param(
+            "ssssssssssssssi",
+            $firstName,
+            $middleName,
+            $lastName,
+            $email,
+            $contactNumber,
+            $dateOfBirth,
+            $gender,
+            $civilStatus,
+            $occupation,
+            $houseNumber,
+            $streetName,
+            $barangay,
+            $status,
+            $imageFileName,
+            $id
+        );
     } else {
         $stmt = $conn->prepare("UPDATE user 
-            SET first_name = ?, middle_name = ?, last_name = ?, email = ?, contact_number = ?, updated_at = NOW() 
+            SET first_name = ?, middle_name = ?, last_name = ?, email = ?, contact_number = ?, 
+                date_of_birth = ?, gender = ?, civil_status = ?, occupation = ?, 
+                house_number = ?, street_name = ?, barangay = ?, status = ?, 
+                updated_at = NOW() 
             WHERE id = ?");
-        $stmt->bind_param("sssssi", $firstName, $middleName, $lastName, $email, $contactNumber, $id);
+        $stmt->bind_param(
+            "sssssssssssssi",
+            $firstName,
+            $middleName,
+            $lastName,
+            $email,
+            $contactNumber,
+            $dateOfBirth,
+            $gender,
+            $civilStatus,
+            $occupation,
+            $houseNumber,
+            $streetName,
+            $barangay,
+            $status,
+            $id
+        );
     }
     $stmt->execute();
 

@@ -1,19 +1,19 @@
-<?php 
-session_start(); 
-require_once("../conn/conn.php");  
+<?php
+session_start();
+require_once("../conn/conn.php");
 
-if (!isset($_SESSION["admin_id"])) {   
-    header("Location: ../index.php?auth=error");   
-    exit(); 
-} 
-?>  
+if (!isset($_SESSION["admin_id"])) {
+    header("Location: ../index.php?auth=error");
+    exit();
+}
+?>
 
-<!DOCTYPE html> 
-<html lang="en" dir="ltr">  
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
 
-<head>   
-    <?php include '../components/header_links.php'; ?>   
-    <?php include '../components/admin_side_header.php'; ?> 
+<head>
+    <?php include '../components/header_links.php'; ?>
+    <?php include '../components/admin_side_header.php'; ?>
     <style>
         /* Dashboard Specific Styles */
         .dashboard-grid {
@@ -306,19 +306,20 @@ if (!isset($_SESSION["admin_id"])) {
             }
         }
     </style>
-</head>  
+</head>
 
-<body>    
-    <?php include '../components/sidebar.php'; ?>    
+<body>
+    <?php include '../components/sidebar.php'; ?>
 
-    <section class="home-section">     
-        <div class="table-container">       
-            <div class="table-header">         
-                <h2 class="table-title">Dashboard Overview</h2>         
+    <section class="home-section">
+        <div class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">Dashboard Overview</h2>
                 <div class="table-actions">
-                    <span style="color: #e5e7eb; font-size: 14px;">Last updated: <?php echo date('M d, Y - g:i A'); ?></span>
+                    <span style="color: #e5e7eb; font-size: 14px;">Last updated:
+                        <?php echo date('M d, Y - g:i A'); ?></span>
                 </div>
-            </div>     
+            </div>
         </div>
 
         <!-- Dashboard Cards Grid -->
@@ -438,11 +439,11 @@ if (!isset($_SESSION["admin_id"])) {
                 <i class="fas fa-plus"></i>
                 Add New Resident
             </a>
-            <a href="requests.php" class="action-btn">
+            <a href="requests_certificates.php" class="action-btn">
                 <i class="fas fa-check"></i>
                 Review Requests
             </a>
-            <a href="waste-schedule.php" class="action-btn">
+            <a href="waste_management.php" class="action-btn">
                 <i class="fas fa-calendar"></i>
                 Manage Schedule
             </a>
@@ -495,8 +496,9 @@ if (!isset($_SESSION["admin_id"])) {
                 </li>
             </ul>
         </div>
-    </section>     
+    </section>
 
-    <?php include '../components/cdn_scripts.php'; ?>  
-</body>  
+    <?php include '../components/cdn_scripts.php'; ?>
+</body>
+
 </html>

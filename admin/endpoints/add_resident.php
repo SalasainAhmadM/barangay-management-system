@@ -3,7 +3,6 @@ require_once("../../conn/conn.php");
 
 header("Content-Type: application/json");
 
-// ✅ Make sure request is multipart/form-data
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
     echo json_encode(["success" => false, "message" => "Invalid request method"]);
     exit();
@@ -14,8 +13,16 @@ $middleName = trim($_POST["middleName"] ?? "");
 $lastName = trim($_POST["lastName"] ?? "");
 $email = trim($_POST["email"] ?? "");
 $contactNumber = trim($_POST["contactNumber"] ?? "");
+$date_of_birth = trim($_POST["dateOfBirth"] ?? "");
+$gender = trim($_POST["gender"] ?? "");
+$civil_status = trim($_POST["civilStatus"] ?? "");
+$occupation = trim($_POST["occupation"] ?? "");
+$house_number = trim($_POST["houseNumber"] ?? "");
+$street_name = trim($_POST["streetName"] ?? "");
+$barangay = trim($_POST["barangay"] ?? "Baliwasan");
+$status = trim($_POST["status"] ?? "active");
 
-// Validate required fields
+// ✅ Validate required fields
 if (empty($firstName) || empty($lastName) || empty($email) || empty($contactNumber)) {
     echo json_encode(["success" => false, "message" => "Required fields are missing"]);
     exit();
@@ -32,7 +39,7 @@ if (!preg_match("/^09\d{9}$/", $contactNumber)) {
 }
 
 try {
-    // ✅ Check email
+    // ✅ Check email uniqueness
     $stmt = $conn->prepare("SELECT id FROM user WHERE email = ? LIMIT 1");
     $stmt->bind_param("s", $email);
     $stmt->execute();
@@ -43,7 +50,7 @@ try {
     }
     $stmt->close();
 
-    // ✅ Check contact number
+    // ✅ Check contact number uniqueness
     $stmt = $conn->prepare("SELECT id FROM user WHERE contact_number = ? LIMIT 1");
     $stmt->bind_param("s", $contactNumber);
     $stmt->execute();
@@ -70,12 +77,37 @@ try {
     }
 
     // ✅ Insert into DB
-    $stmt = $conn->prepare("INSERT INTO user (first_name, middle_name, last_name, email, contact_number, image, created_at) 
-                            VALUES (?, ?, ?, ?, ?, ?, NOW())");
-    $stmt->bind_param("ssssss", $firstName, $middleName, $lastName, $email, $contactNumber, $imageFileName);
-    $stmt->execute();
+    $stmt = $conn->prepare("INSERT INTO user 
+        (first_name, middle_name, last_name, email, contact_number, date_of_birth, gender, civil_status, occupation, house_number, street_name, barangay, status, image, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
 
-    echo json_encode(["success" => true]);
+    $stmt->bind_param(
+        "ssssssssssssss",
+        $firstName,
+        $middleName,
+        $lastName,
+        $email,
+        $contactNumber,
+        $date_of_birth,
+        $gender,
+        $civil_status,
+        $occupation,
+        $house_number,
+        $street_name,
+        $barangay,
+        $status,
+        $imageFileName
+    );
+
+    if ($stmt->execute()) {
+        echo json_encode(["success" => true]);
+    } else {
+        echo json_encode(["success" => false, "message" => "Failed to add resident"]);
+    }
+
+    $stmt->close();
+    $conn->close();
+
 } catch (Exception $e) {
     echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
 }

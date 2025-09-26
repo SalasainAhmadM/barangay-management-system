@@ -126,24 +126,24 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
                       <?= !empty($resident['contact_number']) ? htmlspecialchars($resident['contact_number']) : "N/A"; ?>
                     </div>
                   </td>
-                  <!-- <td>
+                  <td style="display: none;">
                     <div class="date-of-birth">
                       <?= !empty($resident['date_of_birth']) ? date("M d, Y", strtotime($resident['date_of_birth'])) : "N/A"; ?>
                     </div>
                   </td>
-                  <td>
+                  <td style="display: none;">
                     <div class="gender"><?= !empty($resident['gender']) ? ucfirst($resident['gender']) : "N/A"; ?></div>
                   </td>
-                  <td>
+                  <td style="display: none;">
                     <div class="civil-status">
                       <?= !empty($resident['civil_status']) ? ucfirst($resident['civil_status']) : "N/A"; ?>
                     </div>
                   </td>
-                  <td>
+                  <td style="display: none;">
                     <div class="occupation">
                       <?= !empty($resident['occupation']) ? htmlspecialchars($resident['occupation']) : "N/A"; ?>
                     </div>
-                  </td> -->
+                  </td>
                   <td>
                     <div class="address">
                       <?php
@@ -387,9 +387,9 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
         const name = row.querySelector(".resident-name")?.textContent.toLowerCase() || "";
         const email = row.querySelector(".resident-email")?.textContent.toLowerCase() || "";
         const contact = row.querySelector(".contact-number")?.textContent.toLowerCase() || "";
-        const gender = row.cells[5]?.textContent.toLowerCase() || "";
-        const civilStatus = row.cells[6]?.textContent.toLowerCase() || "";
-        const occupation = row.cells[7]?.textContent.toLowerCase() || "";
+        //const gender = row.cells[5]?.textContent.toLowerCase() || "";
+        //const civilStatus = row.cells[6]?.textContent.toLowerCase() || "";
+        //const occupation = row.cells[7]?.textContent.toLowerCase() || "";
         const address = row.cells[8]?.textContent.toLowerCase() || "";
         const status = row.cells[9]?.textContent.toLowerCase() || "";
 
@@ -398,9 +398,9 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
           name.includes(filter) ||
           email.includes(filter) ||
           contact.includes(filter) ||
-          gender.includes(filter) ||
-          civilStatus.includes(filter) ||
-          occupation.includes(filter) ||
+          //gender.includes(filter) ||
+          //civilStatus.includes(filter) ||
+          //occupation.includes(filter) ||
           address.includes(filter) ||
           status.includes(filter);
 
@@ -519,7 +519,7 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
       Swal.fire({
         title: 'Add New Resident',
         html: `
-      <div class="swal-form">
+      <div class="swal-form-wide" style="padding-top: 10px">
           <!-- Profile Image Section -->
           <div class="form-group profile-image-section">
               <div class="profile-image-container">
@@ -541,8 +541,10 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
               <div class="upload-instruction">Click to upload profile image</div>
           </div>
 
+          <div class="section-title">Personal Information</div>
+          
           <div class="form-group">
-              <label class="form-label">First Name</label>
+              <label class="form-label">First Name *</label>
               <input type="text" class="swal2-input" id="firstName" placeholder="Enter first name" required>
           </div>
           <div class="form-group">
@@ -550,32 +552,101 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
               <input type="text" class="swal2-input" id="middleName" placeholder="Enter middle name">
           </div>
           <div class="form-group">
-              <label class="form-label">Last Name</label>
+              <label class="form-label">Last Name *</label>
               <input type="text" class="swal2-input" id="lastName" placeholder="Enter last name" required>
           </div>
           <div class="form-group">
-              <label class="form-label">Email</label>
+              <label class="form-label">Date of Birth</label>
+              <input type="date" class="swal2-input" id="dateOfBirth">
+          </div>
+          <div class="form-group">
+              <label class="form-label">Gender</label>
+              <select class="swal2-select" id="gender">
+                  <option value="">Select Gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+              </select>
+          </div>
+          <div class="form-group">
+              <label class="form-label">Civil Status</label>
+              <select class="swal2-select" id="civilStatus">
+                  <option value="">Select Civil Status</option>
+                  <option value="single">Single</option>
+                  <option value="married">Married</option>
+                  <option value="divorced">Divorced</option>
+                  <option value="widowed">Widowed</option>
+              </select>
+          </div>
+
+          <!-- Contact Information Section -->
+          <div class="section-title">Contact Information</div>
+          
+          <div class="form-group">
+              <label class="form-label">Email Address *</label>
               <input type="email" class="swal2-input" id="email" placeholder="Enter email address" required>
           </div>
           <div class="form-group">
-              <label class="form-label">Contact Number</label>
-              <input type="number" class="swal2-input" id="contactNumber" placeholder="Enter contact number" required>
+              <label class="form-label">Contact Number *</label>
+              <input type="tel" class="swal2-input" id="contactNumber" placeholder="09XXXXXXXXX" required 
+                     pattern="09[0-9]{9}" maxlength="11">
+          </div>
+          <div class="form-group">
+              <label class="form-label">Occupation</label>
+              <input type="text" class="swal2-input" id="occupation" placeholder="Enter occupation">
+          </div>
+
+          <!-- Address Information Section -->
+          <div class="section-title">Address Information</div>
+          
+          <div class="form-group">
+              <label class="form-label">House Number</label>
+              <input type="text" class="swal2-input" id="houseNumber" placeholder="Enter house number">
+          </div>
+          <div class="form-group">
+              <label class="form-label">Street Name</label>
+              <input type="text" class="swal2-input" id="streetName" placeholder="Enter street name">
+          </div>
+          <div class="form-group">
+              <label class="form-label">Barangay</label>
+              <input type="text" class="swal2-input" id="barangay" placeholder="Baliwasan" value="Baliwasan">
+          </div>
+          
+          <div class="form-group">
+              <label class="form-label">Status</label>
+              <select class="swal2-select" id="status">
+                  <option value="active" selected>Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="moved">Moved</option>
+              </select>
           </div>
       </div>
     `,
+        customClass: {
+          popup: 'swal-wide'
+        },
         focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: 'Add Resident',
+        cancelButtonText: 'Cancel',
         didOpen: () => {
           // Add hover effect to profile image
           const profileImg = document.getElementById('profilePreview');
           profileImg.addEventListener('mouseenter', function () {
             this.style.transform = 'scale(1.05)';
-            this.style.borderColor = '#007bff';
+            this.style.borderColor = '#3b82f6';
           });
           profileImg.addEventListener('mouseleave', function () {
             this.style.transform = 'scale(1)';
-            this.style.borderColor = '#ddd';
+            this.style.borderColor = '#e5e7eb';
+          });
+
+          // Add input validation for contact number
+          const contactInput = document.getElementById('contactNumber');
+          contactInput.addEventListener('input', function () {
+            this.value = this.value.replace(/[^0-9]/g, '');
+            if (this.value.length > 11) {
+              this.value = this.value.slice(0, 11);
+            }
           });
         },
         preConfirm: () => {
@@ -584,10 +655,33 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
           const lastName = document.getElementById('lastName').value.trim();
           const email = document.getElementById('email').value.trim();
           const contactNumber = document.getElementById('contactNumber').value.trim();
+          const dateOfBirth = document.getElementById('dateOfBirth').value;
+          const gender = document.getElementById('gender').value;
+          const civilStatus = document.getElementById('civilStatus').value;
+          const occupation = document.getElementById('occupation').value.trim();
+          const houseNumber = document.getElementById('houseNumber').value.trim();
+          const streetName = document.getElementById('streetName').value.trim();
+          const barangay = document.getElementById('barangay').value.trim();
+          const status = document.getElementById('status').value;
           const image = document.getElementById('imageInput').files[0];
 
+          // Validate required fields
           if (!firstName || !lastName || !email || !contactNumber) {
             Swal.showValidationMessage('First name, last name, email, and contact number are required');
+            return false;
+          }
+
+          // Validate email format
+          const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailPattern.test(email)) {
+            Swal.showValidationMessage('Please enter a valid email address');
+            return false;
+          }
+
+          // Validate contact number format
+          const contactPattern = /^09\d{9}$/;
+          if (!contactPattern.test(contactNumber)) {
+            Swal.showValidationMessage('Contact number must start with 09 and be 11 digits long');
             return false;
           }
 
@@ -597,12 +691,30 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
           formData.append("lastName", lastName);
           formData.append("email", email);
           formData.append("contactNumber", contactNumber);
+          formData.append("dateOfBirth", dateOfBirth);
+          formData.append("gender", gender);
+          formData.append("civilStatus", civilStatus);
+          formData.append("occupation", occupation);
+          formData.append("houseNumber", houseNumber);
+          formData.append("streetName", streetName);
+          formData.append("barangay", barangay || "Baliwasan");
+          formData.append("status", status);
           if (image) formData.append("image", image);
 
           return formData;
         }
       }).then((result) => {
         if (result.isConfirmed) {
+          // Show loading state
+          Swal.fire({
+            title: 'Adding Resident...',
+            text: 'Please wait while we process your request.',
+            allowOutsideClick: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
           fetch('./endpoints/add_resident.php', {
             method: 'POST',
             body: result.value
@@ -610,15 +722,31 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
             .then(res => res.json())
             .then(data => {
               if (data.success) {
-                Swal.fire('Success', 'Resident has been added!', 'success').then(() => {
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Success!',
+                  text: 'Resident has been added successfully!',
+                  confirmButtonText: 'OK'
+                }).then(() => {
                   location.reload();
                 });
               } else {
-                Swal.fire('Error', data.message || 'Something went wrong', 'error');
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Error!',
+                  text: data.message || 'Something went wrong while adding the resident.',
+                  confirmButtonText: 'OK'
+                });
               }
             })
-            .catch(() => {
-              Swal.fire('Error', 'Unable to add resident. Please try again later.', 'error');
+            .catch(error => {
+              console.error('Error:', error);
+              Swal.fire({
+                icon: 'error',
+                title: 'Connection Error!',
+                text: 'Unable to add resident. Please check your connection and try again.',
+                confirmButtonText: 'OK'
+              });
             });
         }
       });
@@ -636,86 +764,237 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
     }
 
     function viewResident(id) {
+      // Show loading state
+      Swal.fire({
+        title: 'Loading...',
+        text: 'Fetching resident information.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
       fetch(`./endpoints/get_resident.php?id=${id}`)
         .then(res => res.json())
         .then(data => {
           if (data.success) {
             const resident = data.resident;
 
-            // Format the created date
-            const createdDate = new Date(resident.created_at).toLocaleDateString('en-US', {
+            // Format dates
+            const createdDate = resident.created_at ? new Date(resident.created_at).toLocaleDateString('en-US', {
               year: 'numeric',
               month: 'long',
               day: 'numeric'
-            });
+            }) : 'N/A';
+
+            const updatedDate = resident.updated_at ? new Date(resident.updated_at).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }) : 'N/A';
+
+            const dateOfBirth = resident.date_of_birth ? new Date(resident.date_of_birth).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }) : 'N/A';
+
+            // Calculate age if date of birth is available
+            let age = 'N/A';
+            if (resident.date_of_birth) {
+              const birthDate = new Date(resident.date_of_birth);
+              const today = new Date();
+              age = today.getFullYear() - birthDate.getFullYear();
+              const monthDiff = today.getMonth() - birthDate.getMonth();
+              if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                age--;
+              }
+              age = age + ' years old';
+            }
 
             // Get profile image path
             const profileImage = resident.image ?
               `../assets/images/user/${resident.image}` :
               '../assets/images/user.png';
 
+            // Format address
+            const addressParts = [];
+            if (resident.house_number) addressParts.push(resident.house_number);
+            if (resident.street_name) addressParts.push(resident.street_name);
+            if (resident.barangay) addressParts.push(resident.barangay);
+            const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
+
+            // Format status with color
+            const getStatusClass = (status) => {
+              switch (status) {
+                case 'active': return 'status-active';
+                case 'inactive': return 'status-inactive';
+                case 'moved': return 'status-moved';
+                default: return 'status-inactive';
+              }
+            };
+
             Swal.fire({
               title: 'Resident Details',
               html: `
-            <div class="resident-details-container">
-              <img src="${profileImage}" alt="Profile" class="resident-profile-image">
-              
-              <div class="resident-name-swal">
-                ${resident.first_name} ${resident.middle_name ? resident.middle_name + ' ' : ''}${resident.last_name}
+            <div class="resident-details-container-simple">
+              <!-- Profile Header -->
+              <div class="profile-header-simple">
+                <img src="${profileImage}" alt="Profile" class="resident-profile-image-simple">
+                <div class="profile-info-simple">
+                  <div class="resident-name-simple">
+                    ${resident.first_name} ${resident.middle_name ? resident.middle_name + ' ' : ''}${resident.last_name}
+                  </div>
+                  <div class="resident-email-simple">${resident.email || 'N/A'}</div>
+                  <div class="resident-status-badge-simple ${getStatusClass(resident.status)}">
+                    ${(resident.status || 'inactive').toUpperCase()}
+                  </div>
+                </div>
               </div>
               
-              <div class="resident-email-swal">${resident.email}</div>
+              <!-- Personal Information Section -->
+              <div class="section-header-simple">Personal Information</div>
+              <div class="resident-info-grid-simple">
+                <div class="info-item-simple">
+                  <div class="info-label-simple">First Name</div>
+                  <div class="info-value-simple">${resident.first_name || 'N/A'}</div>
+                </div>
+                
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Middle Name</div>
+                  <div class="info-value-simple">${resident.middle_name || 'N/A'}</div>
+                </div>
+                
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Last Name</div>
+                  <div class="info-value-simple">${resident.last_name || 'N/A'}</div>
+                </div>
+                
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Date of Birth</div>
+                  <div class="info-value-simple">${dateOfBirth}</div>
+                </div>
+                
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Age</div>
+                  <div class="info-value-simple">${age}</div>
+                </div>
+                
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Gender</div>
+                  <div class="info-value-simple">${resident.gender ? resident.gender.charAt(0).toUpperCase() + resident.gender.slice(1) : 'N/A'}</div>
+                </div>
+                
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Civil Status</div>
+                  <div class="info-value-simple">${resident.civil_status ? resident.civil_status.charAt(0).toUpperCase() + resident.civil_status.slice(1) : 'N/A'}</div>
+                </div>
+                
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Occupation</div>
+                  <div class="info-value-simple">${resident.occupation || 'N/A'}</div>
+                </div>
+              </div>
               
-              <div class="resident-info-grid">
-                <div class="info-item">
-                  <div class="info-label">First Name</div>
-                  <div class="info-value">${resident.first_name}</div>
+              <!-- Contact Information Section -->
+              <div class="section-header-simple">Contact Information</div>
+              <div class="resident-info-grid-simple">
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Email Address</div>
+                  <div class="info-value-simple">${resident.email || 'N/A'}</div>
                 </div>
                 
-                ${resident.middle_name ? `
-                <div class="info-item">
-                  <div class="info-label">Middle Name</div>
-                  <div class="info-value">${resident.middle_name}</div>
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Contact Number</div>
+                  <div class="info-value-simple">${resident.contact_number || 'N/A'}</div>
                 </div>
-                ` : ''}
-                
-                <div class="info-item">
-                  <div class="info-label">Last Name</div>
-                  <div class="info-value">${resident.last_name}</div>
-                </div>
-                
-                <div class="info-item ${!resident.middle_name ? 'full-width' : ''}">
-                  <div class="info-label">Contact Number</div>
-                  <div class="info-value">${resident.contact_number}</div>
+              </div>
+              
+              <!-- Address Information Section -->
+              <div class="section-header-simple">Address Information</div>
+              <div class="resident-info-grid-simple">
+                <div class="info-item-simple">
+                  <div class="info-label-simple">House Number</div>
+                  <div class="info-value-simple">${resident.house_number || 'N/A'}</div>
                 </div>
                 
-                <div class="info-item full-width">
-                  <div class="info-label">Member Since</div>
-                  <div class="info-value">${createdDate}</div>
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Street Name</div>
+                  <div class="info-value-simple">${resident.street_name || 'N/A'}</div>
+                </div>
+                
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Barangay</div>
+                  <div class="info-value-simple">${resident.barangay || 'N/A'}</div>
+                </div>
+                
+                <div class="info-item-simple full-width">
+                  <div class="info-label-simple">Complete Address</div>
+                  <div class="info-value-simple">${fullAddress}</div>
+                </div>
+              </div>
+              
+              <!-- System Information Section -->
+              <div class="section-header-simple">System Information</div>
+              <div class="resident-info-grid-simple">
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Date Created</div>
+                  <div class="info-value-simple">${createdDate}</div>
+                </div>
+                
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Last Updated</div>
+                  <div class="info-value-simple">${updatedDate}</div>
+                </div>
+                
+                <div class="info-item-simple">
+                  <div class="info-label-simple">Current Status</div>
+                  <div class="info-value-simple">
+                    <span class="status-badge-simple ${getStatusClass(resident.status)}">
+                      ${(resident.status || 'inactive').charAt(0).toUpperCase() + (resident.status || 'inactive').slice(1)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           `,
-              confirmButtonText: 'Close',
-              confirmButtonColor: '#007bff',
-              width: '500px',
-              showClass: {
-                popup: 'animate__animated animate__fadeInDown animate__faster'
+              customClass: {
+                popup: 'swal-view-simple'
               },
-              hideClass: {
-                popup: 'animate__animated animate__fadeOutUp animate__faster'
-              }
+              confirmButtonText: 'Close',
+              confirmButtonColor: '#00247c'
             });
           } else {
-            Swal.fire('Error', data.message || 'Unable to fetch resident details.', 'error');
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: data.message || 'Unable to fetch resident details.',
+              confirmButtonText: 'OK'
+            });
           }
         })
-        .catch(() => {
-          Swal.fire('Error', 'Unable to connect to server.', 'error');
+        .catch(error => {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Connection Error',
+            text: 'Unable to connect to server.',
+            confirmButtonText: 'OK'
+          });
         });
     }
 
     function editResident(id) {
+      // Show loading state while fetching data
+      Swal.fire({
+        title: 'Loading...',
+        text: 'Fetching resident information.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
       fetch(`./endpoints/get_resident.php?id=${id}`)
         .then(res => res.json())
         .then(data => {
@@ -724,7 +1003,7 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
             Swal.fire({
               title: 'Edit Resident',
               html: `
-            <div class="swal-form">
+            <div class="swal-form-wide" style="padding-top: 10px">
                 <!-- Profile Image Section -->
                 <div class="form-group profile-image-section">
                     <div class="profile-image-container">
@@ -746,8 +1025,11 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
                     <div class="upload-instruction">Click to change profile image</div>
                 </div>
 
+                <!-- Personal Information Section -->
+                <div class="section-title">Personal Information</div>
+                
                 <div class="form-group">
-                    <label class="form-label">First Name</label>
+                    <label class="form-label">First Name *</label>
                     <input type="text" class="swal2-input" id="editFirstName" value="${resident.first_name}" required>
                 </div>
                 <div class="form-group">
@@ -755,32 +1037,101 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
                     <input type="text" class="swal2-input" id="editMiddleName" value="${resident.middle_name || ''}">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Last Name</label>
+                    <label class="form-label">Last Name *</label>
                     <input type="text" class="swal2-input" id="editLastName" value="${resident.last_name}" required>
                 </div>
+                
                 <div class="form-group">
-                    <label class="form-label">Email</label>
+                    <label class="form-label">Date of Birth</label>
+                    <input type="date" class="swal2-input" id="editDateOfBirth" value="${resident.date_of_birth || ''}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Gender</label>
+                    <select class="swal2-select" id="editGender">
+                        <option value="">Select Gender</option>
+                        <option value="male" ${resident.gender === 'male' ? 'selected' : ''}>Male</option>
+                        <option value="female" ${resident.gender === 'female' ? 'selected' : ''}>Female</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Civil Status</label>
+                    <select class="swal2-select" id="editCivilStatus">
+                        <option value="">Select Civil Status</option>
+                        <option value="single" ${resident.civil_status === 'single' ? 'selected' : ''}>Single</option>
+                        <option value="married" ${resident.civil_status === 'married' ? 'selected' : ''}>Married</option>
+                        <option value="divorced" ${resident.civil_status === 'divorced' ? 'selected' : ''}>Divorced</option>
+                        <option value="widowed" ${resident.civil_status === 'widowed' ? 'selected' : ''}>Widowed</option>
+                    </select>
+                </div>
+
+                <!-- Contact Information Section -->
+                <div class="section-title">Contact Information</div>
+                
+                <div class="form-group">
+                    <label class="form-label">Email Address *</label>
                     <input type="email" class="swal2-input" id="editEmail" value="${resident.email}" required>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Contact Number</label>
-                    <input type="number" class="swal2-input" id="editContactNumber" value="${resident.contact_number}" required>
+                    <label class="form-label">Contact Number *</label>
+                    <input type="tel" class="swal2-input" id="editContactNumber" value="${resident.contact_number}" required 
+                           pattern="09[0-9]{9}" maxlength="11">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Occupation</label>
+                    <input type="text" class="swal2-input" id="editOccupation" value="${resident.occupation || ''}">
+                </div>
+
+                <!-- Address Information Section -->
+                <div class="section-title">Address Information</div>
+                
+                <div class="form-group">
+                    <label class="form-label">House Number</label>
+                    <input type="text" class="swal2-input" id="editHouseNumber" value="${resident.house_number || ''}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Street Name</label>
+                    <input type="text" class="swal2-input" id="editStreetName" value="${resident.street_name || ''}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Barangay</label>
+                    <input type="text" class="swal2-input" id="editBarangay" value="${resident.barangay || 'Baliwasan'}">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Status</label>
+                    <select class="swal2-select" id="editStatus">
+                        <option value="active" ${resident.status === 'active' ? 'selected' : ''}>Active</option>
+                        <option value="inactive" ${resident.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+                        <option value="moved" ${resident.status === 'moved' ? 'selected' : ''}>Moved</option>
+                    </select>
                 </div>
             </div>
           `,
+              customClass: {
+                popup: 'swal-wide'
+              },
               showCancelButton: true,
-              confirmButtonText: 'Update',
+              confirmButtonText: 'Update Resident',
               cancelButtonText: 'Cancel',
               didOpen: () => {
                 // Add hover effect to profile image
                 const profileImg = document.getElementById('editProfilePreview');
                 profileImg.addEventListener('mouseenter', function () {
                   this.style.transform = 'scale(1.05)';
-                  this.style.borderColor = '#007bff';
+                  this.style.borderColor = '#3b82f6';
                 });
                 profileImg.addEventListener('mouseleave', function () {
                   this.style.transform = 'scale(1)';
-                  this.style.borderColor = '#ddd';
+                  this.style.borderColor = '#e5e7eb';
+                });
+
+                // Add input validation for contact number
+                const contactInput = document.getElementById('editContactNumber');
+                contactInput.addEventListener('input', function () {
+                  this.value = this.value.replace(/[^0-9]/g, '');
+                  if (this.value.length > 11) {
+                    this.value = this.value.slice(0, 11);
+                  }
                 });
               },
               preConfirm: () => {
@@ -789,10 +1140,33 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
                 const lastName = document.getElementById('editLastName').value.trim();
                 const email = document.getElementById('editEmail').value.trim();
                 const contactNumber = document.getElementById('editContactNumber').value.trim();
+                const dateOfBirth = document.getElementById('editDateOfBirth').value;
+                const gender = document.getElementById('editGender').value;
+                const civilStatus = document.getElementById('editCivilStatus').value;
+                const occupation = document.getElementById('editOccupation').value.trim();
+                const houseNumber = document.getElementById('editHouseNumber').value.trim();
+                const streetName = document.getElementById('editStreetName').value.trim();
+                const barangay = document.getElementById('editBarangay').value.trim();
+                const status = document.getElementById('editStatus').value;
                 const image = document.getElementById('editImageInput').files[0];
 
+                // Validate required fields
                 if (!firstName || !lastName || !email || !contactNumber) {
                   Swal.showValidationMessage('First name, last name, email, and contact number are required');
+                  return false;
+                }
+
+                // Validate email format
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailPattern.test(email)) {
+                  Swal.showValidationMessage('Please enter a valid email address');
+                  return false;
+                }
+
+                // Validate contact number format
+                const contactPattern = /^09\d{9}$/;
+                if (!contactPattern.test(contactNumber)) {
+                  Swal.showValidationMessage('Contact number must start with 09 and be 11 digits long');
                   return false;
                 }
 
@@ -803,12 +1177,30 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
                 formData.append("lastName", lastName);
                 formData.append("email", email);
                 formData.append("contactNumber", contactNumber);
+                formData.append("dateOfBirth", dateOfBirth);
+                formData.append("gender", gender);
+                formData.append("civilStatus", civilStatus);
+                formData.append("occupation", occupation);
+                formData.append("houseNumber", houseNumber);
+                formData.append("streetName", streetName);
+                formData.append("barangay", barangay || "Baliwasan");
+                formData.append("status", status);
                 if (image) formData.append("image", image);
 
                 return formData;
               }
             }).then((result) => {
               if (result.isConfirmed) {
+                // Show loading state
+                Swal.fire({
+                  title: 'Updating Resident...',
+                  text: 'Please wait while we process your request.',
+                  allowOutsideClick: false,
+                  didOpen: () => {
+                    Swal.showLoading();
+                  }
+                });
+
                 fetch('./endpoints/edit_resident.php', {
                   method: 'POST',
                   body: result.value
@@ -816,24 +1208,51 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
                   .then(res => res.json())
                   .then(data => {
                     if (data.success) {
-                      Swal.fire('Success', 'Resident updated successfully!', 'success').then(() => {
+                      Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Resident updated successfully!',
+                        confirmButtonText: 'OK'
+                      }).then(() => {
                         location.reload();
                       });
                     } else {
-                      Swal.fire('Error', data.message || 'Unable to update resident.', 'error');
+                      Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: data.message || 'Unable to update resident.',
+                        confirmButtonText: 'OK'
+                      });
                     }
                   })
-                  .catch(() => {
-                    Swal.fire('Error', 'Unable to connect to server.', 'error');
+                  .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                      icon: 'error',
+                      title: 'Connection Error!',
+                      text: 'Unable to connect to server. Please try again.',
+                      confirmButtonText: 'OK'
+                    });
                   });
               }
             });
           } else {
-            Swal.fire('Error', data.message || 'Unable to fetch resident details.', 'error');
+            Swal.fire({
+              icon: 'error',
+              title: 'Error!',
+              text: data.message || 'Unable to fetch resident details.',
+              confirmButtonText: 'OK'
+            });
           }
         })
-        .catch(() => {
-          Swal.fire('Error', 'Unable to connect to server.', 'error');
+        .catch(error => {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Connection Error!',
+            text: 'Unable to connect to server.',
+            confirmButtonText: 'OK'
+          });
         });
     }
 

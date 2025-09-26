@@ -11,17 +11,40 @@ if (!$id || !is_numeric($id)) {
 }
 
 try {
-    $stmt = $conn->prepare("SELECT id, first_name, middle_name, last_name, email, contact_number, image, created_at
-                           FROM user
-                           WHERE id = ? LIMIT 1");
+    // ✅ Select all required fields
+    $stmt = $conn->prepare("SELECT 
+            id, 
+            first_name, 
+            middle_name, 
+            last_name, 
+            email, 
+            contact_number, 
+            date_of_birth, 
+            gender, 
+            civil_status, 
+            occupation, 
+            house_number, 
+            street_name, 
+            barangay, 
+            status, 
+            image, 
+            created_at, 
+            updated_at
+        FROM user
+        WHERE id = ? LIMIT 1");
+
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
     $resident = $result->fetch_assoc();
 
     if ($resident) {
-        // Format the created_at date for better display
-        $resident['formatted_date'] = date("F j, Y", strtotime($resident['created_at']));
+        // Ensure nulls are handled properly
+        foreach ($resident as $key => $value) {
+            if ($value === null) {
+                $resident[$key] = null;
+            }
+        }
 
         // Ensure image field is properly handled (null if empty)
         $resident['image'] = !empty($resident['image']) ? $resident['image'] : null;
