@@ -595,6 +595,33 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
               <input type="text" class="swal2-input" id="occupation" placeholder="Enter occupation">
           </div>
 
+          <!-- Password Section -->
+          <div class="section-title">Account Credentials</div>
+          
+          <div class="form-group">
+              <label class="form-label">Password *</label>
+              <div style="position: relative;">
+                  <input type="password" class="swal2-input" id="password" placeholder="Enter password" required style="padding-right: 40px;">
+                  <i class="fas fa-eye password-toggle" onclick="togglePasswordResident('password', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+              </div>
+              <div id="password-strength-add" style="margin-top: 5px; font-size: 12px;"></div>
+          </div>
+          
+          <div class="form-group">
+              <label class="form-label">Confirm Password *</label>
+              <div style="position: relative;">
+                  <input type="password" class="swal2-input" id="confirmPassword" placeholder="Confirm password" required style="padding-right: 40px;">
+                  <i class="fas fa-eye password-toggle" onclick="togglePasswordResident('confirmPassword', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+              </div>
+              <div id="password-match-add" style="margin-top: 5px; font-size: 12px;"></div>
+          </div>
+          
+          <div class="form-group">
+              <small style="color: #666; font-size: 12px;">
+                  Password must contain at least 5 lowercase letters, 1 uppercase letter, 2 numbers, and be at least 8 characters long
+              </small>
+          </div>
+
           <!-- Address Information Section -->
           <div class="section-title">Address Information</div>
           
@@ -652,6 +679,72 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
               this.value = this.value.slice(0, 11);
             }
           });
+
+          // Password validation setup
+          const passwordField = document.getElementById('password');
+          const confirmPasswordField = document.getElementById('confirmPassword');
+          const passwordStrengthDiv = document.getElementById('password-strength-add');
+          const passwordMatchDiv = document.getElementById('password-match-add');
+
+          // Password strength check
+          passwordField.addEventListener('input', function () {
+            const password = this.value;
+            const strength = checkPasswordStrength(password);
+
+            if (password.length === 0) {
+              passwordStrengthDiv.innerHTML = '';
+              this.setCustomValidity('');
+              return;
+            }
+
+            let strengthColor = '';
+            let strengthText = '';
+
+            switch (strength) {
+              case 'Strong':
+                strengthColor = '#28a745'; // Green
+                strengthText = '✓ Strong password';
+                this.setCustomValidity('');
+                break;
+              case 'Moderate':
+                strengthColor = '#ffc107'; // Yellow
+                strengthText = '⚠ Moderate password - add more complexity';
+                this.setCustomValidity('Password is not strong enough');
+                break;
+              case 'Weak':
+                strengthColor = '#dc3545'; // Red
+                strengthText = '✗ Weak password - needs improvement';
+                this.setCustomValidity('Password is too weak');
+                break;
+            }
+
+            passwordStrengthDiv.innerHTML = `<span style="color: ${strengthColor};">${strengthText}</span>`;
+
+            // Re-check confirm password when new password changes
+            if (confirmPasswordField.value) {
+              confirmPasswordField.dispatchEvent(new Event('input'));
+            }
+          });
+
+          // Confirm password match check
+          confirmPasswordField.addEventListener('input', function () {
+            const newPassword = passwordField.value;
+            const confirmPassword = this.value;
+
+            if (confirmPassword.length === 0) {
+              passwordMatchDiv.innerHTML = '';
+              this.setCustomValidity('');
+              return;
+            }
+
+            if (confirmPassword !== newPassword) {
+              this.setCustomValidity('Passwords do not match');
+              passwordMatchDiv.innerHTML = '<span style="color: #dc3545;">✗ Passwords do not match</span>';
+            } else {
+              this.setCustomValidity('');
+              passwordMatchDiv.innerHTML = '<span style="color: #28a745;">✓ Passwords match</span>';
+            }
+          });
         },
         preConfirm: () => {
           const firstName = document.getElementById('firstName').value.trim();
@@ -659,6 +752,8 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
           const lastName = document.getElementById('lastName').value.trim();
           const email = document.getElementById('email').value.trim();
           const contactNumber = document.getElementById('contactNumber').value.trim();
+          const password = document.getElementById('password').value;
+          const confirmPassword = document.getElementById('confirmPassword').value;
           const dateOfBirth = document.getElementById('dateOfBirth').value;
           const gender = document.getElementById('gender').value;
           const civilStatus = document.getElementById('civilStatus').value;
@@ -670,8 +765,8 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
           const image = document.getElementById('imageInput').files[0];
 
           // Validate required fields
-          if (!firstName || !lastName || !email || !contactNumber) {
-            Swal.showValidationMessage('First name, last name, email, and contact number are required');
+          if (!firstName || !lastName || !email || !contactNumber || !password || !confirmPassword) {
+            Swal.showValidationMessage('First name, last name, email, contact number, and password are required');
             return false;
           }
 
@@ -689,12 +784,25 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
             return false;
           }
 
+          // Validate password strength
+          const passwordStrength = checkPasswordStrength(password);
+          if (passwordStrength !== 'Strong') {
+            Swal.showValidationMessage('Password must be strong (at least 5 lowercase letters, 1 uppercase letter, 2 numbers, and 8 characters long)');
+            return false;
+          }
+
+          if (password !== confirmPassword) {
+            Swal.showValidationMessage('Passwords do not match');
+            return false;
+          }
+
           const formData = new FormData();
           formData.append("firstName", firstName);
           formData.append("middleName", middleName);
           formData.append("lastName", lastName);
           formData.append("email", email);
           formData.append("contactNumber", contactNumber);
+          formData.append("password", password);
           formData.append("dateOfBirth", dateOfBirth);
           formData.append("gender", gender);
           formData.append("civilStatus", civilStatus);
@@ -1007,110 +1115,144 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
             Swal.fire({
               title: 'Edit Resident',
               html: `
-            <div class="swal-form-wide" style="padding-top: 10px">
-                <!-- Profile Image Section -->
-                <div class="form-group profile-image-section">
-                    <div class="profile-image-container">
-                        <img id="editProfilePreview" 
-                             src="${resident.image ? '../assets/images/user/' + resident.image : '../assets/images/user.png'}"  
-                             alt="Profile Preview" 
-                             class="profile-preview"
-                             onclick="document.getElementById('editImageInput').click();">
-                        <div class="camera-overlay"
-                             onclick="document.getElementById('editImageInput').click();">
-                            <i class="fas fa-camera"></i>
-                        </div>
+        <div class="swal-form-wide" style="padding-top: 10px">
+            <!-- Profile Image Section -->
+            <div class="form-group profile-image-section">
+                <div class="profile-image-container">
+                    <img id="editProfilePreview" 
+                         src="${resident.image ? '../assets/images/user/' + resident.image : '../assets/images/user.png'}"  
+                         alt="Profile Preview" 
+                         class="profile-preview"
+                         onclick="document.getElementById('editImageInput').click();">
+                    <div class="camera-overlay"
+                         onclick="document.getElementById('editImageInput').click();">
+                        <i class="fas fa-camera"></i>
                     </div>
-                    <input type="file" 
-                           id="editImageInput" 
-                           accept="image/*" 
-                           class="image-input-hidden"
-                           onchange="previewImage(this, 'editProfilePreview')">
-                    <div class="upload-instruction">Click to change profile image</div>
                 </div>
-
-                <!-- Personal Information Section -->
-                <div class="section-title">Personal Information</div>
-                
-                <div class="form-group">
-                    <label class="form-label">First Name *</label>
-                    <input type="text" class="swal2-input" id="editFirstName" value="${resident.first_name}" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Middle Name</label>
-                    <input type="text" class="swal2-input" id="editMiddleName" value="${resident.middle_name || ''}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Last Name *</label>
-                    <input type="text" class="swal2-input" id="editLastName" value="${resident.last_name}" required>
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Date of Birth</label>
-                    <input type="date" class="swal2-input" id="editDateOfBirth" value="${resident.date_of_birth || ''}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Gender</label>
-                    <select class="swal2-select" id="editGender">
-                        <option value="">Select Gender</option>
-                        <option value="male" ${resident.gender === 'male' ? 'selected' : ''}>Male</option>
-                        <option value="female" ${resident.gender === 'female' ? 'selected' : ''}>Female</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Civil Status</label>
-                    <select class="swal2-select" id="editCivilStatus">
-                        <option value="">Select Civil Status</option>
-                        <option value="single" ${resident.civil_status === 'single' ? 'selected' : ''}>Single</option>
-                        <option value="married" ${resident.civil_status === 'married' ? 'selected' : ''}>Married</option>
-                        <option value="divorced" ${resident.civil_status === 'divorced' ? 'selected' : ''}>Divorced</option>
-                        <option value="widowed" ${resident.civil_status === 'widowed' ? 'selected' : ''}>Widowed</option>
-                    </select>
-                </div>
-
-                <!-- Contact Information Section -->
-                <div class="section-title">Contact Information</div>
-                
-                <div class="form-group">
-                    <label class="form-label">Email Address *</label>
-                    <input type="email" class="swal2-input" id="editEmail" value="${resident.email}" required>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Contact Number *</label>
-                    <input type="tel" class="swal2-input" id="editContactNumber" value="${resident.contact_number}" required 
-                           pattern="09[0-9]{9}" maxlength="11">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Occupation</label>
-                    <input type="text" class="swal2-input" id="editOccupation" value="${resident.occupation || ''}">
-                </div>
-
-                <!-- Address Information Section -->
-                <div class="section-title">Address Information</div>
-                
-                <div class="form-group">
-                    <label class="form-label">House Number</label>
-                    <input type="text" class="swal2-input" id="editHouseNumber" value="${resident.house_number || ''}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Street Name</label>
-                    <input type="text" class="swal2-input" id="editStreetName" value="${resident.street_name || ''}">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Barangay</label>
-                    <input type="text" class="swal2-input" id="editBarangay" value="${resident.barangay || 'Baliwasan'}">
-                </div>
-                
-                <div class="form-group">
-                    <label class="form-label">Status</label>
-                    <select class="swal2-select" id="editStatus">
-                        <option value="active" ${resident.status === 'active' ? 'selected' : ''}>Active</option>
-                        <option value="inactive" ${resident.status === 'inactive' ? 'selected' : ''}>Inactive</option>
-                        <option value="moved" ${resident.status === 'moved' ? 'selected' : ''}>Moved</option>
-                    </select>
-                </div>
+                <input type="file" 
+                       id="editImageInput" 
+                       accept="image/*" 
+                       class="image-input-hidden"
+                       onchange="previewImage(this, 'editProfilePreview')">
+                <div class="upload-instruction">Click to change profile image</div>
             </div>
-          `,
+
+            <!-- Personal Information Section -->
+            <div class="section-title">Personal Information</div>
+            
+            <div class="form-group">
+                <label class="form-label">First Name *</label>
+                <input type="text" class="swal2-input" id="editFirstName" value="${resident.first_name}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Middle Name</label>
+                <input type="text" class="swal2-input" id="editMiddleName" value="${resident.middle_name || ''}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Last Name *</label>
+                <input type="text" class="swal2-input" id="editLastName" value="${resident.last_name}" required>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Date of Birth</label>
+                <input type="date" class="swal2-input" id="editDateOfBirth" value="${resident.date_of_birth || ''}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Gender</label>
+                <select class="swal2-select" id="editGender">
+                    <option value="">Select Gender</option>
+                    <option value="male" ${resident.gender === 'male' ? 'selected' : ''}>Male</option>
+                    <option value="female" ${resident.gender === 'female' ? 'selected' : ''}>Female</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Civil Status</label>
+                <select class="swal2-select" id="editCivilStatus">
+                    <option value="">Select Civil Status</option>
+                    <option value="single" ${resident.civil_status === 'single' ? 'selected' : ''}>Single</option>
+                    <option value="married" ${resident.civil_status === 'married' ? 'selected' : ''}>Married</option>
+                    <option value="divorced" ${resident.civil_status === 'divorced' ? 'selected' : ''}>Divorced</option>
+                    <option value="widowed" ${resident.civil_status === 'widowed' ? 'selected' : ''}>Widowed</option>
+                </select>
+            </div>
+
+            <!-- Contact Information Section -->
+            <div class="section-title">Contact Information</div>
+            
+            <div class="form-group">
+                <label class="form-label">Email Address *</label>
+                <input type="email" class="swal2-input" id="editEmail" value="${resident.email}" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Contact Number *</label>
+                <input type="tel" class="swal2-input" id="editContactNumber" value="${resident.contact_number}" required 
+                       pattern="09[0-9]{9}" maxlength="11">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Occupation</label>
+                <input type="text" class="swal2-input" id="editOccupation" value="${resident.occupation || ''}">
+            </div>
+
+            <!-- Password Section -->
+            <div class="section-title">Change Password</div>
+            
+            <div class="form-group">
+                <label class="form-label" style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" id="changePasswordToggle" style="width: auto; margin: 0;">
+                    <span>Change Password</span>
+                </label>
+            </div>
+            
+                <div class="form-group" id="passwordFields" style="display: none;">
+                    <label class="form-label">New Password *</label>
+                    <div style="position: relative;">
+                        <input type="password" class="swal2-input" id="editPassword" placeholder="Enter new password" style="padding-right: 40px;">
+                        <i class="fas fa-eye password-toggle" onclick="togglePasswordResident('editPassword', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+                    </div>
+                    <div id="password-strength-edit" style="margin-top: 5px; font-size: 12px;"></div>
+                </div>
+                
+                <div class="form-group" id="password2Fields" style="display: none;">
+                    <label class="form-label">Confirm Password *</label>
+                    <div style="position: relative;">
+                        <input type="password" class="swal2-input" id="editConfirmPassword" placeholder="Confirm new password" style="padding-right: 40px;">
+                        <i class="fas fa-eye password-toggle" onclick="togglePasswordResident('editConfirmPassword', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+                    </div>
+                    <div id="password-match-edit" style="margin-top: 5px; font-size: 12px;"></div>
+                </div>
+                
+                <div class="form-group" id="password3Fields" style="display: none;">
+                    <small style="color: #666; font-size: 12px;">
+                        Password must contain at least 5 lowercase letters, 1 uppercase letter, 2 numbers, and be at least 8 characters long
+                    </small>
+                </div>
+
+            <!-- Address Information Section -->
+            <div class="section-title">Address Information</div>
+            
+            <div class="form-group">
+                <label class="form-label">House Number</label>
+                <input type="text" class="swal2-input" id="editHouseNumber" value="${resident.house_number || ''}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Street Name</label>
+                <input type="text" class="swal2-input" id="editStreetName" value="${resident.street_name || ''}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Barangay</label>
+                <input type="text" class="swal2-input" id="editBarangay" value="${resident.barangay || 'Baliwasan'}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Status</label>
+                <select class="swal2-select" id="editStatus">
+                    <option value="active" ${resident.status === 'active' ? 'selected' : ''}>Active</option>
+                    <option value="inactive" ${resident.status === 'inactive' ? 'selected' : ''}>Inactive</option>
+                    <option value="moved" ${resident.status === 'moved' ? 'selected' : ''}>Moved</option>
+                </select>
+            </div>
+        </div>
+      `,
               customClass: {
                 popup: 'swal-wide'
               },
@@ -1137,6 +1279,94 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
                     this.value = this.value.slice(0, 11);
                   }
                 });
+
+                // Password change toggle
+                const changePasswordToggle = document.getElementById('changePasswordToggle');
+                const passwordFields = document.getElementById('passwordFields');
+                const password2Fields = document.getElementById('password2Fields');
+                // const password3Fields = document.getElementById('password3Fields');
+                const passwordField = document.getElementById('editPassword');
+                const confirmPasswordField = document.getElementById('editConfirmPassword');
+                const passwordStrengthDiv = document.getElementById('password-strength-edit');
+                const passwordMatchDiv = document.getElementById('password-match-edit');
+
+                changePasswordToggle.addEventListener('change', function () {
+                  if (this.checked) {
+                    passwordFields.style.display = 'block';
+                    password2Fields.style.display = 'block';
+                    // password3Fields.style.display = 'block';
+                  } else {
+                    passwordFields.style.display = 'none';
+                    password2Fields.style.display = 'none';
+                    // password3Fields.style.display = 'none';
+                    passwordField.value = '';
+                    confirmPasswordField.value = '';
+                    passwordStrengthDiv.innerHTML = '';
+                    passwordMatchDiv.innerHTML = '';
+                    passwordField.setCustomValidity('');
+                    confirmPasswordField.setCustomValidity('');
+                  }
+                });
+
+                // Password strength check
+                passwordField.addEventListener('input', function () {
+                  const password = this.value;
+                  const strength = checkPasswordStrength(password);
+
+                  if (password.length === 0) {
+                    passwordStrengthDiv.innerHTML = '';
+                    this.setCustomValidity('');
+                    return;
+                  }
+
+                  let strengthColor = '';
+                  let strengthText = '';
+
+                  switch (strength) {
+                    case 'Strong':
+                      strengthColor = '#28a745'; // Green
+                      strengthText = '✓ Strong password';
+                      this.setCustomValidity('');
+                      break;
+                    case 'Moderate':
+                      strengthColor = '#ffc107'; // Yellow
+                      strengthText = '⚠ Moderate password - add more complexity';
+                      this.setCustomValidity('Password is not strong enough');
+                      break;
+                    case 'Weak':
+                      strengthColor = '#dc3545'; // Red
+                      strengthText = '✗ Weak password - needs improvement';
+                      this.setCustomValidity('Password is too weak');
+                      break;
+                  }
+
+                  passwordStrengthDiv.innerHTML = `<span style="color: ${strengthColor};">${strengthText}</span>`;
+
+                  // Re-check confirm password when new password changes
+                  if (confirmPasswordField.value) {
+                    confirmPasswordField.dispatchEvent(new Event('input'));
+                  }
+                });
+
+                // Confirm password match check
+                confirmPasswordField.addEventListener('input', function () {
+                  const newPassword = passwordField.value;
+                  const confirmPassword = this.value;
+
+                  if (confirmPassword.length === 0) {
+                    passwordMatchDiv.innerHTML = '';
+                    this.setCustomValidity('');
+                    return;
+                  }
+
+                  if (confirmPassword !== newPassword) {
+                    this.setCustomValidity('Passwords do not match');
+                    passwordMatchDiv.innerHTML = '<span style="color: #dc3545;">✗ Passwords do not match</span>';
+                  } else {
+                    this.setCustomValidity('');
+                    passwordMatchDiv.innerHTML = '<span style="color: #28a745;">✓ Passwords match</span>';
+                  }
+                });
               },
               preConfirm: () => {
                 const firstName = document.getElementById('editFirstName').value.trim();
@@ -1144,6 +1374,9 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
                 const lastName = document.getElementById('editLastName').value.trim();
                 const email = document.getElementById('editEmail').value.trim();
                 const contactNumber = document.getElementById('editContactNumber').value.trim();
+                const changePassword = document.getElementById('changePasswordToggle').checked;
+                const password = document.getElementById('editPassword').value;
+                const confirmPassword = document.getElementById('editConfirmPassword').value;
                 const dateOfBirth = document.getElementById('editDateOfBirth').value;
                 const gender = document.getElementById('editGender').value;
                 const civilStatus = document.getElementById('editCivilStatus').value;
@@ -1174,6 +1407,25 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
                   return false;
                 }
 
+                // Validate password if changing
+                if (changePassword) {
+                  if (!password || !confirmPassword) {
+                    Swal.showValidationMessage('Both password fields are required when changing password');
+                    return false;
+                  }
+
+                  const passwordStrength = checkPasswordStrength(password);
+                  if (passwordStrength !== 'Strong') {
+                    Swal.showValidationMessage('Password must be strong (at least 5 lowercase letters, 1 uppercase letter, 2 numbers, and 8 characters long)');
+                    return false;
+                  }
+
+                  if (password !== confirmPassword) {
+                    Swal.showValidationMessage('Passwords do not match');
+                    return false;
+                  }
+                }
+
                 const formData = new FormData();
                 formData.append("id", id);
                 formData.append("firstName", firstName);
@@ -1181,6 +1433,10 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
                 formData.append("lastName", lastName);
                 formData.append("email", email);
                 formData.append("contactNumber", contactNumber);
+                if (changePassword) {
+                  formData.append("changePassword", "1");
+                  formData.append("password", password);
+                }
                 formData.append("dateOfBirth", dateOfBirth);
                 formData.append("gender", gender);
                 formData.append("civilStatus", civilStatus);
@@ -1258,6 +1514,32 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
             confirmButtonText: 'OK'
           });
         });
+    }
+    // Function to toggle password visibility for resident forms
+    function togglePasswordResident(inputId, toggleIcon) {
+      const passwordInput = document.getElementById(inputId);
+
+      if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.classList.remove('fa-eye');
+        toggleIcon.classList.add('fa-eye-slash');
+      } else {
+        passwordInput.type = 'password';
+        toggleIcon.classList.remove('fa-eye-slash');
+        toggleIcon.classList.add('fa-eye');
+      }
+    }
+
+    // Function to check password strength (if not already defined)
+    function checkPasswordStrength(password) {
+      const regexStrong = /(?=(.*[a-z]){5,})(?=.*[A-Z])(?=(.*[0-9]){2,})/;
+      if (password.length >= 8 && regexStrong.test(password)) {
+        return 'Strong';
+      } else if (password.length >= 6) {
+        return 'Moderate';
+      } else {
+        return 'Weak';
+      }
     }
 
     function deleteResident(id) {

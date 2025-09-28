@@ -252,24 +252,37 @@
             Swal.fire({
                 title: 'Reset Password',
                 html: `
-                    <div class="swal-form">
-                        <div class="form-group">
-                            <label for="fp-email" class="form-label">Email Address</label>
-                            <input type="email" id="fp-email" class="swal2-input" placeholder="Enter your email address" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="fp-newpass" class="form-label">New Password</label>
-                            <input type="password" id="fp-newpass" class="swal2-input" placeholder="Enter new password" required>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="fp-confirmpass" class="form-label">Confirm New Password</label>
-                            <input type="password" id="fp-confirmpass" class="swal2-input" placeholder="Confirm new password" required>
-                        </div>
+            <div class="swal-form">
+                <div class="form-group">
+                    <label for="fp-email" class="form-label">Email Address *</label>
+                    <input type="email" id="fp-email" class="swal2-input" placeholder="Enter your email address" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fp-newpass" class="form-label">New Password *</label>
+                    <div style="position: relative;">
+                        <input type="password" id="fp-newpass" class="swal2-input" placeholder="Enter new password" required style="padding-right: 40px;">
+                        <i class="fas fa-eye password-toggle" onclick="togglePasswordForgot('fp-newpass', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
                     </div>
-                    
-                `,
+                    <div id="fp-password-strength" style="margin-top: 5px; font-size: 12px;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="fp-confirmpass" class="form-label">Confirm New Password *</label>
+                    <div style="position: relative;">
+                        <input type="password" id="fp-confirmpass" class="swal2-input" placeholder="Confirm new password" required style="padding-right: 40px;">
+                        <i class="fas fa-eye password-toggle" onclick="togglePasswordForgot('fp-confirmpass', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+                    </div>
+                    <div id="fp-password-match" style="margin-top: 5px; font-size: 12px;"></div>
+                </div>
+                
+                <div class="form-group">
+                    <small style="color: #666; font-size: 12px;">
+                        Password must contain at least 5 lowercase letters, 1 uppercase letter, 2 numbers, and be at least 8 characters long
+                    </small>
+                </div>
+            </div>
+        `,
                 focusConfirm: false,
                 showCancelButton: true,
                 confirmButtonText: 'Reset Password',
@@ -277,9 +290,75 @@
                 didOpen: () => {
                     document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
                     document.body.classList.remove("swal2-shown", "swal2-height-auto");
+
+                    // Get password field elements
+                    const newPasswordField = document.getElementById('fp-newpass');
+                    const confirmPasswordField = document.getElementById('fp-confirmpass');
+                    const passwordStrengthDiv = document.getElementById('fp-password-strength');
+                    const passwordMatchDiv = document.getElementById('fp-password-match');
+
+                    // Password strength check
+                    newPasswordField.addEventListener('input', function () {
+                        const password = this.value;
+                        const strength = checkPasswordStrength(password);
+
+                        if (password.length === 0) {
+                            passwordStrengthDiv.innerHTML = '';
+                            this.setCustomValidity('');
+                            return;
+                        }
+
+                        let strengthColor = '';
+                        let strengthText = '';
+
+                        switch (strength) {
+                            case 'Strong':
+                                strengthColor = '#28a745'; // Green
+                                strengthText = '✓ Strong password';
+                                this.setCustomValidity('');
+                                break;
+                            case 'Moderate':
+                                strengthColor = '#ffc107'; // Yellow
+                                strengthText = '⚠ Moderate password - add more complexity';
+                                this.setCustomValidity('Password is not strong enough');
+                                break;
+                            case 'Weak':
+                                strengthColor = '#dc3545'; // Red
+                                strengthText = '✗ Weak password - needs improvement';
+                                this.setCustomValidity('Password is too weak');
+                                break;
+                        }
+
+                        passwordStrengthDiv.innerHTML = `<span style="color: ${strengthColor};">${strengthText}</span>`;
+
+                        // Re-check confirm password when new password changes
+                        if (confirmPasswordField.value) {
+                            confirmPasswordField.dispatchEvent(new Event('input'));
+                        }
+                    });
+
+                    // Confirm password match check
+                    confirmPasswordField.addEventListener('input', function () {
+                        const newPassword = newPasswordField.value;
+                        const confirmPassword = this.value;
+
+                        if (confirmPassword.length === 0) {
+                            passwordMatchDiv.innerHTML = '';
+                            this.setCustomValidity('');
+                            return;
+                        }
+
+                        if (confirmPassword !== newPassword) {
+                            this.setCustomValidity('Passwords do not match');
+                            passwordMatchDiv.innerHTML = '<span style="color: #dc3545;">✗ Passwords do not match</span>';
+                        } else {
+                            this.setCustomValidity('');
+                            passwordMatchDiv.innerHTML = '<span style="color: #28a745;">✓ Passwords match</span>';
+                        }
+                    });
                 },
                 preConfirm: () => {
-                    const email = document.getElementById('fp-email').value;
+                    const email = document.getElementById('fp-email').value.trim();
                     const newPass = document.getElementById('fp-newpass').value;
                     const confirmPass = document.getElementById('fp-confirmpass').value;
 
@@ -287,6 +366,21 @@
                         Swal.showValidationMessage('All fields are required');
                         return false;
                     }
+
+                    // Validate email format
+                    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailPattern.test(email)) {
+                        Swal.showValidationMessage('Please enter a valid email address');
+                        return false;
+                    }
+
+                    // Validate password strength
+                    const passwordStrength = checkPasswordStrength(newPass);
+                    if (passwordStrength !== 'Strong') {
+                        Swal.showValidationMessage('Password must be strong (at least 5 lowercase letters, 1 uppercase letter, 2 numbers, and 8 characters long)');
+                        return false;
+                    }
+
                     if (newPass !== confirmPass) {
                         Swal.showValidationMessage('Passwords do not match');
                         return false;
@@ -296,6 +390,16 @@
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
+                    // Show loading state
+                    Swal.fire({
+                        title: 'Resetting Password...',
+                        text: 'Please wait while we process your request.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
                     fetch('./conn/endpoint/forgotpassword.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -304,16 +408,62 @@
                         .then(res => res.json())
                         .then(data => {
                             if (data.success) {
-                                Swal.fire('Success', 'Your password has been reset!', 'success');
+                                Swal.fire({
+                                    title: 'Success!',
+                                    text: 'Your password has been reset successfully!',
+                                    icon: 'success',
+                                    confirmButtonText: 'OK',
+                                    didOpen: () => {
+                                        document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                                        document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                                    }
+                                });
                             } else {
-                                Swal.fire('Error', data.message || 'Something went wrong', 'error');
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: data.message || 'Something went wrong. Please try again.',
+                                    icon: 'error',
+                                    confirmButtonText: 'OK'
+                                });
                             }
                         })
                         .catch(() => {
-                            Swal.fire('Error', 'Unable to reset password. Please try again later.', 'error');
+                            Swal.fire({
+                                title: 'Error',
+                                text: 'Unable to reset password. Please check your connection and try again.',
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
                         });
                 }
             });
+        }
+
+        // Function to toggle password visibility for forgot password
+        function togglePasswordForgot(inputId, toggleIcon) {
+            const passwordInput = document.getElementById(inputId);
+
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleIcon.classList.remove('fa-eye');
+                toggleIcon.classList.add('fa-eye-slash');
+            } else {
+                passwordInput.type = 'password';
+                toggleIcon.classList.remove('fa-eye-slash');
+                toggleIcon.classList.add('fa-eye');
+            }
+        }
+
+        // Function to check password strength (if not already defined)
+        function checkPasswordStrength(password) {
+            const regexStrong = /(?=(.*[a-z]){5,})(?=.*[A-Z])(?=(.*[0-9]){2,})/;
+            if (password.length >= 8 && regexStrong.test(password)) {
+                return 'Strong';
+            } else if (password.length >= 6) {
+                return 'Moderate';
+            } else {
+                return 'Weak';
+            }
         }
 
     </script>

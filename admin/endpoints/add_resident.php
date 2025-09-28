@@ -1,6 +1,5 @@
 <?php
 require_once("../../conn/conn.php");
-
 header("Content-Type: application/json");
 
 if ($_SERVER["REQUEST_METHOD"] !== "POST") {
@@ -13,6 +12,7 @@ $middleName = trim($_POST["middleName"] ?? "");
 $lastName = trim($_POST["lastName"] ?? "");
 $email = trim($_POST["email"] ?? "");
 $contactNumber = trim($_POST["contactNumber"] ?? "");
+$password = trim($_POST["password"] ?? "");
 $date_of_birth = trim($_POST["dateOfBirth"] ?? "");
 $gender = trim($_POST["gender"] ?? "");
 $civil_status = trim($_POST["civilStatus"] ?? "");
@@ -23,8 +23,8 @@ $barangay = trim($_POST["barangay"] ?? "Baliwasan");
 $status = trim($_POST["status"] ?? "active");
 
 // ✅ Validate required fields
-if (empty($firstName) || empty($lastName) || empty($email) || empty($contactNumber)) {
-    echo json_encode(["success" => false, "message" => "Required fields are missing"]);
+if (empty($firstName) || empty($lastName) || empty($email) || empty($contactNumber) || empty($password)) {
+    echo json_encode(["success" => false, "message" => "First name, last name, email, contact number, and password are required"]);
     exit();
 }
 
@@ -35,6 +35,13 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
 if (!preg_match("/^09\d{9}$/", $contactNumber)) {
     echo json_encode(["success" => false, "message" => "Invalid contact number format. Must start with 09 and be 11 digits."]);
+    exit();
+}
+
+// ✅ Validate password strength
+$regexStrong = '/(?=(.*[a-z]){5,})(?=.*[A-Z])(?=(.*[0-9]){2,})/';
+if (strlen($password) < 8 || !preg_match($regexStrong, $password)) {
+    echo json_encode(["success" => false, "message" => "Password must contain at least 5 lowercase letters, 1 uppercase letter, 2 numbers, and be at least 8 characters long"]);
     exit();
 }
 
@@ -61,11 +68,29 @@ try {
     }
     $stmt->close();
 
+    // ✅ Hash password
+    $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+
     // ✅ Handle Image Upload
     $imageFileName = "";
     if (isset($_FILES["image"]) && $_FILES["image"]["error"] === UPLOAD_ERR_OK) {
         $uploadDir = "../../assets/images/user/";
-        $ext = pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION);
+
+        // Validate image file
+        $allowedTypes = ['jpg', 'jpeg', 'png', 'gif'];
+        $ext = strtolower(pathinfo($_FILES["image"]["name"], PATHINFO_EXTENSION));
+
+        if (!in_array($ext, $allowedTypes)) {
+            echo json_encode(["success" => false, "message" => "Invalid image format. Only JPG, JPEG, PNG, and GIF are allowed"]);
+            exit();
+        }
+
+        // Check file size (5MB max)
+        if ($_FILES["image"]["size"] > 5 * 1024 * 1024) {
+            echo json_encode(["success" => false, "message" => "Image file is too large. Maximum size is 5MB"]);
+            exit();
+        }
+
         $dateNow = date("Ymd_His");
         $imageFileName = $lastName . "_" . $contactNumber . "_" . $dateNow . "." . $ext;
         $targetPath = $uploadDir . $imageFileName;
@@ -78,16 +103,16 @@ try {
 
     // ✅ Insert into DB
     $stmt = $conn->prepare("INSERT INTO user 
-        (first_name, middle_name, last_name, email, contact_number, date_of_birth, gender, civil_status, occupation, house_number, street_name, barangay, status, image, created_at) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-
+        (first_name, middle_name, last_name, email, contact_number, password, date_of_birth, gender, civil_status, occupation, house_number, street_name, barangay, status, image, created_at) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
     $stmt->bind_param(
-        "ssssssssssssss",
+        "sssssssssssssss",
         $firstName,
         $middleName,
         $lastName,
         $email,
         $contactNumber,
+        $hashedPassword,
         $date_of_birth,
         $gender,
         $civil_status,
@@ -111,7 +136,7 @@ try {
         $logStmt->execute();
         $logStmt->close();
 
-        echo json_encode(["success" => true]);
+        echo json_encode(["success" => true, "message" => "Resident added successfully"]);
     } else {
         echo json_encode(["success" => false, "message" => "Failed to add resident"]);
     }
@@ -122,3 +147,4 @@ try {
 } catch (Exception $e) {
     echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
 }
+?>
