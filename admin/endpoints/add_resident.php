@@ -100,6 +100,17 @@ try {
     );
 
     if ($stmt->execute()) {
+        // ✅ Insert Activity Log
+        $fullName = trim($firstName . " " . $middleName . " " . $lastName);
+        $fullAddress = trim($house_number . " " . $street_name . ", " . $barangay);
+        $activity = "New Resident";
+        $description = "Added new resident {$fullName} from {$fullAddress}";
+
+        $logStmt = $conn->prepare("INSERT INTO activity_logs (activity, description, created_at) VALUES (?, ?, NOW())");
+        $logStmt->bind_param("ss", $activity, $description);
+        $logStmt->execute();
+        $logStmt->close();
+
         echo json_encode(["success" => true]);
     } else {
         echo json_encode(["success" => false, "message" => "Failed to add resident"]);

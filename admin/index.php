@@ -14,298 +14,7 @@ if (!isset($_SESSION["admin_id"])) {
 <head>
     <?php include '../components/header_links.php'; ?>
     <?php include '../components/admin_side_header.php'; ?>
-    <style>
-        /* Dashboard Specific Styles */
-        .dashboard-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 20px;
-            margin: 20px;
-        }
 
-        .dashboard-card {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 36, 124, 0.1);
-            overflow: hidden;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-
-        .dashboard-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 15px rgba(0, 36, 124, 0.15);
-        }
-
-        .card-header {
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .card-icon {
-            width: 50px;
-            height: 50px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 24px;
-            color: #fff;
-        }
-
-        .residents-icon {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .requests-icon {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-        }
-
-        .waste-icon {
-            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        }
-
-        .reports-icon {
-            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        }
-
-        .card-info {
-            text-align: right;
-        }
-
-        .card-number {
-            font-size: 32px;
-            font-weight: 700;
-            color: #00247c;
-            margin: 0;
-            line-height: 1;
-        }
-
-        .card-title {
-            font-size: 14px;
-            color: #6b7280;
-            margin: 5px 0 0 0;
-            font-weight: 500;
-        }
-
-        .card-body {
-            padding: 0 20px 20px 20px;
-        }
-
-        .card-details {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-top: 1px solid #f1f5f9;
-            font-size: 14px;
-        }
-
-        .detail-label {
-            color: #6b7280;
-        }
-
-        .detail-value {
-            font-weight: 600;
-            color: #374151;
-        }
-
-        .status-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .badge-success {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .badge-warning {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .badge-danger {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-
-        .badge-info {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .recent-section {
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 36, 124, 0.1);
-            margin: 20px;
-            overflow: hidden;
-        }
-
-        .recent-header {
-            background: #f8fafc;
-            padding: 20px;
-            border-bottom: 1px solid #e5e7eb;
-        }
-
-        .recent-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #374151;
-            margin: 0;
-        }
-
-        .recent-list {
-            padding: 0;
-            margin: 0;
-            list-style: none;
-        }
-
-        .recent-item {
-            padding: 16px 20px;
-            border-bottom: 1px solid #f1f5f9;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .recent-item:last-child {
-            border-bottom: none;
-        }
-
-        .recent-item:hover {
-            background: #f8fafc;
-        }
-
-        .item-info {
-            flex: 1;
-        }
-
-        .item-title {
-            font-weight: 500;
-            color: #374151;
-            margin: 0 0 4px 0;
-        }
-
-        .item-subtitle {
-            font-size: 13px;
-            color: #6b7280;
-            margin: 0;
-        }
-
-        .item-time {
-            font-size: 12px;
-            color: #9ca3af;
-            white-space: nowrap;
-        }
-
-        .quick-actions {
-            display: flex;
-            gap: 10px;
-            margin: 20px;
-            flex-wrap: wrap;
-        }
-
-        .action-btn {
-            flex: 1;
-            min-width: 200px;
-            padding: 16px 20px;
-            background: #fff;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            text-decoration: none;
-            color: #374151;
-            font-weight: 500;
-            text-align: center;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-        }
-
-        .action-btn:hover {
-            border-color: #00247c;
-            background: #f8fafc;
-            color: #00247c;
-            transform: translateY(-1px);
-        }
-
-        /* Responsive Design */
-        @media (max-width: 768px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-                margin: 15px;
-                gap: 15px;
-            }
-
-            .recent-section {
-                margin: 15px;
-            }
-
-            .quick-actions {
-                margin: 15px;
-                flex-direction: column;
-            }
-
-            .action-btn {
-                min-width: auto;
-            }
-
-            .card-header {
-                padding: 15px;
-            }
-
-            .card-body {
-                padding: 0 15px 15px 15px;
-            }
-
-            .card-number {
-                font-size: 28px;
-            }
-
-            .card-icon {
-                width: 45px;
-                height: 45px;
-                font-size: 20px;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .card-header {
-                flex-direction: column;
-                text-align: center;
-                gap: 15px;
-            }
-
-            .card-info {
-                text-align: center;
-            }
-
-            .card-details {
-                flex-direction: column;
-                gap: 8px;
-                text-align: center;
-            }
-
-            .recent-item {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
-
-            .item-time {
-                align-self: flex-end;
-            }
-        }
-    </style>
 </head>
 
 <body>
@@ -439,7 +148,7 @@ if (!isset($_SESSION["admin_id"])) {
                 <i class="fas fa-plus"></i>
                 Add New Resident
             </a>
-            <a href="requests_certificates.php" class="action-btn">
+            <a href="request_certificates.php" class="action-btn">
                 <i class="fas fa-check"></i>
                 Review Requests
             </a>
@@ -459,41 +168,53 @@ if (!isset($_SESSION["admin_id"])) {
                 <h3 class="recent-title">Recent Activities</h3>
             </div>
             <ul class="recent-list">
-                <li class="recent-item">
-                    <div class="item-info">
-                        <h4 class="item-title">New Certificate Request</h4>
-                        <p class="item-subtitle">Maria Santos requested Barangay Clearance</p>
-                    </div>
-                    <span class="item-time">2 hours ago</span>
-                </li>
-                <li class="recent-item">
-                    <div class="item-info">
-                        <h4 class="item-title">Waste Collection Report</h4>
-                        <p class="item-subtitle">Missed collection reported on Mango Street</p>
-                    </div>
-                    <span class="item-time">5 hours ago</span>
-                </li>
-                <li class="recent-item">
-                    <div class="item-info">
-                        <h4 class="item-title">New Resident Registration</h4>
-                        <p class="item-subtitle">Juan Dela Cruz registered as new resident</p>
-                    </div>
-                    <span class="item-time">1 day ago</span>
-                </li>
-                <li class="recent-item">
-                    <div class="item-info">
-                        <h4 class="item-title">Permit Approved</h4>
-                        <p class="item-subtitle">Business permit approved for ABC Store</p>
-                    </div>
-                    <span class="item-time">2 days ago</span>
-                </li>
-                <li class="recent-item">
-                    <div class="item-info">
-                        <h4 class="item-title">SMS Notification Sent</h4>
-                        <p class="item-subtitle">Waste collection reminder sent to 1,200+ residents</p>
-                    </div>
-                    <span class="item-time">3 days ago</span>
-                </li>
+                <?php
+                // Set timezone to Asia/Manila
+                date_default_timezone_set('Asia/Manila');
+
+                // Fetch last 5 activity logs
+                $stmt = $conn->prepare("SELECT activity, description, created_at 
+                                FROM activity_logs 
+                                ORDER BY created_at DESC 
+                                LIMIT 5");
+                $stmt->execute();
+                $result = $stmt->get_result();
+
+                if ($result->num_rows > 0) {
+                    while ($row = $result->fetch_assoc()) {
+                        // Format time ago
+                        $createdAt = new DateTime($row["created_at"], new DateTimeZone('Asia/Manila'));
+                        $now = new DateTime("now", new DateTimeZone('Asia/Manila'));
+                        $diff = $now->diff($createdAt);
+
+                        if ($diff->y > 0) {
+                            $timeAgo = $diff->y . " year" . ($diff->y > 1 ? "s" : "") . " ago";
+                        } elseif ($diff->m > 0) {
+                            $timeAgo = $diff->m . " month" . ($diff->m > 1 ? "s" : "") . " ago";
+                        } elseif ($diff->d > 0) {
+                            $timeAgo = $diff->d . " day" . ($diff->d > 1 ? "s" : "") . " ago";
+                        } elseif ($diff->h > 0) {
+                            $timeAgo = $diff->h . " hour" . ($diff->h > 1 ? "s" : "") . " ago";
+                        } elseif ($diff->i > 0) {
+                            $timeAgo = $diff->i . " minute" . ($diff->i > 1 ? "s" : "") . " ago";
+                        } else {
+                            $timeAgo = "Just now";
+                        }
+                        ?>
+                        <li class="recent-item">
+                            <div class="item-info">
+                                <h4 class="item-title"><?php echo htmlspecialchars($row["activity"]); ?></h4>
+                                <p class="item-subtitle"><?php echo htmlspecialchars($row["description"]); ?></p>
+                            </div>
+                            <span class="item-time"><?php echo $timeAgo; ?></span>
+                        </li>
+                        <?php
+                    }
+                } else {
+                    echo "<li class='recent-item'><div class='item-info'><p>No recent activities found</p></div></li>";
+                }
+                $stmt->close();
+                ?>
             </ul>
         </div>
     </section>

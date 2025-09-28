@@ -21,7 +21,11 @@ if (!isset($_SESSION["admin_id"])) {
     <?php include '../components/sidebar.php'; ?>
 
     <section class="home-section">
-
+        <div class="table-container">
+            <div class="table-header">
+                <h2 class="table-title">Reports</h2>
+            </div>
+        </div>
     </section>
 
 

@@ -600,7 +600,7 @@ body {
 }
 .sidebar li a{
   display: flex;
-  height: 100%;
+  /* height: 100%; */
   width: 100%;
   border-radius: 12px;
   align-items: center;

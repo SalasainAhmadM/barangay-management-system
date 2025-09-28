@@ -640,6 +640,10 @@ $endRecord = min($offset + $residentsPerPage, $totalResidents);
             this.style.borderColor = '#e5e7eb';
           });
 
+          const dateInput = document.getElementById('dateOfBirth');
+          if (dateInput) {
+            dateInput.value = "2000-01-01"; // default January 1, 2000
+          }
           // Add input validation for contact number
           const contactInput = document.getElementById('contactNumber');
           contactInput.addEventListener('input', function () {
