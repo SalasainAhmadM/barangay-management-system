@@ -6,7 +6,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $email = trim($_POST["email"]);
     $password = trim($_POST["password"]);
 
-    $stmt = $conn->prepare("SELECT id, first_name, last_name, email, password FROM admin WHERE email = ?");
+    $stmt = $conn->prepare("SELECT id, first_name, middle_name, last_name, email, password FROM admin WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $adminResult = $stmt->get_result();
@@ -15,10 +15,16 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $admin = $adminResult->fetch_assoc();
 
         if (password_verify($password, $admin["password"])) {
-
             $_SESSION["admin_id"] = $admin["id"];
-            $_SESSION["admin_name"] = $admin["first_name"] . " " . $user["middle_name"] . ". " . $user["last_name"];
+            $adminName = $admin["first_name"];
+            if (!empty($admin["middle_name"])) {
+                $adminName .= " " . strtoupper(substr($admin["middle_name"], 0, 1)) . ".";
+            }
+            $adminName .= " " . $admin["last_name"];
+            $_SESSION["admin_name"] = $adminName;
             $_SESSION["admin_email"] = $admin["email"];
+
+            $_SESSION["show_admin_welcome"] = true;
 
             header("Location: ../../admin/index.php");
             exit();
@@ -29,7 +35,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 
-    $stmt = $conn->prepare("SELECT id, first_name, middle_name, last_name, email, contact_number, password FROM user WHERE email = ?");
+    $stmt = $conn->prepare("SELECT id, first_name, middle_name, last_name, email, contact_number, date_of_birth, gender, password FROM user WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $userResult = $stmt->get_result();
@@ -38,11 +44,17 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $user = $userResult->fetch_assoc();
 
         if (password_verify($password, $user["password"])) {
-
             $_SESSION["user_id"] = $user["id"];
-            $_SESSION["user_name"] = $user["first_name"] . " " . $user["middle_name"] . ". " . $user["last_name"];
+            $userName = $user["first_name"];
+            if (!empty($user["middle_name"])) {
+                $userName .= " " . strtoupper(substr($user["middle_name"], 0, 1)) . ".";
+            }
+            $userName .= " " . $user["last_name"];
+            $_SESSION["user_name"] = $userName;
             $_SESSION["user_email"] = $user["email"];
             $_SESSION["needs_details"] = (empty($user["date_of_birth"]) || empty($user["gender"]));
+
+            $_SESSION["show_user_welcome"] = true;
 
             header("Location: ../../user/index.php");
             exit();

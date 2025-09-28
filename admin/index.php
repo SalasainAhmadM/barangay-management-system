@@ -220,6 +220,35 @@ if (!isset($_SESSION["admin_id"])) {
     </section>
 
     <?php include '../components/cdn_scripts.php'; ?>
+
+    <!-- Admin Welcome Alert Script -->
+    <?php if (isset($_SESSION["show_admin_welcome"]) && $_SESSION["show_admin_welcome"] === true): ?>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                // Show the welcome toast
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 4000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.addEventListener('mouseenter', Swal.stopTimer)
+                        toast.addEventListener('mouseleave', Swal.resumeTimer)
+                    }
+                });
+
+                Toast.fire({
+                    icon: 'success',
+                    text: 'Welcome back, <?php echo htmlspecialchars($_SESSION["admin_name"]); ?>!'
+                });
+            });
+        </script>
+        <?php
+        // Remove the flag so it won't show again
+        unset($_SESSION["show_admin_welcome"]);
+        ?>
+    <?php endif; ?>
 </body>
 
 </html>
