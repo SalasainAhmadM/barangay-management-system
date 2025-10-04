@@ -6,6 +6,117 @@ if (!isset($_SESSION["user_id"])) {
     header("Location: ../index.php?auth=error");
     exit();
 }
+
+$user_id = $_SESSION["user_id"];
+
+// Fetch waste schedules
+$schedules_query = "SELECT * FROM waste_schedules WHERE is_active = 1 ORDER BY schedule_id";
+$schedules_result = $conn->query($schedules_query);
+
+// Fetch user's reports
+$reports_query = "SELECT * FROM missed_collections WHERE user_id = ? ORDER BY created_at DESC LIMIT 10";
+$reports_stmt = $conn->prepare($reports_query);
+$reports_stmt->bind_param("i", $user_id);
+$reports_stmt->execute();
+$reports_result = $reports_stmt->get_result();
+
+// Function to calculate next collection date
+function getNextCollectionDate($collection_days)
+{
+    $today = new DateTime();
+    $daysOfWeek = ['Sunday' => 0, 'Monday' => 1, 'Tuesday' => 2, 'Wednesday' => 3, 'Thursday' => 4, 'Friday' => 5, 'Saturday' => 6];
+
+    // Handle "First Saturday" type schedules
+    if (strpos($collection_days, 'First') !== false) {
+        $month = $today->format('n');
+        $year = $today->format('Y');
+        $firstDay = new DateTime("$year-$month-01");
+        $dayOfWeek = $firstDay->format('w');
+        $daysUntilSaturday = (6 - $dayOfWeek + 7) % 7;
+        $firstSaturday = clone $firstDay;
+        $firstSaturday->modify("+$daysUntilSaturday days");
+
+        if ($today > $firstSaturday) {
+            $firstDay->modify('+1 month');
+            $month = $firstDay->format('n');
+            $year = $firstDay->format('Y');
+            $firstDay = new DateTime("$year-$month-01");
+            $dayOfWeek = $firstDay->format('w');
+            $daysUntilSaturday = (6 - $dayOfWeek + 7) % 7;
+            $firstSaturday = clone $firstDay;
+            $firstSaturday->modify("+$daysUntilSaturday days");
+        }
+
+        return $firstSaturday;
+    }
+
+    // Handle regular day schedules
+    $days = array_map('trim', explode(',', $collection_days));
+    $nextDate = null;
+    $minDiff = PHP_INT_MAX;
+
+    foreach ($days as $day) {
+        if (isset($daysOfWeek[$day])) {
+            $targetDay = $daysOfWeek[$day];
+            $currentDay = (int) $today->format('w');
+            $diff = ($targetDay - $currentDay + 7) % 7;
+
+            if ($diff === 0) {
+                $diff = 7; // Next week if today is the collection day
+            }
+
+            if ($diff < $minDiff) {
+                $minDiff = $diff;
+                $nextDate = clone $today;
+                $nextDate->modify("+$diff days");
+            }
+        }
+    }
+
+    return $nextDate;
+}
+
+// Function to get days until collection
+function getDaysUntil($nextDate)
+{
+    $today = new DateTime();
+    $today->setTime(0, 0, 0);
+    $nextDate->setTime(0, 0, 0);
+    $diff = $today->diff($nextDate);
+    $days = (int) $diff->format('%a');
+
+    if ($days === 0) {
+        return 'Today';
+    } elseif ($days === 1) {
+        return 'Tomorrow';
+    } else {
+        return "In $days days";
+    }
+}
+
+// Function to format status badge
+function getStatusBadgeClass($status)
+{
+    $classes = [
+        'pending' => 'pending',
+        'investigating' => 'investigating',
+        'resolved' => 'resolved',
+        'rejected' => 'rejected'
+    ];
+    return $classes[$status] ?? 'pending';
+}
+
+// Function to format status text
+function getStatusText($status)
+{
+    $texts = [
+        'pending' => 'Pending',
+        'investigating' => 'Under Investigation',
+        'resolved' => 'Resolved',
+        'rejected' => 'Rejected'
+    ];
+    return $texts[$status] ?? 'Unknown';
+}
 ?>
 <!DOCTYPE html>
 
@@ -42,49 +153,23 @@ if (!isset($_SESSION["user_id"])) {
                     </div>
                 </div>
 
-                <div class="schedule-item">
-                    <div class="schedule-icon">
-                        <i class="fas fa-recycle"></i>
+                <?php while ($schedule = $schedules_result->fetch_assoc()):
+                    $nextDate = getNextCollectionDate($schedule['collection_days']);
+                    $daysUntil = getDaysUntil($nextDate);
+                    ?>
+                    <div class="schedule-item">
+                        <div class="schedule-icon">
+                            <i class="fas <?php echo htmlspecialchars($schedule['icon']); ?>"></i>
+                        </div>
+                        <div class="schedule-info">
+                            <h4><?php echo htmlspecialchars($schedule['waste_type']); ?></h4>
+                            <p><?php echo htmlspecialchars($schedule['collection_days']); ?> - Next:
+                                <?php echo $nextDate->format('F j, Y'); ?>
+                            </p>
+                        </div>
+                        <span class="schedule-badge"><?php echo $daysUntil; ?></span>
                     </div>
-                    <div class="schedule-info">
-                        <h4>Recyclable Waste</h4>
-                        <p>Every Friday - Next: October 4, 2025</p>
-                    </div>
-                    <span class="schedule-badge">In 4 days</span>
-                </div>
-
-                <div class="schedule-item">
-                    <div class="schedule-icon">
-                        <i class="fas fa-leaf"></i>
-                    </div>
-                    <div class="schedule-info">
-                        <h4>Biodegradable Waste</h4>
-                        <p>Monday, Wednesday, Friday - Next: October 2, 2025</p>
-                    </div>
-                    <span class="schedule-badge">In 2 days</span>
-                </div>
-
-                <div class="schedule-item">
-                    <div class="schedule-icon">
-                        <i class="fas fa-trash"></i>
-                    </div>
-                    <div class="schedule-info">
-                        <h4>Non-Biodegradable Waste</h4>
-                        <p>Tuesday, Thursday, Saturday - Next: October 1, 2025</p>
-                    </div>
-                    <span class="schedule-badge">Tomorrow</span>
-                </div>
-
-                <div class="schedule-item">
-                    <div class="schedule-icon">
-                        <i class="fas fa-hospital"></i>
-                    </div>
-                    <div class="schedule-info">
-                        <h4>Special/Hazardous Waste</h4>
-                        <p>First Saturday of the month - Next: October 5, 2025</p>
-                    </div>
-                    <span class="schedule-badge">In 5 days</span>
-                </div>
+                <?php endwhile; ?>
             </div>
         </div>
 
@@ -96,24 +181,30 @@ if (!isset($_SESSION["user_id"])) {
             </div>
             <div class="section-card-body">
                 <div class="report-form-card">
-                    <form id="missedCollectionForm">
+                    <form id="missedCollectionForm" enctype="multipart/form-data">
                         <div class="form-group">
                             <label for="collection-date">Missed Collection Date *</label>
-                            <input type="date" id="collection-date" name="collection-date" required>
+                            <input type="date" id="collection-date" name="collection-date"
+                                max="<?php echo date('Y-m-d'); ?>" required>
                         </div>
 
                         <div class="form-group">
                             <label>Waste Type *</label>
                             <div class="waste-type-tags">
-                                <div class="waste-tag biodegradable" onclick="toggleWasteType(this, 'biodegradable')">
+                                <div class="waste-tag biodegradable"
+                                    onclick="toggleWasteType(this, 'Biodegradable Waste')">
                                     <i class="fas fa-leaf"></i> Biodegradable
                                 </div>
                                 <div class="waste-tag non-biodegradable"
-                                    onclick="toggleWasteType(this, 'non-biodegradable')">
+                                    onclick="toggleWasteType(this, 'Non-Biodegradable Waste')">
                                     <i class="fas fa-trash"></i> Non-Biodegradable
                                 </div>
-                                <div class="waste-tag recyclable" onclick="toggleWasteType(this, 'recyclable')">
+                                <div class="waste-tag recyclable" onclick="toggleWasteType(this, 'Recyclable Waste')">
                                     <i class="fas fa-recycle"></i> Recyclable
+                                </div>
+                                <div class="waste-tag hazardous"
+                                    onclick="toggleWasteType(this, 'Special/Hazardous Waste')">
+                                    <i class="fas fa-hospital"></i> Special/Hazardous
                                 </div>
                             </div>
                             <input type="hidden" id="waste-type" name="waste-type" required>
@@ -127,7 +218,7 @@ if (!isset($_SESSION["user_id"])) {
 
                         <div class="form-group">
                             <label for="description">Description</label>
-                            <textarea id="description" name="description"
+                            <textarea id="description" name="description" rows="4"
                                 placeholder="Please provide additional details about the missed collection..."></textarea>
                         </div>
 
@@ -138,7 +229,7 @@ if (!isset($_SESSION["user_id"])) {
                                 <p>Click to upload or drag and drop</p>
                                 <span>PNG, JPG up to 5MB</span>
                             </div>
-                            <input type="file" id="photo-upload" name="photo" accept="image/*">
+                            <input type="file" id="photo-upload" name="photo" accept="image/*" style="display: none;">
                         </div>
 
                         <button type="submit" class="submit-report-btn">
@@ -157,77 +248,64 @@ if (!isset($_SESSION["user_id"])) {
             </div>
             <div class="section-card-body">
                 <div class="reports-history">
-                    <!-- Report Item - Pending -->
-                    <div class="report-item pending">
-                        <div class="report-item-content">
-                            <div class="report-item-header">
-                                <div>
-                                    <h4>Missed Biodegradable Collection</h4>
-                                    <span class="report-date">Reported on Sept 28, 2025</span>
+                    <?php if ($reports_result->num_rows > 0): ?>
+                        <?php while ($report = $reports_result->fetch_assoc()): ?>
+                            <div class="report-item <?php echo getStatusBadgeClass($report['status']); ?>">
+                                <div class="report-item-content">
+                                    <div class="report-item-header">
+                                        <div>
+                                            <h4>Missed <?php echo htmlspecialchars($report['waste_type']); ?></h4>
+                                            <span class="report-date">Reported on
+                                                <?php echo date('M j, Y', strtotime($report['created_at'])); ?></span>
+                                        </div>
+                                        <span class="report-status-badge <?php echo getStatusBadgeClass($report['status']); ?>">
+                                            <?php echo getStatusText($report['status']); ?>
+                                        </span>
+                                    </div>
+                                    <p><strong>Location:</strong> <?php echo htmlspecialchars($report['location']); ?></p>
+                                    <p><strong>Date:</strong>
+                                        <?php echo date('F j, Y', strtotime($report['collection_date'])); ?></p>
+                                    <?php if (!empty($report['description'])): ?>
+                                        <p><?php echo htmlspecialchars($report['description']); ?></p>
+                                    <?php endif; ?>
+                                    <?php if ($report['status'] === 'resolved' && !empty($report['resolution_notes'])): ?>
+                                        <p><strong>Resolution:</strong> <?php echo htmlspecialchars($report['resolution_notes']); ?>
+                                        </p>
+                                    <?php endif; ?>
+                                    <?php if (!empty($report['photo_path'])): ?>
+                                        <div class="report-photo">
+                                            <img src="../assets/waste_reports/<?php echo htmlspecialchars($report['photo_path']); ?>"
+                                                alt="Report photo" style="max-width: 200px; margin-top: 10px; border-radius: 8px;">
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
-                                <span class="report-status-badge pending">Pending</span>
                             </div>
-                            <p><strong>Location:</strong> Block 5, Lot 10</p>
-                            <p><strong>Date:</strong> September 27, 2025</p>
-                            <p>Collection truck did not pass by our area during scheduled time.</p>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <div class="no-reports">
+                            <i class="fas fa-inbox"></i>
+                            <p>No reports yet. Submit a report above if you experience a missed collection.</p>
                         </div>
-                    </div>
-
-                    <!-- Report Item - Investigating -->
-                    <div class="report-item investigating">
-                        <div class="report-item-content">
-                            <div class="report-item-header">
-                                <div>
-                                    <h4>Missed Recyclable Collection</h4>
-                                    <span class="report-date">Reported on Sept 20, 2025</span>
-                                </div>
-                                <span class="report-status-badge investigating">Under Investigation</span>
-                            </div>
-                            <p><strong>Location:</strong> Block 5, Lot 10</p>
-                            <p><strong>Date:</strong> September 19, 2025</p>
-                            <p>Recyclable waste was not collected as scheduled.</p>
-                        </div>
-                    </div>
-
-                    <!-- Report Item - Resolved -->
-                    <div class="report-item resolved">
-                        <div class="report-item-content">
-                            <div class="report-item-header">
-                                <div>
-                                    <h4>Missed Non-Biodegradable Collection</h4>
-                                    <span class="report-date">Reported on Sept 10, 2025</span>
-                                </div>
-                                <span class="report-status-badge resolved">Resolved</span>
-                            </div>
-                            <p><strong>Location:</strong> Block 5, Lot 10</p>
-                            <p><strong>Date:</strong> September 9, 2025</p>
-                            <p><strong>Resolution:</strong> Make-up collection scheduled and completed on September 12,
-                                2025.</p>
-                        </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         let selectedWasteType = null;
 
         function toggleWasteType(element, type) {
-            // Remove active class from all waste tags
             document.querySelectorAll('.waste-tag').forEach(tag => {
                 tag.classList.remove('active');
             });
 
-            // Add active class to selected tag
             element.classList.add('active');
             selectedWasteType = type;
-
-            // Update hidden input
             document.getElementById('waste-type').value = type;
         }
 
-        // Handle file upload display
         document.getElementById('photo-upload').addEventListener('change', function (e) {
             const fileName = e.target.files[0]?.name;
             if (fileName) {
@@ -236,31 +314,60 @@ if (!isset($_SESSION["user_id"])) {
             }
         });
 
-        // Handle form submission
         document.getElementById('missedCollectionForm').addEventListener('submit', function (e) {
             e.preventDefault();
 
-            // Validate waste type selection
             if (!selectedWasteType) {
-                alert('Please select a waste type');
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Waste Type Required',
+                    text: 'Please select a waste type'
+                });
                 return;
             }
 
-            // Here you would send the form data to your PHP backend
             const formData = new FormData(this);
+            const submitBtn = this.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
 
-            console.log('Form submitted with data:', {
-                date: formData.get('collection-date'),
-                wasteType: formData.get('waste-type'),
-                location: formData.get('location'),
-                description: formData.get('description')
-            });
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Submitting...';
 
-            // Show success message (you can use SweetAlert2 here)
-            alert('Report submitted successfully!');
-            this.reset();
-            document.querySelectorAll('.waste-tag').forEach(tag => tag.classList.remove('active'));
-            selectedWasteType = null;
+            fetch('./endpoints/submit_missed_collection.php', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Report Submitted!',
+                            text: data.message,
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Submission Failed',
+                            text: data.message
+                        });
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalText;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'An error occurred. Please try again.'
+                    });
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                });
         });
     </script>
 
@@ -270,3 +377,6 @@ if (!isset($_SESSION["user_id"])) {
 </body>
 
 </html>
+<?php
+$conn->close();
+?>
