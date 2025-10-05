@@ -30,6 +30,15 @@ try {
     $stmt->bind_param("ssssdssi", $documentName, $documentType, $icon, $processingDays, $fee, $description, $requirements, $isActive);
 
     if ($stmt->execute()) {
+
+        $activity = "Add Document Type";
+        $feeText = ($fee > 0) ? "with a fee of {$fee}." : "without a fee.";
+        $descriptionLog = "Added a new document type named {$documentName} ({$documentType}) {$feeText}";
+        $log_stmt = $conn->prepare("INSERT INTO activity_logs (activity, description) VALUES (?, ?)");
+        $log_stmt->bind_param("ss", $activity, $descriptionLog);
+        $log_stmt->execute();
+        $log_stmt->close();
+
         echo json_encode(['success' => true, 'message' => 'Document type added successfully']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to add document type']);

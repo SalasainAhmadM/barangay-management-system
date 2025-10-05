@@ -9,6 +9,8 @@ if (!isset($_SESSION["admin_id"])) {
     exit();
 }
 
+date_default_timezone_set("Asia/Manila");
+
 $data = json_decode(file_get_contents('php://input'), true);
 
 $id = $data['id'] ?? 0;
@@ -31,13 +33,26 @@ try {
     $stmt->bind_param("ssssdssii", $documentName, $documentType, $icon, $processingDays, $fee, $description, $requirements, $isActive, $id);
 
     if ($stmt->execute()) {
+
+        $feeText = ($fee > 0) ? "with a fee of {$fee}." : "without a fee.";
+
+        $activity = "Edited a Document Type";
+        $log_description = "Updated the document type named '{$documentName}' ({$documentType}) {$feeText}";
+
+        $log_stmt = $conn->prepare("INSERT INTO activity_logs (activity, description, created_at) VALUES ( ?, ?, NOW())");
+        $log_stmt->bind_param("ss", $activity, $log_description);
+        $log_stmt->execute();
+        $log_stmt->close();
+
         echo json_encode(['success' => true, 'message' => 'Document type updated successfully']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Failed to update document type']);
     }
+
     $stmt->close();
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+
 $conn->close();
 ?>

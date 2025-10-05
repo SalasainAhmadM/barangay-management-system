@@ -909,7 +909,7 @@ function viewReport(id) {
                                 <div class="info-value-simple">${collectionDate}</div>
                             </div>
                             
-                            <div class="info-item-simple full-width">
+                            <div class="info-item-simple">
                                 <div class="info-label-simple">Location</div>
                                 <div class="info-value-simple">${report.location}</div>
                             </div>

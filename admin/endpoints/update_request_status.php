@@ -1,4 +1,5 @@
 <?php
+// ========== update_request_status.php ==========
 session_start();
 require_once("../../conn/conn.php");
 
@@ -9,6 +10,7 @@ if (!isset($_SESSION["admin_id"])) {
     exit();
 }
 
+$admin_id = $_SESSION["admin_id"];
 $input = json_decode(file_get_contents('php://input'), true);
 
 if (!isset($input['request_id']) || !isset($input['status'])) {
@@ -17,9 +19,9 @@ if (!isset($input['request_id']) || !isset($input['status'])) {
 }
 
 $requestId = (int) $input['request_id'];
-$status = $input['status'];
-$rejectionReason = isset($input['rejection_reason']) ? $input['rejection_reason'] : null;
-$notes = isset($input['notes']) ? $input['notes'] : null;
+$status = trim($input['status']);
+$rejectionReason = trim($input['rejection_reason'] ?? '');
+$notes = trim($input['notes'] ?? '');
 
 // Validate status
 $validStatuses = ['pending', 'processing', 'approved', 'ready', 'completed', 'rejected', 'cancelled'];
@@ -37,7 +39,25 @@ if ($status === 'rejected' && empty($rejectionReason)) {
 try {
     $conn->begin_transaction();
 
-    // Prepare update query based on status
+    // Get document info for logging
+    $info_stmt = $conn->prepare("
+        SELECT dr.id, dr.user_id, dt.name AS document_name
+        FROM document_requests dr
+        INNER JOIN document_types dt ON dr.document_type_id = dt.id
+        WHERE dr.id = ?
+    ");
+    $info_stmt->bind_param("i", $requestId);
+    $info_stmt->execute();
+    $result = $info_stmt->get_result();
+    $requestInfo = $result->fetch_assoc();
+    $info_stmt->close();
+
+    if (!$requestInfo) {
+        echo json_encode(['success' => false, 'message' => 'Request not found']);
+        exit();
+    }
+
+    // Prepare update query
     $updateFields = "status = ?, updated_at = NOW()";
     $params = [$status];
     $types = "s";
@@ -49,7 +69,7 @@ try {
         $updateFields .= ", released_date = NOW()";
     }
 
-    // Add rejection reason if status is rejected
+    // Add rejection reason if rejected
     if ($status === 'rejected' && !empty($rejectionReason)) {
         $updateFields .= ", rejection_reason = ?";
         $params[] = $rejectionReason;
@@ -63,16 +83,45 @@ try {
         $types .= "s";
     }
 
-    // Add request ID for WHERE clause
+    // Add WHERE clause
     $params[] = $requestId;
     $types .= "i";
 
+    // Execute update
     $stmt = $conn->prepare("UPDATE document_requests SET $updateFields WHERE id = ?");
     $stmt->bind_param($types, ...$params);
 
     if ($stmt->execute()) {
-        $conn->commit();
-        echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
+        if ($stmt->affected_rows > 0) {
+            // ✅ Log admin activity
+            $activity = "Updated document request status";
+            $docName = $requestInfo['document_name'] ?? 'Unknown document';
+
+            // Build readable description
+            $description = "Updated the status of request ID {$requestId} for '{$docName}' to '{$status}'.";
+
+            if (!empty($notes)) {
+                $description .= " Notes: {$notes}.";
+            }
+
+            if ($status === 'rejected' && !empty($rejectionReason)) {
+                $description .= " Rejection reason: {$rejectionReason}.";
+            }
+
+            $log_stmt = $conn->prepare("
+                INSERT INTO activity_logs (activity, description, created_at)
+                VALUES (?, ?, NOW())
+            ");
+            $log_stmt->bind_param("ss", $activity, $description);
+            $log_stmt->execute();
+            $log_stmt->close();
+
+            $conn->commit();
+            echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
+        } else {
+            $conn->rollback();
+            echo json_encode(['success' => false, 'message' => 'Request not found or no changes made']);
+        }
     } else {
         $conn->rollback();
         echo json_encode(['success' => false, 'message' => 'Failed to update status']);

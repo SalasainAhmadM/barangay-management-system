@@ -10,6 +10,8 @@ if (!isset($_SESSION["admin_id"])) {
     exit();
 }
 
+$admin_id = $_SESSION["admin_id"];
+
 $data = json_decode(file_get_contents('php://input'), true);
 $report_id = $data['id'] ?? 0;
 
@@ -19,13 +21,18 @@ if (empty($report_id)) {
 }
 
 try {
-    // First, get the photo path to delete the file
-    $stmt = $conn->prepare("SELECT photo_path FROM missed_collections WHERE report_id = ?");
+    // First, get the photo path and details for activity log
+    $stmt = $conn->prepare("SELECT photo_path, location, description FROM missed_collections WHERE report_id = ?");
     $stmt->bind_param("i", $report_id);
     $stmt->execute();
     $result = $stmt->get_result();
     $report = $result->fetch_assoc();
     $stmt->close();
+
+    if (!$report) {
+        echo json_encode(['success' => false, 'message' => 'Report not found']);
+        exit();
+    }
 
     // Delete the report from database
     $stmt = $conn->prepare("DELETE FROM missed_collections WHERE report_id = ?");
@@ -34,12 +41,26 @@ try {
     if ($stmt->execute()) {
         if ($stmt->affected_rows > 0) {
             // Delete associated photo file if it exists
-            if ($report && $report['photo_path']) {
+            if (!empty($report['photo_path'])) {
                 $photo_file = '../../assets/waste_reports/' . $report['photo_path'];
                 if (file_exists($photo_file)) {
                     unlink($photo_file);
                 }
             }
+
+            // Log activity
+            $activity = "Deleted a report";
+            $desc_location = $report['location'] ?? 'Unknown location';
+            $description = "Deleted a missed collection report at '{$desc_location}' (Report ID: {$report_id}).";
+
+            $log_stmt = $conn->prepare("
+                INSERT INTO activity_logs (activity, description, created_at)
+                VALUES (?, ?, NOW())
+            ");
+            $log_stmt->bind_param("ss", $activity, $description);
+            $log_stmt->execute();
+            $log_stmt->close();
+
             echo json_encode(['success' => true, 'message' => 'Report deleted successfully']);
         } else {
             echo json_encode(['success' => false, 'message' => 'Report not found']);

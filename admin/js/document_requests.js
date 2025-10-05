@@ -467,6 +467,12 @@ function viewRequestDetails(requestId) {
 
 // Update request status
 function updateRequestStatus(requestId) {
+    Swal.fire({
+        title: 'Loading...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
     // First fetch current status
     fetch(`./endpoints/get_request_details.php?id=${requestId}`)
         .then(res => res.json())
@@ -475,22 +481,34 @@ function updateRequestStatus(requestId) {
                 const request = data.request;
 
                 Swal.fire({
-                    title: 'Update Request Status',
+                    title: '<i class="fas fa-edit"></i> Update Request Status',
                     html: `
-                        <div style="text-align: left; padding: 10px;">
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: block; font-weight: 600; margin-bottom: 5px; font-size: 13px; color: #374151;">Request ID</label>
-                                <input type="text" class="swal2-input" value="${request.request_id}" readonly style="background-color: #e9ecef !important; margin: 0; width: 100%;">
+                        <div class="enhanced-form">
+                            <div class="form-section">
+                                <div class="section-title">
+                                    <i class="fas fa-hashtag"></i>
+                                    Request ID
+                                </div>
+                                <input type="text" class="enhanced-input" value="${request.request_id}" readonly 
+                                       style="background-color: #f3f4f6; margin-top: 8px; cursor: not-allowed;">
                             </div>
                             
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: block; font-weight: 600; margin-bottom: 5px; font-size: 13px; color: #374151;">Current Status</label>
-                                <input type="text" class="swal2-input" value="${request.status.replace('_', ' ').toUpperCase()}" readonly style="background-color: #e9ecef !important; margin: 0; width: 100%;">
+                            <div class="form-section">
+                                <div class="section-title">
+                                    <i class="fas fa-info-circle"></i>
+                                    Current Status
+                                </div>
+                                <div style="padding: 12px; background: #f3f4f6; border: 2px solid #e5e7eb; border-radius: 8px; margin-top: 8px;">
+                                    <span class="status-badge ${request.status}">${request.status.replace('_', ' ').toUpperCase()}</span>
+                                </div>
                             </div>
                             
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: block; font-weight: 600; margin-bottom: 5px; font-size: 13px; color: #374151;">New Status <span style="color: #ef4444;">*</span></label>
-                                <select id="newStatus" class="swal2-select" style="margin: 0; width: 100%;">
+                            <div class="form-section">
+                                <div class="section-title">
+                                    <i class="fas fa-sync-alt"></i>
+                                    New Status <span style="color: #ef4444;">*</span>
+                                </div>
+                                <select id="newStatus" class="enhanced-input" style="margin-top: 8px;">
                                     <option value="">Select Status</option>
                                     <option value="pending">Pending</option>
                                     <option value="processing">Processing</option>
@@ -501,22 +519,31 @@ function updateRequestStatus(requestId) {
                                 </select>
                             </div>
                             
-                            <div id="rejectionReasonDiv" style="margin-bottom: 15px; display: none;">
-                                <label style="display: block; font-weight: 600; margin-bottom: 5px; font-size: 13px; color: #374151;">Rejection Reason <span style="color: #ef4444;">*</span></label>
-                                <input type="text" id="rejectionReason" class="swal2-input" placeholder="Enter rejection reason" style="margin: 0; width: 100%;">
+                            <div id="rejectionReasonDiv" class="form-section" style="display: none;">
+                                <div class="section-title">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    Rejection Reason <span style="color: #ef4444;">*</span>
+                                </div>
+                                <input type="text" id="rejectionReason" class="enhanced-input" 
+                                       placeholder="Enter rejection reason" style="margin-top: 8px;">
                             </div>
                             
-                            <div style="margin-bottom: 15px;">
-                                <label style="display: block; font-weight: 600; margin-bottom: 5px; font-size: 13px; color: #374151;">Admin Notes <span style="font-size: 11px; color: #6b7280;">(Optional)</span></label>
-                                <input type="text" id="adminNotes" class="swal2-input" placeholder="Enter any additional notes" style="margin: 0; width: 100%;">
+                            <div class="form-section">
+                                <div class="section-title">
+                                    <i class="fas fa-file-alt"></i>
+                                    Admin Notes
+                                </div>
+                                <textarea class="enhanced-textarea" id="adminNotes" rows="4" 
+                                          placeholder="Add any additional notes or comments..."></textarea>
                             </div>
                         </div>
                     `,
+                    width: '650px',
                     showCancelButton: true,
-                    confirmButtonText: 'Update Status',
-                    cancelButtonText: 'Cancel',
-                    confirmButtonColor: '#00247c',
-                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: '<i class="fas fa-save"></i> Update Status',
+                    cancelButtonText: '<i class="fas fa-times"></i> Cancel',
+                    confirmButtonColor: '#6366f1',
+                    cancelButtonColor: '#6b7280',
                     didOpen: () => {
                         // Show/hide rejection reason based on status
                         document.getElementById('newStatus').addEventListener('change', function () {
@@ -553,8 +580,7 @@ function updateRequestStatus(requestId) {
                 }).then((result) => {
                     if (result.isConfirmed) {
                         Swal.fire({
-                            title: 'Updating...',
-                            text: 'Please wait',
+                            title: 'Updating Status...',
                             allowOutsideClick: false,
                             didOpen: () => {
                                 Swal.showLoading();
@@ -573,18 +599,17 @@ function updateRequestStatus(requestId) {
                                 if (data.success) {
                                     Swal.fire({
                                         icon: 'success',
-                                        title: 'Updated!',
+                                        title: 'Success!',
                                         text: 'Request status has been updated successfully.',
-                                        confirmButtonColor: '#00247c'
+                                        confirmButtonColor: '#6366f1'
                                     }).then(() => {
                                         location.reload();
                                     });
                                 } else {
                                     Swal.fire({
                                         icon: 'error',
-                                        title: 'Error',
-                                        text: data.message || 'Failed to update status',
-                                        confirmButtonColor: '#00247c'
+                                        title: 'Error!',
+                                        text: data.message || 'Failed to update status'
                                     });
                                 }
                             })
@@ -592,14 +617,27 @@ function updateRequestStatus(requestId) {
                                 console.error('Error:', error);
                                 Swal.fire({
                                     icon: 'error',
-                                    title: 'Error',
-                                    text: 'An error occurred while updating the status',
-                                    confirmButtonColor: '#00247c'
+                                    title: 'Connection Error!',
+                                    text: 'Unable to connect to server'
                                 });
                             });
                     }
                 });
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: data.message || 'Failed to fetch request details'
+                });
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Connection Error!',
+                text: 'Unable to connect to server'
+            });
         });
 }
 // Delete request
