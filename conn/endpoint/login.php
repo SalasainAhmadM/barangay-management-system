@@ -62,7 +62,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $log_stmt->bind_param("ss", $activity, $description);
             $log_stmt->execute();
             $log_stmt->close();
-            \
 
             header("Location: ../../user/index.php");
             exit();
