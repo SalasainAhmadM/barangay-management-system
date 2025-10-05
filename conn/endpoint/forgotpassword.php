@@ -15,15 +15,17 @@ $email = trim($data["email"]);
 $newPassword = password_hash($data["password"], PASSWORD_BCRYPT);
 
 // Check user
-$stmt = $conn->prepare("SELECT id FROM user WHERE email = ?");
+$stmt = $conn->prepare("SELECT id, first_name, middle_name, last_name FROM user WHERE email = ?");
 $stmt->bind_param("s", $email);
 $stmt->execute();
-$stmt->store_result();
+$result = $stmt->get_result();
 
-if ($stmt->num_rows === 0) {
+if ($result->num_rows === 0) {
     echo json_encode(["success" => false, "message" => "No account found"]);
     exit();
 }
+
+$user = $result->fetch_assoc();
 $stmt->close();
 
 // Update password
@@ -31,6 +33,20 @@ $stmt = $conn->prepare("UPDATE user SET password = ? WHERE email = ?");
 $stmt->bind_param("ss", $newPassword, $email);
 
 if ($stmt->execute()) {
+
+    $userName = $user["first_name"];
+    if (!empty($user["middle_name"])) {
+        $userName .= " " . strtoupper(substr($user["middle_name"], 0, 1)) . ".";
+    }
+    $userName .= " " . $user["last_name"];
+
+    $activity = "Password Reset";
+    $description = "User {$userName} ({$email}) has successfully reset their password.";
+    $log_stmt = $conn->prepare("INSERT INTO activity_logs (activity, description) VALUES (?, ?)");
+    $log_stmt->bind_param("ss", $activity, $description);
+    $log_stmt->execute();
+    $log_stmt->close();
+
     echo json_encode(["success" => true]);
 } else {
     echo json_encode(["success" => false, "message" => "Error resetting password"]);
@@ -38,3 +54,4 @@ if ($stmt->execute()) {
 
 $stmt->close();
 $conn->close();
+?>

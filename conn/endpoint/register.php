@@ -66,6 +66,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $stmt->bind_param("ssssss", $first_name, $middle_name, $last_name, $email, $contact, $hashedPassword);
 
     if ($stmt->execute()) {
+
+        $activity = "New Account";
+        $description = "A new user account was created for {$first_name} {$middle_name} {$last_name} ({$email})";
+        $log_stmt = $conn->prepare("INSERT INTO activity_logs (activity, description) VALUES (?, ?)");
+        $log_stmt->bind_param("ss", $activity, $description);
+        $log_stmt->execute();
+        $log_stmt->close();
+
         $_SESSION["register_success"] = "Account created successfully!";
         header("Location: ../../index.php?register=success");
         exit();

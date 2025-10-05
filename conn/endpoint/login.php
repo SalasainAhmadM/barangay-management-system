@@ -56,6 +56,14 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             $_SESSION["show_user_welcome"] = true;
 
+            $activity = "User Login";
+            $description = "User {$userName} ({$user['email']}) has logged in.";
+            $log_stmt = $conn->prepare("INSERT INTO activity_logs (activity, description) VALUES (?, ?)");
+            $log_stmt->bind_param("ss", $activity, $description);
+            $log_stmt->execute();
+            $log_stmt->close();
+            \
+
             header("Location: ../../user/index.php");
             exit();
         } else {

@@ -42,7 +42,7 @@ INSERT INTO `activity_logs` (`id`, `activity`, `description`, `created_at`) VALU
 (1, 'Admin Update', 'admin credentials has been updated', '2025-09-27 22:08:27'),
 (2, 'Admin Update', 'admin profile has been updated', '2025-09-27 22:09:29'),
 (3, 'New Resident', 'Added new resident Maloi D Salasain from 123 Loop, Baliwasan', '2025-09-28 07:28:00'),
-(4, 'Edit Resident', 'Resident name was changed from \'Maloi D Salasain\' to \'Maloi1 D2 Salasain3\'', '2025-09-28 07:38:32'),
+(4, 'Edit Resident', 'Resident name was changed from Maloi D Salasain to Maloi1 D2 Salasain3', '2025-09-28 07:38:32'),
 (5, 'Edit Resident', 'Resident address was changed from 123 Loop, Baliwasan to 1234 Loop5, Baliwasan6', '2025-09-28 07:39:28'),
 (6, 'Edit Resident', 'Resident Maloi1 D2 Salasain3 credentials has been updated', '2025-09-28 07:39:51'),
 (7, 'Edit Resident', 'Resident Maloi1 D2 Salasain3 profile was updated', '2025-09-28 07:40:19'),
