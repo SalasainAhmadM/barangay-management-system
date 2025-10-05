@@ -6,6 +6,130 @@ if (!isset($_SESSION["user_id"])) {
   header("Location: ../index.php?auth=error");
   exit();
 }
+
+$user_id = $_SESSION["user_id"];
+
+// Fetch user's document request statistics
+$stmt = $conn->prepare("
+  SELECT 
+    COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
+    COUNT(CASE WHEN status IN ('approved', 'ready') THEN 1 END) as approved_count
+  FROM document_requests 
+  WHERE user_id = ?
+");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$stats = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+// Fetch next waste collection dates
+$current_day = date('l'); // Get current day name
+$stmt = $conn->prepare("
+  SELECT waste_type, collection_days, icon, color 
+  FROM waste_schedules 
+  WHERE is_active = 1
+  ORDER BY schedule_id
+");
+$stmt->execute();
+$waste_schedules = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+// Calculate days until next collection for each waste type
+function getNextCollectionDate($collection_days)
+{
+  $days = array_map('trim', explode(',', $collection_days));
+  $current_day = date('l');
+  $current_date = new DateTime();
+
+  $day_map = [
+    'Sunday' => 0,
+    'Monday' => 1,
+    'Tuesday' => 2,
+    'Wednesday' => 3,
+    'Thursday' => 4,
+    'Friday' => 5,
+    'Saturday' => 6
+  ];
+
+  $current_day_num = $day_map[$current_day];
+  $min_days_away = 7;
+  $next_day_name = '';
+
+  foreach ($days as $day) {
+    if (isset($day_map[$day])) {
+      $target_day_num = $day_map[$day];
+      $days_away = ($target_day_num - $current_day_num + 7) % 7;
+      if ($days_away == 0)
+        $days_away = 7; // If today, set to next week
+
+      if ($days_away < $min_days_away) {
+        $min_days_away = $days_away;
+        $next_day_name = $day;
+      }
+    }
+  }
+
+  $next_date = clone $current_date;
+  $next_date->modify("+{$min_days_away} days");
+
+  return [
+    'days_away' => $min_days_away,
+    'date' => $next_date->format('l, F j, Y'),
+    'day_name' => $next_day_name
+  ];
+}
+
+// Get the nearest collection
+$nearest_collection = null;
+foreach ($waste_schedules as $schedule) {
+  $next = getNextCollectionDate($schedule['collection_days']);
+  if (!$nearest_collection || $next['days_away'] < $nearest_collection['days_away']) {
+    $nearest_collection = $next;
+  }
+}
+
+$limit = count($waste_schedules) > 0 ? count($waste_schedules) : 5;
+
+$stmt = $conn->prepare("
+  SELECT 
+    dr.request_id,
+    dr.status,
+    dr.submitted_date,
+    dr.approved_date,
+    dt.name as document_name,
+    dt.icon
+  FROM document_requests dr
+  JOIN document_types dt ON dr.document_type_id = dt.id
+  WHERE dr.user_id = ?
+  ORDER BY dr.submitted_date DESC
+  LIMIT ?
+");
+$stmt->bind_param("ii", $user_id, $limit);
+$stmt->execute();
+$recent_requests = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+
+// Fetch announcements for this user
+$stmt = $conn->prepare("
+  SELECT 
+    title, 
+    message, 
+    icon, 
+    DATE_FORMAT(created_at, '%b %e, %Y') AS formatted_date
+  FROM notifications 
+  WHERE user_id = ? AND type = 'announcement'
+  ORDER BY created_at DESC
+  LIMIT 10
+");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$announcements = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+// Count announcements dynamically
+$announcement_count = count($announcements);
+
 ?>
 <!DOCTYPE html>
 
@@ -23,7 +147,7 @@ if (!isset($_SESSION["user_id"])) {
   <main class="main-content">
     <!-- Welcome Section -->
     <div class="welcome-section">
-      <h1>Welcome, <?php echo $_SESSION["user_name"]; ?>!</h1>
+      <h1>Welcome, <?php echo htmlspecialchars($_SESSION["user_name"]); ?>!</h1>
       <p>Here's what's happening in your barangay today</p>
     </div>
 
@@ -33,7 +157,7 @@ if (!isset($_SESSION["user_id"])) {
         <div class="stat-card-header">
           <div>
             <h3>Pending Requests</h3>
-            <div class="stat-value">2</div>
+            <div class="stat-value"><?php echo $stats['pending_count']; ?></div>
             <div class="stat-label">Awaiting approval</div>
           </div>
           <div class="stat-card-icon">
@@ -46,7 +170,7 @@ if (!isset($_SESSION["user_id"])) {
         <div class="stat-card-header">
           <div>
             <h3>Approved Requests</h3>
-            <div class="stat-value">5</div>
+            <div class="stat-value"><?php echo $stats['approved_count']; ?></div>
             <div class="stat-label">Ready for pickup</div>
           </div>
           <div class="stat-card-icon">
@@ -59,8 +183,12 @@ if (!isset($_SESSION["user_id"])) {
         <div class="stat-card-header">
           <div>
             <h3>Next Collection</h3>
-            <div class="stat-value">2</div>
-            <div class="stat-label">Days remaining</div>
+            <?php
+            $days = $nearest_collection ? $nearest_collection['days_away'] : 0;
+            $label = ($days == 1) ? 'Day remaining' : 'Days remaining';
+            ?>
+            <div class="stat-value"><?php echo $days; ?></div>
+            <div class="stat-label"><?php echo $label; ?></div>
           </div>
           <div class="stat-card-icon">
             <i class="fas fa-trash-alt"></i>
@@ -72,7 +200,7 @@ if (!isset($_SESSION["user_id"])) {
         <div class="stat-card-header">
           <div>
             <h3>Announcements</h3>
-            <div class="stat-value">3</div>
+            <div class="stat-value"><?php echo $announcement_count; ?></div>
             <div class="stat-label">New updates</div>
           </div>
           <div class="stat-card-icon">
@@ -91,36 +219,21 @@ if (!isset($_SESSION["user_id"])) {
           <h2>Waste Collection Schedule</h2>
         </div>
         <div class="section-card-body">
-          <div class="schedule-item">
-            <div class="schedule-icon">
-              <i class="fas fa-recycle"></i>
+          <?php foreach ($waste_schedules as $schedule):
+            $next_collection = getNextCollectionDate($schedule['collection_days']);
+            ?>
+            <div class="schedule-item">
+              <div class="schedule-icon">
+                <i class="fas <?php echo htmlspecialchars($schedule['icon']); ?>"></i>
+              </div>
+              <div class="schedule-info">
+                <h4><?php echo htmlspecialchars($schedule['waste_type']); ?></h4>
+                <p>Next: <?php echo $next_collection['date']; ?></p>
+              </div>
+              <span class="schedule-badge">In <?php echo $next_collection['days_away']; ?>
+                day<?php echo $next_collection['days_away'] != 1 ? 's' : ''; ?></span>
             </div>
-            <div class="schedule-info">
-              <h4>Recyclable Waste</h4>
-              <p>Next: Friday, October 4, 2025</p>
-            </div>
-            <span class="schedule-badge">In 2 days</span>
-          </div>
-          <div class="schedule-item">
-            <div class="schedule-icon">
-              <i class="fas fa-trash"></i>
-            </div>
-            <div class="schedule-info">
-              <h4>Biodegradable Waste</h4>
-              <p>Next: Monday, October 7, 2025</p>
-            </div>
-            <span class="schedule-badge">In 5 days</span>
-          </div>
-          <div class="schedule-item">
-            <div class="schedule-icon">
-              <i class="fas fa-dumpster"></i>
-            </div>
-            <div class="schedule-info">
-              <h4>Non-Biodegradable Waste</h4>
-              <p>Next: Wednesday, October 9, 2025</p>
-            </div>
-            <span class="schedule-badge">In 7 days</span>
-          </div>
+          <?php endforeach; ?>
         </div>
       </div>
 
@@ -131,36 +244,33 @@ if (!isset($_SESSION["user_id"])) {
           <h2>Recent Requests</h2>
         </div>
         <div class="section-card-body">
-          <div class="request-item pending">
-            <div class="request-icon">
-              <i class="fas fa-id-card"></i>
-            </div>
-            <div class="request-info">
-              <h4>Barangay Clearance</h4>
-              <p>Submitted: Sept 28, 2025</p>
-            </div>
-            <span class="status-badge pending">Pending</span>
-          </div>
-          <div class="request-item processing">
-            <div class="request-icon">
-              <i class="fas fa-certificate"></i>
-            </div>
-            <div class="request-info">
-              <h4>Certificate of Residency</h4>
-              <p>Submitted: Sept 25, 2025</p>
-            </div>
-            <span class="status-badge processing">Processing</span>
-          </div>
-          <div class="request-item approved">
-            <div class="request-icon">
-              <i class="fas fa-file-invoice"></i>
-            </div>
-            <div class="request-info">
-              <h4>Indigency Certificate</h4>
-              <p>Approved: Sept 20, 2025</p>
-            </div>
-            <span class="status-badge approved">Ready</span>
-          </div>
+          <?php if (empty($recent_requests)): ?>
+            <p style="text-align: center; color: #6c757d; padding: 20px;">No document requests yet</p>
+          <?php else: ?>
+            <?php foreach ($recent_requests as $request):
+              $status_class = strtolower($request['status']);
+              $status_label = ucfirst($request['status']);
+              if ($request['status'] == 'ready' || $request['status'] == 'approved') {
+                $status_label = 'Ready';
+              }
+              $date_display = $request['status'] == 'approved' && $request['approved_date']
+                ? date('M j, Y', strtotime($request['approved_date']))
+                : date('M j, Y', strtotime($request['submitted_date']));
+              ?>
+              <div class="request-item <?php echo $status_class; ?>">
+                <div class="request-icon">
+                  <i class="fas <?php echo htmlspecialchars($request['icon']); ?>"></i>
+                </div>
+                <div class="request-info">
+                  <h4><?php echo htmlspecialchars($request['document_name']); ?></h4>
+                  <p><?php echo $request['status'] == 'approved' ? 'Approved' : 'Submitted'; ?>:
+                    <?php echo $date_display; ?>
+                  </p>
+                </div>
+                <span class="status-badge <?php echo $status_class; ?>"><?php echo $status_label; ?></span>
+              </div>
+            <?php endforeach; ?>
+          <?php endif; ?>
         </div>
       </div>
     </div>
@@ -172,51 +282,22 @@ if (!isset($_SESSION["user_id"])) {
         <h2>Barangay Announcements</h2>
       </div>
       <div class="section-card-body">
-        <div class="announcement-item">
-          <div class="announcement-header">
-            <h4>Community Clean-up Drive</h4>
-            <span class="announcement-date">Sept 29, 2025</span>
-          </div>
-          <p>Join us this Saturday, October 5, for our monthly community clean-up drive. Gathering at the barangay hall
-            at 6:00 AM.</p>
-        </div>
-        <div class="announcement-item">
-          <div class="announcement-header">
-            <h4>Barangay Assembly Meeting</h4>
-            <span class="announcement-date">Sept 27, 2025</span>
-          </div>
-          <p>Monthly assembly meeting scheduled for October 10, 2025, at 5:00 PM. All residents are encouraged to
-            attend.</p>
-        </div>
-        <div class="announcement-item">
-          <div class="announcement-header">
-            <h4>Holiday Schedule Notice</h4>
-            <span class="announcement-date">Sept 25, 2025</span>
-          </div>
-          <p>The barangay office will be closed on October 31 and November 1 in observance of All Saints' Day.</p>
-        </div>
+        <?php if (empty($announcements)): ?>
+          <p style="text-align: center; color: #6c757d; padding: 20px;">No announcements at this time</p>
+        <?php else: ?>
+          <?php foreach ($announcements as $a): ?>
+            <div class="announcement-item">
+              <div class="announcement-header">
+                <h4><?php echo htmlspecialchars($a['title']); ?></h4>
+                <span class="announcement-date"><?php echo htmlspecialchars($a['formatted_date']); ?></span>
+              </div>
+              <p><?php echo nl2br(htmlspecialchars($a['message'])); ?></p>
+            </div>
+          <?php endforeach; ?>
+        <?php endif; ?>
       </div>
     </div>
 
-    <!-- Quick Actions 
-    <div class="quick-actions">
-      <a href="#" class="action-btn">
-        <i class="fas fa-plus-circle"></i>
-        <span>New Request</span>
-      </a>
-      <a href="#" class="action-btn">
-        <i class="fas fa-user-edit"></i>
-        <span>Update Profile</span>
-      </a>
-      <a href="#" class="action-btn">
-        <i class="fas fa-exclamation-triangle"></i>
-        <span>Report Issue</span>
-      </a>
-      <a href="#" class="action-btn">
-        <i class="fas fa-envelope"></i>
-        <span>Contact Barangay</span>
-      </a>
-    </div> -->
   </main>
 
   <?php include '../components/cdn_scripts.php'; ?>

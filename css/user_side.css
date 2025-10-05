@@ -216,7 +216,7 @@
 }
 
 .request-item.pending {
-  border-color: #ffa500;
+  border-color: #ffc107;
 }
 
 .request-item.approved {
@@ -225,6 +225,22 @@
 
 .request-item.processing {
   border-color: #17a2b8;
+}
+
+.request-item.ready {
+  border-color: #20c997;
+}
+
+.request-item.completed {
+  border-color: #6c757d
+}
+
+.request-item.cancelled {
+  border-color: #dc3545;
+}
+
+.request-item.rejected {
+  border-color: #dc3545;
 }
 
 .request-icon {
@@ -240,7 +256,7 @@
 }
 
 .request-item.pending .request-icon {
-  background: #ffa500;
+  background: #ffc107;
 }
 
 .request-item.approved .request-icon {
@@ -249,6 +265,22 @@
 
 .request-item.processing .request-icon {
   background: #17a2b8;
+}
+
+.request-item.ready .request-icon {
+  background: #20c997;
+}
+
+.request-item.completed .request-icon {
+  background: #6c757d;
+}
+
+.request-item.rejected .request-icon {
+  background: #dc3545;
+}
+
+.request-item.cancelled .request-icon {
+  background: #dc3545;
 }
 
 .request-info h4 {
@@ -272,7 +304,7 @@
 }
 
 .status-badge.pending {
-  background: #ffa500;
+  background: #ffc107;
 }
 
 .status-badge.approved {
@@ -281,6 +313,22 @@
 
 .status-badge.processing {
   background: #17a2b8;
+}
+
+.status-badge.ready {
+  background: #20c997;
+}
+
+.status-badge.completed {
+  background: #6c757d;
+}
+
+.status-badge.cancelled {
+  background: #dc3545;
+}
+
+.status-badge.rejected {
+  background: #dc3545;
 }
 
 /* Announcements */
@@ -668,6 +716,10 @@
 }
 
 .request-card.cancelled .request-icon-small {
+  background: #dc3545;
+}
+
+.request-card.rejected .request-icon-small {
   background: #dc3545;
 }
 
@@ -1635,6 +1687,10 @@ input[type="file"] {
 }
 
 .request-card.cancelled {
+  border-left: 5px solid #dc3545;
+}
+
+.request-card.rejected {
   border-left: 5px solid #dc3545;
 }
 

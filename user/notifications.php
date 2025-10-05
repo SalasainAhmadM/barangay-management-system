@@ -6,6 +6,32 @@ if (!isset($_SESSION["user_id"])) {
     header("Location: ../index.php?auth=error");
     exit();
 }
+
+$user_id = $_SESSION["user_id"];
+
+// Get user's notification preferences
+$preferences = null;
+$stmt = $conn->prepare("SELECT * FROM notification_preferences WHERE user_id = ?");
+$stmt->bind_param("i", $user_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$preferences = $result->fetch_assoc();
+$stmt->close();
+
+if (!$preferences) {
+    // Create default preferences if they don't exist
+    $stmt = $conn->prepare("INSERT INTO notification_preferences (user_id) VALUES (?)");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $stmt->close();
+
+    $preferences = [
+        'waste_reminders' => 1,
+        'request_updates' => 1,
+        'announcements' => 1,
+        'sms_notifications' => 1
+    ];
+}
 ?>
 <!DOCTYPE html>
 
@@ -30,19 +56,19 @@ if (!isset($_SESSION["user_id"])) {
             <div class="section-card-body">
                 <div class="notifications-header">
                     <div class="notification-filters">
-                        <button class="notification-filter-btn active" onclick="filterNotifications('all')">
+                        <button class="notification-filter-btn active" data-filter="all">
                             <i class="fas fa-inbox"></i> All
                         </button>
-                        <button class="notification-filter-btn" onclick="filterNotifications('waste')">
+                        <button class="notification-filter-btn" data-filter="waste">
                             <i class="fas fa-trash-alt"></i> Waste Collection
                         </button>
-                        <button class="notification-filter-btn" onclick="filterNotifications('request')">
+                        <button class="notification-filter-btn" data-filter="request">
                             <i class="fas fa-file-alt"></i> Requests
                         </button>
-                        <button class="notification-filter-btn" onclick="filterNotifications('announcement')">
+                        <button class="notification-filter-btn" data-filter="announcement">
                             <i class="fas fa-bullhorn"></i> Announcements
                         </button>
-                        <button class="notification-filter-btn" onclick="filterNotifications('unread')">
+                        <button class="notification-filter-btn" data-filter="unread">
                             <i class="fas fa-envelope"></i> Unread
                         </button>
                     </div>
@@ -58,131 +84,9 @@ if (!isset($_SESSION["user_id"])) {
                 </div>
 
                 <!-- Notifications List -->
-                <div class="notifications-list">
-                    <!-- Waste Collection Reminder - Unread -->
-                    <div class="notification-item waste unread" onclick="markAsRead(this)">
-                        <div class="notification-header">
-                            <div class="notification-icon">
-                                <i class="fas fa-trash-alt"></i>
-                            </div>
-                            <div class="notification-content">
-                                <h4>Waste Collection Reminder</h4>
-                                <p>Reminder: Recyclable waste collection is scheduled for tomorrow, October 1, 2025.
-                                    Please prepare your bins before 6:00 AM.</p>
-                                <div class="notification-time">
-                                    <i class="fas fa-clock"></i>
-                                    <span>2 hours ago</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Request Update - Unread -->
-                    <div class="notification-item success unread" onclick="markAsRead(this)">
-                        <div class="notification-header">
-                            <div class="notification-icon">
-                                <i class="fas fa-check-circle"></i>
-                            </div>
-                            <div class="notification-content">
-                                <h4>Certificate Ready for Pickup</h4>
-                                <p>Your Certificate of Residency (Request #BR-2025-001198) has been approved and is
-                                    ready for pickup at the barangay hall.</p>
-                                <div class="notification-time">
-                                    <i class="fas fa-clock"></i>
-                                    <span>5 hours ago</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Announcement - Unread -->
-                    <div class="notification-item announcement unread" onclick="markAsRead(this)">
-                        <div class="notification-header">
-                            <div class="notification-icon">
-                                <i class="fas fa-bullhorn"></i>
-                            </div>
-                            <div class="notification-content">
-                                <h4>Community Clean-up Drive</h4>
-                                <p>Join us this Saturday, October 5, for our monthly community clean-up drive. Gathering
-                                    at the barangay hall at 6:00 AM. Your participation matters!</p>
-                                <div class="notification-time">
-                                    <i class="fas fa-clock"></i>
-                                    <span>1 day ago</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Request Update - Read -->
-                    <div class="notification-item request">
-                        <div class="notification-header">
-                            <div class="notification-icon">
-                                <i class="fas fa-hourglass-half"></i>
-                            </div>
-                            <div class="notification-content">
-                                <h4>Request Status Update</h4>
-                                <p>Your Barangay Clearance request (Request #BR-2025-001234) is now being processed.
-                                    Expected completion: October 5, 2025.</p>
-                                <div class="notification-time">
-                                    <i class="fas fa-clock"></i>
-                                    <span>2 days ago</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Waste Collection Reminder - Read -->
-                    <div class="notification-item waste">
-                        <div class="notification-header">
-                            <div class="notification-icon">
-                                <i class="fas fa-leaf"></i>
-                            </div>
-                            <div class="notification-content">
-                                <h4>Biodegradable Waste Collection</h4>
-                                <p>Biodegradable waste collection completed successfully in your area. Next collection:
-                                    October 2, 2025.</p>
-                                <div class="notification-time">
-                                    <i class="fas fa-clock"></i>
-                                    <span>3 days ago</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Announcement - Read -->
-                    <div class="notification-item announcement">
-                        <div class="notification-header">
-                            <div class="notification-icon">
-                                <i class="fas fa-calendar-times"></i>
-                            </div>
-                            <div class="notification-content">
-                                <h4>Office Closure Notice</h4>
-                                <p>The barangay office will be closed on October 31 and November 1 in observance of All
-                                    Saints' Day. Regular operations resume November 2.</p>
-                                <div class="notification-time">
-                                    <i class="fas fa-clock"></i>
-                                    <span>5 days ago</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Missed Collection Report Update - Read -->
-                    <div class="notification-item alert">
-                        <div class="notification-header">
-                            <div class="notification-icon">
-                                <i class="fas fa-exclamation-circle"></i>
-                            </div>
-                            <div class="notification-content">
-                                <h4>Missed Collection Report Update</h4>
-                                <p>Your missed collection report has been resolved. Make-up collection was completed on
-                                    September 25, 2025. Thank you for your patience.</p>
-                                <div class="notification-time">
-                                    <i class="fas fa-clock"></i>
-                                    <span>1 week ago</span>
-                                </div>
-                            </div>
-                        </div>
+                <div class="notifications-list" id="notificationsList">
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i> Loading notifications...
                     </div>
                 </div>
             </div>
@@ -200,7 +104,8 @@ if (!isset($_SESSION["user_id"])) {
                     <p>Get notified before scheduled waste collection</p>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" checked onchange="toggleNotificationSetting(this, 'waste')">
+                    <input type="checkbox" <?php echo $preferences['waste_reminders'] ? 'checked' : ''; ?>
+                        onchange="toggleNotificationSetting(this, 'waste_reminders')">
                     <span class="toggle-slider"></span>
                 </label>
             </div>
@@ -211,7 +116,8 @@ if (!isset($_SESSION["user_id"])) {
                     <p>Receive updates on your certificate and permit requests</p>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" checked onchange="toggleNotificationSetting(this, 'request')">
+                    <input type="checkbox" <?php echo $preferences['request_updates'] ? 'checked' : ''; ?>
+                        onchange="toggleNotificationSetting(this, 'request_updates')">
                     <span class="toggle-slider"></span>
                 </label>
             </div>
@@ -222,7 +128,8 @@ if (!isset($_SESSION["user_id"])) {
                     <p>Stay informed about community events and updates</p>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" checked onchange="toggleNotificationSetting(this, 'announcement')">
+                    <input type="checkbox" <?php echo $preferences['announcements'] ? 'checked' : ''; ?>
+                        onchange="toggleNotificationSetting(this, 'announcements')">
                     <span class="toggle-slider"></span>
                 </label>
             </div>
@@ -233,7 +140,8 @@ if (!isset($_SESSION["user_id"])) {
                     <p>Receive notifications via SMS</p>
                 </div>
                 <label class="toggle-switch">
-                    <input type="checkbox" checked onchange="toggleNotificationSetting(this, 'sms')">
+                    <input type="checkbox" <?php echo $preferences['sms_notifications'] ? 'checked' : ''; ?>
+                        onchange="toggleNotificationSetting(this, 'sms_notifications')">
                     <span class="toggle-slider"></span>
                 </label>
             </div>
@@ -244,49 +152,279 @@ if (!isset($_SESSION["user_id"])) {
     <?php include '../components/footer.php'; ?>
 
     <script>
-        function filterNotifications(type) {
-            // Update active filter button
+        let currentFilter = 'all';
+
+        // Load notifications on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            loadNotifications();
+
+            // Add click event listeners to filter buttons
             document.querySelectorAll('.notification-filter-btn').forEach(btn => {
-                btn.classList.remove('active');
+                btn.addEventListener('click', function () {
+                    document.querySelectorAll('.notification-filter-btn').forEach(b => {
+                        b.classList.remove('active');
+                    });
+                    this.classList.add('active');
+                    currentFilter = this.dataset.filter;
+                    loadNotifications();
+                });
             });
-            event.currentTarget.classList.add('active');
+        });
 
-            // Filter logic would go here
-            console.log('Filtering notifications by:', type);
+        function loadNotifications() {
+            const notificationsList = document.getElementById('notificationsList');
+            notificationsList.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Loading notifications...</div>';
+
+            fetch(`./endpoints/notifications.php?action=get_all&filter=${currentFilter}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        displayNotifications(data.notifications);
+                    } else {
+                        showError('Failed to load notifications');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('Error loading notifications');
+                });
         }
 
-        function markAsRead(element) {
-            element.classList.remove('unread');
-            // Backend call to mark as read would go here
-            console.log('Marked notification as read');
-        }
+        function displayNotifications(notifications) {
+            const notificationsList = document.getElementById('notificationsList');
 
-        function markAllAsRead() {
-            document.querySelectorAll('.notification-item.unread').forEach(item => {
-                item.classList.remove('unread');
-            });
-            // Backend call to mark all as read would go here
-            console.log('Marked all notifications as read');
-        }
-
-        function clearAll() {
-            if (confirm('Are you sure you want to clear all notifications?')) {
-                document.querySelector('.notifications-list').innerHTML = `
+            if (notifications.length === 0) {
+                notificationsList.innerHTML = `
                     <div class="notifications-empty">
                         <i class="fas fa-bell-slash"></i>
                         <h3>No Notifications</h3>
                         <p>You're all caught up! Check back later for new updates.</p>
                     </div>
                 `;
-                // Backend call to clear all would go here
-                console.log('Cleared all notifications');
+                return;
+            }
+
+            let html = '';
+            notifications.forEach(notification => {
+                const iconClass = getIconClass(notification);
+                const typeClass = getTypeClass(notification.type);
+                const unreadClass = notification.is_read == 0 ? 'unread' : '';
+                const timeAgo = formatTimeAgo(notification.created_at);
+
+                html += `
+                    <div class="notification-item ${typeClass} ${unreadClass}" 
+                         onclick="markAsRead(${notification.id}, this)"
+                         data-id="${notification.id}">
+                        <div class="notification-header">
+                            <div class="notification-icon">
+                                <i class="fas ${iconClass}"></i>
+                            </div>
+                            <div class="notification-content">
+                                <h4>${escapeHtml(notification.title)}</h4>
+                                <p>${escapeHtml(notification.message)}</p>
+                                <div class="notification-time">
+                                    <i class="fas fa-clock"></i>
+                                    <span>${timeAgo}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            notificationsList.innerHTML = html;
+        }
+
+        function getIconClass(notification) {
+            if (notification.icon) return notification.icon;
+
+            switch (notification.type) {
+                case 'waste': return 'fa-trash-alt';
+                case 'request': return 'fa-hourglass-half';
+                case 'announcement': return 'fa-bullhorn';
+                case 'alert': return 'fa-exclamation-circle';
+                case 'success': return 'fa-check-circle';
+                default: return 'fa-bell';
             }
         }
 
+        function getTypeClass(type) {
+            const typeMap = {
+                'waste': 'waste',
+                'request': 'request',
+                'announcement': 'announcement',
+                'alert': 'alert',
+                'success': 'success'
+            };
+            return typeMap[type] || '';
+        }
+
+        function formatTimeAgo(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now - date) / 1000);
+
+            if (seconds < 60) return 'Just now';
+            if (seconds < 3600) {
+                const mins = Math.floor(seconds / 60);
+                return mins + (mins === 1 ? ' minute ago' : ' minutes ago');
+            }
+            if (seconds < 86400) {
+                const hours = Math.floor(seconds / 3600);
+                return hours + (hours === 1 ? ' hour ago' : ' hours ago');
+            }
+            if (seconds < 604800) {
+                const days = Math.floor(seconds / 86400);
+                return days + (days === 1 ? ' day ago' : ' days ago');
+            }
+            if (seconds < 2592000) {
+                const weeks = Math.floor(seconds / 604800);
+                return weeks + (weeks === 1 ? ' week ago' : ' weeks ago');
+            }
+            const months = Math.floor(seconds / 2592000);
+            return months + (months === 1 ? ' month ago' : ' months ago');
+        }
+
+        function markAsRead(notificationId, element) {
+            if (!element.classList.contains('unread')) return;
+
+            fetch('./endpoints/notifications.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `action=mark_read&notification_id=${notificationId}`
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        element.classList.remove('unread');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+
+        function markAllAsRead() {
+            fetch('./endpoints/notifications.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: 'action=mark_all_read'
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.querySelectorAll('.notification-item.unread').forEach(item => {
+                            item.classList.remove('unread');
+                        });
+                        showSuccess('All notifications marked as read');
+                    } else {
+                        showError('Failed to mark notifications as read');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('Error marking notifications as read');
+                });
+        }
+
+        function clearAll() {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Clear All Notifications?',
+                text: 'Are you sure you want to clear all notifications? This action cannot be undone.',
+                showCancelButton: true,
+                confirmButtonColor: '#667eea',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, clear all',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch('./endpoints/notifications.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'action=clear_all'
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                document.getElementById('notificationsList').innerHTML = `
+                        <div class="notifications-empty">
+                            <i class="fas fa-bell-slash"></i>
+                            <h3>No Notifications</h3>
+                            <p>You're all caught up! Check back later for new updates.</p>
+                        </div>
+                    `;
+                                showSuccess('All notifications cleared');
+                            } else {
+                                showError('Failed to clear notifications');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            showError('Error clearing notifications');
+                        });
+                }
+            });
+        }
+
         function toggleNotificationSetting(checkbox, type) {
-            const status = checkbox.checked ? 'enabled' : 'disabled';
-            console.log(`${type} notifications ${status}`);
-            // Backend call to update settings would go here
+            const value = checkbox.checked ? 1 : 0;
+            const typeName = type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+            fetch('./endpoints/notifications.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `action=update_preference&preference_type=${type}&value=${value}`
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showSuccess(`${typeName} ${value ? 'enabled' : 'disabled'}`);
+                    } else {
+                        showError('Failed to update preference');
+                        checkbox.checked = !checkbox.checked;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showError('Error updating preference');
+                    checkbox.checked = !checkbox.checked;
+                });
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        function showSuccess(message) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: message,
+                confirmButtonColor: '#667eea'
+            });
+        }
+
+        function showError(message) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: message,
+                confirmButtonColor: '#667eea'
+            });
         }
     </script>
 </body>

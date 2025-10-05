@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 05, 2025 at 01:43 PM
+-- Generation Time: Oct 04, 2025 at 05:35 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -42,7 +42,7 @@ INSERT INTO `activity_logs` (`id`, `activity`, `description`, `created_at`) VALU
 (1, 'Admin Update', 'admin credentials has been updated', '2025-09-27 22:08:27'),
 (2, 'Admin Update', 'admin profile has been updated', '2025-09-27 22:09:29'),
 (3, 'New Resident', 'Added new resident Maloi D Salasain from 123 Loop, Baliwasan', '2025-09-28 07:28:00'),
-(4, 'Edit Resident', 'Resident name was changed from \'Maloi D Salasain\' to \'Maloi1 D2 Salasain3\'', '2025-09-28 07:38:32'),
+(4, 'Edit Resident', 'Resident name was changed from Maloi D Salasain to Maloi1 D2 Salasain3', '2025-09-28 07:38:32'),
 (5, 'Edit Resident', 'Resident address was changed from 123 Loop, Baliwasan to 1234 Loop5, Baliwasan6', '2025-09-28 07:39:28'),
 (6, 'Edit Resident', 'Resident Maloi1 D2 Salasain3 credentials has been updated', '2025-09-28 07:39:51'),
 (7, 'Edit Resident', 'Resident Maloi1 D2 Salasain3 profile was updated', '2025-09-28 07:40:19'),
@@ -60,22 +60,7 @@ INSERT INTO `activity_logs` (`id`, `activity`, `description`, `created_at`) VALU
 (19, 'Edit Resident', 'Resident Kaede D Rukawa credentials has been updated', '2025-09-28 19:27:19'),
 (20, 'Edit Resident', 'Resident address was changed from 123 Duston Drive, Baliwasan to 1234 Duston Drive5, Baliwasan6', '2025-09-28 19:34:27'),
 (21, 'Edit Resident', 'Resident Kaede1 D2 Rukawa3 name and profile image has been updated', '2025-09-28 19:35:16'),
-(22, 'Profile Update', 'Resident name was changed from John K Cena12 to John Kena Cena12', '2025-09-28 20:28:41'),
-(23, 'Deleted a Resident', 'Removed resident \'Maloi1 D2 Salasain3\' (ID: 14) from the system.', '2025-10-05 13:33:09'),
-(24, 'Add Document Type', 'Added a new document type named TEST (permit) without a fee.', '2025-10-05 13:33:48'),
-(25, 'Edited a Document Type', 'Updated the document type named \'TEST2\' (certificate) without a fee.', '2025-10-05 13:34:16'),
-(26, 'Deleted a Document Type', 'Deleted a document type named \'TEST2\' (certificate).', '2025-10-05 13:37:46'),
-(27, 'Edited Waste Schedule', 'Updated schedule (ID: 5) - Waste Type: \'tsy\', Collection Days: \'Monday, Saturday\'.', '2025-10-05 13:45:40'),
-(28, 'Added a Waste Collection Schedule', 'Added a new waste collection schedule for \'tsy1231\' on Tuesday, Saturday.', '2025-10-05 13:45:58'),
-(29, 'Deleted Waste Schedule', 'Removed schedule (ID: 6) - Waste Type: \'tsy1231\', Collection Days: \'Tuesday, Saturday\'.', '2025-10-05 13:48:57'),
-(30, 'Deleted a report', 'Deleted a missed collection report at \'Grandline 44\' (Report ID: 3).', '2025-10-05 16:57:58'),
-(31, 'Updated report status', 'Updated report ID 4 status to \'resolved\' at \'Grandline\'. No resolution notes.', '2025-10-05 17:32:57'),
-(32, 'Deleted a report', 'Deleted a missed collection report at \'Grandline 44\' (Report ID: 2).', '2025-10-05 17:39:34'),
-(33, 'Updated document request status', 'Admin ID 1 updated the status of request ID 3 for \'Construction Permit\' to \'pending\'.', '2025-10-05 17:40:50'),
-(34, 'Updated document request status', 'Updated the status of request ID 3 for \'Construction Permit\' to \'approved\'.', '2025-10-05 17:41:13'),
-(35, 'Updated report status', 'Updated report ID 4 status to \'rejected\' at \'Grandline\'. No resolution notes.', '2025-10-05 17:41:23'),
-(36, 'Deleted Document Request', 'Deleted a certificate request (ID: 1) for \'Good Moral Character\' with a fee of 50.00. Submitted by John Kena Cena12.', '2025-10-05 17:47:31'),
-(37, 'User Login', 'User John K. Cena12 (test@gmail.com) has logged in.', '2025-10-05 18:26:58');
+(22, 'Profile Update', 'Resident name was changed from John K Cena12 to John Kena Cena12', '2025-09-28 20:28:41');
 
 -- --------------------------------------------------------
 
@@ -133,7 +118,9 @@ CREATE TABLE `document_requests` (
 --
 
 INSERT INTO `document_requests` (`id`, `request_id`, `user_id`, `document_type_id`, `purpose`, `additional_info`, `status`, `payment_status`, `payment_reference`, `submitted_date`, `approved_date`, `released_date`, `expected_date`, `rejection_reason`, `notes`, `created_at`, `updated_at`) VALUES
-(3, 'BR-2025-653431', 1, 8, 'Employment', 'qwerty', 'approved', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13');
+(1, 'BR-2025-273712', 1, 4, '123', '3', 'processing', 'unpaid', NULL, '2025-10-04 21:31:24', NULL, NULL, '2025-10-07', NULL, NULL, '2025-10-04 13:31:24', '2025-10-04 15:14:12'),
+(2, 'BR-2025-535250', 1, 6, 'Employment', 'qwe', 'pending', 'unpaid', NULL, '2025-10-04 23:02:29', NULL, NULL, '2025-10-09', NULL, NULL, '2025-10-04 15:02:29', '2025-10-04 15:02:29'),
+(3, 'BR-2025-653431', 1, 8, 'Employment', 'qwerty', 'cancelled', 'unpaid', NULL, '2025-10-04 23:10:12', NULL, NULL, '2025-10-14', NULL, NULL, '2025-10-04 15:10:12', '2025-10-04 15:17:49');
 
 -- --------------------------------------------------------
 
@@ -159,16 +146,16 @@ CREATE TABLE `document_types` (
 --
 
 INSERT INTO `document_types` (`id`, `name`, `type`, `description`, `icon`, `processing_days`, `fee`, `requirements`, `is_active`, `created_at`) VALUES
-(1, 'Certificate of Residency', 'certificate', 'Proof of residence within the barangay. Required for various transactions.', 'fa-home', '3-5 days', 0.00, 'N/A', 1, '2025-10-04 13:09:36'),
-(2, 'Certificate of Indigency', 'certificate', 'For financial assistance purposes, medical aid, and educational support.', 'fa-user-check', '3-5 days', 0.00, 'N/A', 1, '2025-10-04 13:09:36'),
-(3, 'Barangay Clearance', 'certificate', 'Required for employment, business permits, and other legal purposes.', 'fa-id-card', '5-7 days', 0.00, 'N/A', 1, '2025-10-04 13:09:36'),
-(4, 'Good Moral Character', 'certificate', 'Certification of good standing in the community. Often required for jobs.', 'fa-certificate', '3-5 days', 50.00, 'N/A', 1, '2025-10-04 13:09:36'),
-(5, 'Low Income Certificate', 'certificate', 'For government assistance programs and subsidies.', 'fa-file-alt', '3-5 days', 0.00, 'N/A', 1, '2025-10-04 13:09:36'),
-(6, 'Certificate of Cohabitation', 'certificate', 'For couples living together without formal marriage.', 'fa-briefcase', '5-7 days', 10.00, 'N/A', 1, '2025-10-04 13:09:36'),
-(7, 'Business Permit', 'certificate', 'Required to operate a business within the barangay jurisdiction.', 'fa-id-card', '7-10 days', 0.00, 'N/A', 1, '2025-10-04 13:09:36'),
-(8, 'Construction Permit', 'permit', 'For building, renovation, or construction projects in the barangay.', 'fa-home', '10-14 days', 30.00, 'N/A', 1, '2025-10-04 13:09:36'),
-(9, 'Fencing Permit', 'permit', 'Required for installing or repairing fences and boundary walls.', 'fa-home', '5-7 days', 10.00, 'N/A', 1, '2025-10-04 13:09:36'),
-(10, 'Excavation Permit', 'permit', 'For digging or excavation activities within barangay roads.', 'fa-home', '7-10 days', 5.00, 'N/A', 1, '2025-10-04 13:09:36');
+(1, 'Certificate of Residency', 'certificate', 'Proof of residence within the barangay. Required for various transactions.', 'fa-home', '3-5 days', 50.00, NULL, 1, '2025-10-04 13:09:36'),
+(2, 'Certificate of Indigency', 'certificate', 'For financial assistance purposes, medical aid, and educational support.', 'fa-hand-holding-heart', '3-5 days', 0.00, NULL, 1, '2025-10-04 13:09:36'),
+(3, 'Barangay Clearance', 'certificate', 'Required for employment, business permits, and other legal purposes.', 'fa-id-card', '5-7 days', 100.00, NULL, 1, '2025-10-04 13:09:36'),
+(4, 'Good Moral Character', 'certificate', 'Certification of good standing in the community. Often required for jobs.', 'fa-award', '3-5 days', 50.00, NULL, 1, '2025-10-04 13:09:36'),
+(5, 'Low Income Certificate', 'certificate', 'For government assistance programs and subsidies.', 'fa-money-bill-wave', '3-5 days', 0.00, NULL, 1, '2025-10-04 13:09:36'),
+(6, 'Certificate of Cohabitation', 'certificate', 'For couples living together without formal marriage.', 'fa-heart', '5-7 days', 75.00, NULL, 1, '2025-10-04 13:09:36'),
+(7, 'Business Permit', 'permit', 'Required to operate a business within the barangay jurisdiction.', 'fa-store', '7-10 days', 500.00, NULL, 1, '2025-10-04 13:09:36'),
+(8, 'Construction Permit', 'permit', 'For building, renovation, or construction projects in the barangay.', 'fa-hard-hat', '10-14 days', 300.00, NULL, 1, '2025-10-04 13:09:36'),
+(9, 'Fencing Permit', 'permit', 'Required for installing or repairing fences and boundary walls.', 'fa-border-style', '5-7 days', 200.00, NULL, 1, '2025-10-04 13:09:36'),
+(10, 'Excavation Permit', 'permit', 'For digging or excavation activities within barangay roads.', 'fa-digging', '7-10 days', 250.00, NULL, 1, '2025-10-04 13:09:36');
 
 -- --------------------------------------------------------
 
@@ -196,71 +183,10 @@ CREATE TABLE `missed_collections` (
 --
 
 INSERT INTO `missed_collections` (`report_id`, `user_id`, `collection_date`, `waste_type`, `location`, `description`, `photo_path`, `status`, `resolution_notes`, `resolved_date`, `created_at`, `updated_at`) VALUES
-(4, 1, '2025-10-03', 'Recyclable Waste', 'Grandline', '123', NULL, 'rejected', '', '2025-10-05 17:32:57', '2025-10-04 15:07:08', '2025-10-05 09:41:23');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `notifications`
---
-
-CREATE TABLE `notifications` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `type` enum('waste','request','announcement','alert','success') NOT NULL,
-  `title` varchar(255) NOT NULL,
-  `message` text NOT NULL,
-  `icon` varchar(50) DEFAULT NULL,
-  `is_read` tinyint(1) DEFAULT 0,
-  `related_id` int(11) DEFAULT NULL COMMENT 'Related record ID (request_id, report_id, etc)',
-  `related_type` varchar(50) DEFAULT NULL COMMENT 'Type of related record',
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `notifications`
---
-
-INSERT INTO `notifications` (`id`, `user_id`, `type`, `title`, `message`, `icon`, `is_read`, `related_id`, `related_type`, `created_at`, `updated_at`) VALUES
-(1, 1, 'waste', 'Waste Collection Reminder', 'Reminder: Recyclable waste collection is scheduled for tomorrow, October 6, 2025. Please prepare your bins before 6:00 AM.', 'fa-trash-alt', 1, NULL, NULL, '2025-10-05 09:07:41', '2025-10-05 11:28:17'),
-(2, 1, 'success', 'Certificate Ready for Pickup', 'Your Certificate of Residency (Request #BR-2025-001198) has been approved and is ready for pickup at the barangay hall.', 'fa-check-circle', 1, 1, 'document_request', '2025-10-05 06:07:41', '2025-10-05 11:28:17'),
-(3, 1, 'announcement', 'Community Clean-up Drive', 'Join us this Saturday, October 5, for our monthly community clean-up drive. Gathering at the barangay hall at 6:00 AM. Your participation matters!', 'fa-bullhorn', 1, NULL, NULL, '2025-10-04 11:07:41', '2025-10-05 11:28:17'),
-(4, 1, 'request', 'Request Status Update', 'Your Barangay Clearance request (Request #BR-2025-001234) is now being processed. Expected completion: October 5, 2025.', 'fa-hourglass-half', 1, NULL, 'document_request', '2025-10-03 11:07:41', '2025-10-05 11:07:41'),
-(5, 1, 'waste', 'Biodegradable Waste Collection', 'Biodegradable waste collection completed successfully in your area. Next collection: October 7, 2025.', 'fa-leaf', 1, NULL, NULL, '2025-10-02 11:07:41', '2025-10-05 11:07:41'),
-(6, 1, 'announcement', 'Office Closure Notice', 'The barangay office will be closed on October 31 and November 1 in observance of All Saints\' Day. Regular operations resume November 2.', 'fa-calendar-times', 1, NULL, NULL, '2025-09-30 11:07:41', '2025-10-05 11:07:41'),
-(7, 1, 'alert', 'Missed Collection Report Update', 'Your missed collection report has been resolved. Make-up collection was completed on September 25, 2025. Thank you for your patience.', 'fa-exclamation-circle', 1, 3, 'missed_collection', '2025-09-28 11:07:41', '2025-10-05 11:07:41');
-
--- --------------------------------------------------------
-
---
--- Table structure for table `notification_preferences`
---
-
-CREATE TABLE `notification_preferences` (
-  `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `waste_reminders` tinyint(1) DEFAULT 1,
-  `request_updates` tinyint(1) DEFAULT 1,
-  `announcements` tinyint(1) DEFAULT 1,
-  `sms_notifications` tinyint(1) DEFAULT 1,
-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `notification_preferences`
---
-
-INSERT INTO `notification_preferences` (`id`, `user_id`, `waste_reminders`, `request_updates`, `announcements`, `sms_notifications`, `created_at`, `updated_at`) VALUES
-(1, 1, 0, 1, 1, 1, '2025-10-05 11:07:41', '2025-10-05 11:32:22'),
-(2, 2, 1, 1, 1, 1, '2025-10-05 11:07:41', '2025-10-05 11:07:41'),
-(3, 4, 1, 1, 1, 1, '2025-10-05 11:07:41', '2025-10-05 11:07:41'),
-(4, 5, 1, 1, 1, 1, '2025-10-05 11:07:41', '2025-10-05 11:07:41'),
-(5, 6, 1, 1, 1, 1, '2025-10-05 11:07:41', '2025-10-05 11:07:41'),
-(6, 7, 1, 1, 1, 1, '2025-10-05 11:07:41', '2025-10-05 11:07:41'),
-(7, 12, 1, 1, 1, 1, '2025-10-05 11:07:41', '2025-10-05 11:07:41'),
-(8, 15, 1, 1, 1, 1, '2025-10-05 11:07:41', '2025-10-05 11:07:41');
+(1, 1, '2025-10-03', 'Biodegradable Waste', 'Grandline', '123', NULL, 'pending', NULL, NULL, '2025-10-04 07:13:32', '2025-10-04 07:13:32'),
+(2, 1, '2025-10-03', 'Recyclable Waste', 'Grandline 44', '1232', 'report_1_1759562081.png', 'rejected', '', NULL, '2025-10-04 07:14:41', '2025-10-04 11:51:25'),
+(3, 1, '2025-10-02', 'Non-Biodegradable Waste', 'Grandline 44', '123', 'report_1_1759562472.png', 'investigating', '', '2025-10-04 20:06:09', '2025-10-04 07:21:12', '2025-10-04 12:06:20'),
+(4, 1, '2025-10-03', 'Recyclable Waste', 'Grandline', '123', NULL, 'pending', NULL, NULL, '2025-10-04 15:07:08', '2025-10-04 15:07:08');
 
 -- --------------------------------------------------------
 
@@ -276,6 +202,14 @@ CREATE TABLE `request_attachments` (
   `file_type` varchar(50) DEFAULT NULL,
   `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `request_attachments`
+--
+
+INSERT INTO `request_attachments` (`id`, `request_id`, `file_name`, `file_path`, `file_type`, `uploaded_at`) VALUES
+(1, 1, 'Screenshot (75).png', '../uploads/document_requests/BR-2025-273712_1759584684_0.png', 'png', '2025-10-04 13:31:24'),
+(2, 2, 'Mukaram_CV.pdf', '../uploads/document_requests/BR-2025-535250_1759590149_0.pdf', 'pdf', '2025-10-04 15:02:29');
 
 -- --------------------------------------------------------
 
@@ -315,7 +249,11 @@ INSERT INTO `user` (`id`, `first_name`, `middle_name`, `last_name`, `email`, `pa
 (5, 'Takenori', 'D', 'Akagi', 'akagi@gmail.com', '', '', '09551078233', NULL, NULL, NULL, NULL, NULL, NULL, 'Baliwasan', 'active', '2025-09-21 22:16:35', NULL),
 (6, 'Maloi', 'D', 'Arceta', 'binimaloi52@gmail.com', '', 'Arceta_09641356677_20250921_171528.jpg', '09641356677', NULL, NULL, NULL, NULL, NULL, NULL, 'Baliwasan', 'active', '2025-09-21 22:16:46', '2025-09-21 15:15:28'),
 (7, 'Maloi', 'D', 'Arceta', 'binimaloi352asda@gmail.com', '', 'Arceta_09551078263_20250921_171517.png', '09551078263', NULL, NULL, NULL, NULL, NULL, NULL, 'Baliwasan', 'active', '2025-09-21 22:39:29', '2025-09-21 15:15:17'),
+(9, 'asdsa', 'dasdas', 'dasd', 'samcena.sdas902604@gmail.com', '', '', '09511178235', NULL, NULL, NULL, NULL, NULL, NULL, 'Baliwasan', 'active', '2025-09-21 23:26:07', NULL),
+(10, 'Maloi', 'sadas', 'asdas', 'sassd02604@gmail.com', '', '', '09551078111', NULL, NULL, NULL, NULL, NULL, NULL, 'Baliwasan', 'active', '2025-09-21 23:26:21', '2025-09-21 15:37:25'),
 (12, 'Maloi', 'D', 'Arceta', 'binimaloi35sdsa42@gmail.com', '', '', '09551012345', NULL, NULL, 'single', 'qwerty', '123', 'Duston Drive', 'Baliwasan', 'active', '2025-09-26 09:34:23', NULL),
+(13, 'Takenori1', 'D2', 'Akagi3', 'binimaloi3521233332@gmail.com', '', 'Akagi_09123078233_20250926_034712.png', '09123012345', '2024-05-28', 'male', 'widowed', 'qwerty123', '1234', 'Duston Drive1', 'Baliwasan23', 'inactive', '2025-09-26 09:47:12', '2025-09-26 01:50:47'),
+(14, 'Maloi1', 'D2', 'Salasain3', 'binim@gmail.com', '', 'Salasain3_09553218233_20250928_014019.png', '09553218233', '2020-10-01', 'male', 'divorced', 'General', '1234', 'Loop5', 'Baliwasan6', 'active', '2025-09-28 07:28:00', '2025-09-27 23:40:19'),
 (15, 'Kaede1', 'D2', 'Rukawa3', 'rukawa@gmail.com', '$2y$10$hhVbbJbDWBbGABaLcVl05ui2YasW9hF8n9Wjk0WCO6BIHJIp5COOq', 'Rukawa3_09123321345_20250928_133516.png', '09123321345', '1999-08-20', 'male', 'single', 'Ace Player', '1234', 'Duston Drive5', 'Baliwasan6', 'active', '2025-09-28 19:11:40', '2025-09-28 11:35:16');
 
 -- --------------------------------------------------------
@@ -343,8 +281,7 @@ INSERT INTO `waste_schedules` (`schedule_id`, `waste_type`, `collection_days`, `
 (1, 'Recyclable Waste', 'Monday, Tuesday, Wednesday, Friday, Saturday', 'fa-recycle', 'recyclable', 'Plastic, paper, glass, and metal items', 1, '2025-10-04 07:06:39'),
 (2, 'Biodegradable Waste', 'Monday,Wednesday,Friday', 'fa-leaf', 'biodegradable', 'Food scraps, yard waste, and organic materials', 1, '2025-10-04 07:06:39'),
 (3, 'Non-Biodegradable Waste', 'Tuesday,Thursday,Saturday', 'fa-trash', 'non-biodegradable', 'General waste that cannot be recycled or composted', 1, '2025-10-04 07:06:39'),
-(4, 'Special/Hazardous Waste', 'First Saturday', 'fa-hospital', 'hazardous', 'Batteries, chemicals, electronics, and medical waste', 1, '2025-10-04 07:06:39'),
-(5, 'tsy', 'Monday, Saturday', 'fa-leaf', 'hazardous', '123', 1, '2025-10-05 05:44:58');
+(4, 'Special/Hazardous Waste', 'First Saturday', 'fa-hospital', 'hazardous', 'Batteries, chemicals, electronics, and medical waste', 1, '2025-10-04 07:06:39');
 
 --
 -- Indexes for dumped tables
@@ -387,23 +324,6 @@ ALTER TABLE `missed_collections`
   ADD KEY `created_at` (`created_at`);
 
 --
--- Indexes for table `notifications`
---
-ALTER TABLE `notifications`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`),
-  ADD KEY `is_read` (`is_read`),
-  ADD KEY `type` (`type`),
-  ADD KEY `created_at` (`created_at`);
-
---
--- Indexes for table `notification_preferences`
---
-ALTER TABLE `notification_preferences`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `user_id` (`user_id`);
-
---
 -- Indexes for table `request_attachments`
 --
 ALTER TABLE `request_attachments`
@@ -430,7 +350,7 @@ ALTER TABLE `waste_schedules`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=38;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `admin`
@@ -442,31 +362,19 @@ ALTER TABLE `admin`
 -- AUTO_INCREMENT for table `document_requests`
 --
 ALTER TABLE `document_requests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `document_types`
 --
 ALTER TABLE `document_types`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `missed_collections`
 --
 ALTER TABLE `missed_collections`
   MODIFY `report_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
-
---
--- AUTO_INCREMENT for table `notifications`
---
-ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
-
---
--- AUTO_INCREMENT for table `notification_preferences`
---
-ALTER TABLE `notification_preferences`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `request_attachments`
@@ -484,7 +392,7 @@ ALTER TABLE `user`
 -- AUTO_INCREMENT for table `waste_schedules`
 --
 ALTER TABLE `waste_schedules`
-  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- Constraints for dumped tables
@@ -496,18 +404,6 @@ ALTER TABLE `waste_schedules`
 ALTER TABLE `document_requests`
   ADD CONSTRAINT `document_requests_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `document_requests_ibfk_2` FOREIGN KEY (`document_type_id`) REFERENCES `document_types` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `notifications`
---
-ALTER TABLE `notifications`
-  ADD CONSTRAINT `notifications_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE;
-
---
--- Constraints for table `notification_preferences`
---
-ALTER TABLE `notification_preferences`
-  ADD CONSTRAINT `notification_preferences_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE;
 
 --
 -- Constraints for table `request_attachments`
