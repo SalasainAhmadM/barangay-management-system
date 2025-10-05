@@ -51,9 +51,9 @@
         <li>
             <a href="notifications.php" class="<?= ($current_page == 'notifications.php') ? 'active' : '' ?>">
                 <i class="fa-solid fa-message"></i>
-                <span class="links_name">SMS Notify</span>
+                <span class="links_name">Notifications</span>
             </a>
-            <span class="tooltip">SMS Notifications</span>
+            <span class="tooltip">Notifications</span>
         </li>
 
         <li>
