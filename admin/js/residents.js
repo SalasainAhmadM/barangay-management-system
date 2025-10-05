@@ -104,13 +104,21 @@ function exportData() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    doc.setFontSize(14);
+    // Title
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
     doc.text("Residents Report", 14, 20);
+
+    // Date and time
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    const now = new Date();
+    doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
 
     // Collect visible rows
     const rows = [];
     document.querySelectorAll("#residentsTable tbody tr").forEach(row => {
-        if (row.style.display !== "none") {
+        if (row.style.display !== "none" && !row.querySelector('.no-data')) {
             const name = row.querySelector(".resident-name")?.textContent.trim() || "";
             const email = row.querySelector(".resident-email")?.textContent.trim() || "";
             const contact = row.querySelector(".contact-number")?.textContent.trim() || "";
@@ -124,19 +132,51 @@ function exportData() {
             icon: "warning",
             title: "No data to export",
             text: "There are no residents matching your current filters.",
+            confirmButtonColor: '#00247c'
         });
         return;
     }
 
-    // ✅ AutoTable is available directly on doc
+    // Create table
     doc.autoTable({
         head: [["Name", "Email", "Contact", "Created Date"]],
         body: rows,
-        startY: 30,
-        theme: "grid"
+        startY: 34,
+        theme: "grid",
+        styles: {
+            fontSize: 9,
+            cellPadding: 3
+        },
+        headStyles: {
+            fillColor: [0, 36, 124],
+            textColor: 255,
+            fontStyle: 'bold'
+        },
+        columnStyles: {
+            0: { cellWidth: 50 },  // Name
+            1: { cellWidth: 60 },  // Email
+            2: { cellWidth: 35 },  // Contact
+            3: { cellWidth: 35 }   // Date
+        }
     });
 
-    doc.save("residents.pdf");
+    // Footer with total count
+    const finalY = doc.lastAutoTable.finalY || 34;
+    doc.setFontSize(9);
+    doc.text(`Total Residents: ${rows.length}`, 14, finalY + 10);
+
+    // Save the PDF
+    const filename = `residents_report_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
+
+    // Success notification
+    Swal.fire({
+        icon: 'success',
+        title: 'Exported Successfully!',
+        text: `${rows.length} resident(s) exported to PDF`,
+        timer: 2000,
+        showConfirmButton: false
+    });
 }
 
 function addResident() {

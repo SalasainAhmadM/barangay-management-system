@@ -1303,9 +1303,35 @@
 }
 
 .stat-card.pending .stat-icon {
-  background: #fef3c7;
-  color: #d97706;
+  background: #fff3cd;
+  color: #ffc107;
 }
+
+.stat-card.processing .stat-icon {
+  background: #d1ecf1;
+  color: #17a2b8;
+}
+
+.stat-card.approved .stat-icon {
+  background: #d4edda;
+  color: #28a745;
+}
+
+.stat-card.ready .stat-icon {
+  background: #c3e6cb;
+  color: #20c997;
+}
+
+.stat-card.completed .stat-icon {
+  background: #e2e3e5;
+  color: #6c757d;
+}
+
+.stat-card.cancelled .stat-icon {
+  background: #f8d7da;
+  color: #dc3545;
+}
+
 
 .stat-card.investigating .stat-icon {
   background: #ddd6fe;
@@ -1374,7 +1400,7 @@
 
 .status-badge.pending {
   background: #fef3c7;
-  color: #d97706;
+  color: #ffc107;
 }
 
 .status-badge.investigating {
@@ -1387,7 +1413,27 @@
   color: #059669;
 }
 
+.status-badge.approved {
+  background: #d4edda;
+  color: #28a745;
+}
+
+.status-badge.ready {
+  background: #c3e6cb;
+  color: #20c997;
+}
+
+.status-badge.processing {
+  background: #d1ecf1;
+  color: #17a2b8;
+}
+
 .status-badge.rejected {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.status-badge.cancelled {
   background: #fee2e2;
   color: #dc2626;
 }
@@ -1400,6 +1446,11 @@
 .status-badge.inactive {
   background: #f3f4f6;
   color: #6b7280;
+}
+
+.status-badge.completed {
+  background: #e2e3e5;
+  color: #6c757d;
 }
 
 /* Waste Tab End */
@@ -1710,3 +1761,163 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* Stat Card Hover */
+
+/* Statistics Cards as Filters */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  position: relative;
+}
+
+/* Hover Effect */
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+  border-color: currentColor;
+}
+
+.stat-card:hover .stat-icon {
+  transform: scale(1.1);
+}
+
+/* Active/Selected State */
+.stat-card.active {
+  border-color: currentColor;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  transform: translateY(-2px);
+}
+
+.stat-card.active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: currentColor;
+  opacity: 0.05;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.stat-card.active .stat-value {
+  color: currentColor;
+}
+
+.stat-card.total:hover,
+.stat-card.total.active {
+  border-color: #1e40af;
+}
+
+.stat-card.pending:hover,
+.stat-card.pending.active {
+  border-color: #ffc107;
+}
+
+.stat-card.investigating:hover,
+.stat-card.investigating.active {
+  border-color: #7c3aed;
+}
+
+.stat-card.resolved:hover,
+.stat-card.resolved.active {
+  border-color: #059669;
+}
+
+.stat-card.rejected:hover,
+.stat-card.rejected.active {
+  border-color: #dc2626;
+}
+
+.stat-card.cancelled:hover,
+.stat-card.cancelled.active {
+  border-color: #dc2626;
+}
+
+.stat-card.processing:hover,
+.stat-card.processing.active {
+  border-color: #17a2b8;
+}
+
+.stat-card.approved:hover,
+.stat-card.approved.active {
+  border-color: #28a745;
+}
+
+.stat-card.ready:hover,
+.stat-card.ready.active {
+  border-color: #20c997;
+}
+
+.stat-card.completed:hover,
+.stat-card.completed.active {
+  border-color: #6c757d;
+}
+
+.stat-card .stat-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  font-size: 24px;
+  transition: transform 0.3s ease;
+}
+
+.stat-value {
+  font-size: 32px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 4px;
+  transition: color 0.3s ease;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #6b7280;
+}
+
+/* Add click feedback */
+.stat-card:active {
+  transform: translateY(-1px);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+  }
+
+  .stat-card {
+    padding: 15px;
+  }
+
+  .stat-value {
+    font-size: 24px;
+  }
+
+  .stat-card .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+}
+
+/* Stat Card Hover End */

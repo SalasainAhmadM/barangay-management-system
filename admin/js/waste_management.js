@@ -1,10 +1,3 @@
-// Tab switching
-function switchTab(tab) {
-    const params = new URLSearchParams(window.location.search);
-    params.set('tab', tab);
-    window.location.search = params.toString();
-}
-
 // Search schedules
 function searchSchedules() {
     const filter = document.getElementById('searchScheduleInput').value.toLowerCase();
@@ -28,7 +21,146 @@ function searchSchedules() {
     handleSearchResults(found, filter, 'schedule');
 }
 
-// Search reports
+// Global variable to track current filter
+let currentStatusFilter = 'all';
+
+// Initialize status filter listeners on page load
+document.addEventListener('DOMContentLoaded', function () {
+    initializeStatusFilters();
+});
+
+// Initialize status card click handlers
+function initializeStatusFilters() {
+    const statCards = document.querySelectorAll('.stat-card');
+
+    statCards.forEach(card => {
+        card.addEventListener('click', function () {
+            const cardClasses = this.className.split(' ');
+            const statusClass = cardClasses.find(cls =>
+                ['total', 'pending', 'investigating', 'resolved', 'rejected'].includes(cls)
+            );
+
+            if (statusClass) {
+                filterReportsByStatus(statusClass, this);
+            }
+        });
+    });
+}
+
+// Filter reports by status
+function filterReportsByStatus(status, clickedCard) {
+    const rows = document.querySelectorAll("#reportsTable tbody tr");
+    const mobileCards = document.querySelectorAll(".mobile-cards .resident-card");
+    const allStatCards = document.querySelectorAll('.stat-card');
+
+    // Remove active class from all cards
+    allStatCards.forEach(card => card.classList.remove('active'));
+
+    // If clicking the same filter, reset to show all
+    if (currentStatusFilter === status) {
+        currentStatusFilter = 'all';
+        showAllReports(rows, mobileCards);
+        return;
+    }
+
+    // Set new filter and add active class
+    currentStatusFilter = status;
+    clickedCard.classList.add('active');
+
+    // Show all if "total" is clicked
+    if (status === 'total') {
+        showAllReports(rows, mobileCards);
+        return;
+    }
+
+    // Filter desktop table rows
+    let visibleCount = 0;
+    rows.forEach(row => {
+        if (row.querySelector('.no-data')) return;
+
+        const statusBadge = row.querySelector('.status-badge');
+        if (statusBadge) {
+            const rowStatus = statusBadge.textContent.toLowerCase().trim();
+            const matches = rowStatus === status;
+            row.style.display = matches ? "" : "none";
+            if (matches) visibleCount++;
+        }
+    });
+
+    // Filter mobile cards
+    let visibleMobileCount = 0;
+    mobileCards.forEach(card => {
+        const statusSpan = card.querySelector('.card-status');
+        if (statusSpan) {
+            const cardStatus = statusSpan.textContent.toLowerCase().trim();
+            const matches = cardStatus === status;
+            card.style.display = matches ? "" : "none";
+            if (matches) visibleMobileCount++;
+        }
+    });
+
+    // Handle no results
+    handleFilterResults(visibleCount, status);
+
+    // Hide pagination when filtering
+    const pagination = document.querySelector(".pagination-container");
+    if (pagination) {
+        pagination.style.display = status === 'total' ? "flex" : "none";
+    }
+}
+
+// Show all reports (reset filter)
+function showAllReports(rows, mobileCards) {
+    rows.forEach(row => {
+        if (!row.querySelector('.no-data')) {
+            row.style.display = "";
+        }
+    });
+
+    mobileCards.forEach(card => {
+        card.style.display = "";
+    });
+
+    // Remove no data message if exists
+    const noDataMsg = document.getElementById('noDataFilterMsg');
+    if (noDataMsg) {
+        noDataMsg.remove();
+    }
+
+    // Show pagination
+    const pagination = document.querySelector(".pagination-container");
+    if (pagination) {
+        pagination.style.display = "flex";
+    }
+}
+
+// Handle filter results display
+function handleFilterResults(visibleCount, status) {
+    let noDataMsg = document.getElementById('noDataFilterMsg');
+
+    if (visibleCount === 0) {
+        if (!noDataMsg) {
+            noDataMsg = document.createElement("div");
+            noDataMsg.id = 'noDataFilterMsg';
+            noDataMsg.className = "no-data";
+            const reportsTable = document.querySelector("#reportsTable");
+            if (reportsTable) {
+                reportsTable.parentElement.appendChild(noDataMsg);
+            }
+        }
+        noDataMsg.innerHTML = `
+            <i class="fas fa-filter"></i>
+            <p>No reports found with status: <strong>${status}</strong></p>
+        `;
+        noDataMsg.style.display = "block";
+    } else {
+        if (noDataMsg) {
+            noDataMsg.style.display = "none";
+        }
+    }
+}
+
+// Enhanced search reports to work with status filter
 function searchReports() {
     const filter = document.getElementById('searchReportInput').value.toLowerCase();
     const rows = document.querySelectorAll("#reportsTable tbody tr");
@@ -42,15 +174,41 @@ function searchReports() {
         const location = row.cells[2]?.textContent.toLowerCase() || "";
         const status = row.cells[4]?.textContent.toLowerCase() || "";
 
-        const matches = !filter || reporter.includes(filter) ||
+        // Check if matches search filter
+        const matchesSearch = !filter || reporter.includes(filter) ||
             wasteType.includes(filter) || location.includes(filter) ||
             status.includes(filter);
 
-        row.style.display = matches ? "" : "none";
-        if (matches && filter) found = true;
+        // Check if matches status filter
+        let matchesStatusFilter = true;
+        if (currentStatusFilter !== 'all' && currentStatusFilter !== 'total') {
+            const statusBadge = row.querySelector('.status-badge');
+            if (statusBadge) {
+                const rowStatus = statusBadge.textContent.toLowerCase().trim();
+                matchesStatusFilter = rowStatus === currentStatusFilter;
+            }
+        }
+
+        // Show row only if matches both filters
+        const shouldShow = matchesSearch && matchesStatusFilter;
+        row.style.display = shouldShow ? "" : "none";
+        if (shouldShow && filter) found = true;
     });
 
     handleSearchResults(found, filter, 'report');
+}
+
+// Reset filters when switching tabs
+function switchTab(tab) {
+    // Reset status filter
+    currentStatusFilter = 'all';
+    const allStatCards = document.querySelectorAll('.stat-card');
+    allStatCards.forEach(card => card.classList.remove('active'));
+
+    // Navigate to tab
+    const params = new URLSearchParams(window.location.search);
+    params.set('tab', tab);
+    window.location.search = params.toString();
 }
 
 function handleSearchResults(found, filter, type) {
@@ -979,22 +1137,32 @@ function deleteReport(id) {
 // Export Data
 function exportData() {
     const activeTab = new URLSearchParams(window.location.search).get('tab') || 'schedules';
-
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
 
-    doc.setFontSize(14);
-    doc.text(activeTab === 'schedules' ? "Waste Collection Schedules" : "Missed Collection Reports", 14, 20);
+    // Title
+    doc.setFontSize(16);
+    doc.setFont(undefined, 'bold');
+    const title = activeTab === 'schedules' ? "Waste Collection Schedules Report" : "Missed Collection Reports";
+    doc.text(title, 14, 20);
+
+    // Date and time
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    const now = new Date();
+    doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
 
     const rows = [];
 
     if (activeTab === 'schedules') {
+        // Collect schedules data
         document.querySelectorAll("#schedulesTable tbody tr").forEach(row => {
             if (row.style.display !== "none" && !row.querySelector('.no-data')) {
                 const wasteType = row.cells[1]?.textContent.trim() || "";
                 const days = row.cells[2]?.textContent.trim() || "";
+                const description = row.cells[3]?.textContent.trim().substring(0, 40) || "";
                 const status = row.cells[4]?.textContent.trim() || "";
-                rows.push([wasteType, days, status]);
+                rows.push([wasteType, days, description, status]);
             }
         });
 
@@ -1003,24 +1171,49 @@ function exportData() {
                 icon: "warning",
                 title: "No data to export",
                 text: "There are no schedules matching your current filters.",
+                confirmButtonColor: '#00247c'
             });
             return;
         }
 
+        // Create schedules table
         doc.autoTable({
-            head: [["Waste Type", "Collection Days", "Status"]],
+            head: [["Waste Type", "Collection Days", "Description", "Status"]],
             body: rows,
-            startY: 30,
-            theme: "grid"
+            startY: 34,
+            theme: "grid",
+            styles: {
+                fontSize: 9,
+                cellPadding: 3
+            },
+            headStyles: {
+                fillColor: [0, 36, 124],
+                textColor: 255,
+                fontStyle: 'bold'
+            },
+            columnStyles: {
+                0: { cellWidth: 40 },  // Waste Type
+                1: { cellWidth: 50 },  // Collection Days
+                2: { cellWidth: 60 },  // Description
+                3: { cellWidth: 30 }   // Status
+            }
         });
+
+        // Footer
+        const finalY = doc.lastAutoTable.finalY || 34;
+        doc.setFontSize(9);
+        doc.text(`Total Schedules: ${rows.length}`, 14, finalY + 10);
+
     } else {
+        // Collect reports data
         document.querySelectorAll("#reportsTable tbody tr").forEach(row => {
-            if (row.style.display !== "none" && !row.querySelector('.no-data')) {
+            if (row.style.display !== "none" && !row.querySelector('.no-data') && row.id !== 'noDataFilterMsg') {
                 const reporter = row.cells[0]?.textContent.trim().split('\n')[0] || "";
                 const wasteType = row.cells[1]?.textContent.trim() || "";
-                const location = row.cells[2]?.textContent.trim() || "";
+                const location = row.cells[2]?.textContent.trim().substring(0, 30) || "";
+                const collectionDate = row.cells[3]?.textContent.trim() || "";
                 const status = row.cells[4]?.textContent.trim() || "";
-                rows.push([reporter, wasteType, location, status]);
+                rows.push([reporter, wasteType, location, collectionDate, status]);
             }
         });
 
@@ -1029,17 +1222,58 @@ function exportData() {
                 icon: "warning",
                 title: "No data to export",
                 text: "There are no reports matching your current filters.",
+                confirmButtonColor: '#00247c'
             });
             return;
         }
 
+        // Add filter info if active
+        if (currentStatusFilter !== 'all') {
+            doc.setFontSize(9);
+            doc.setTextColor(100);
+            doc.text(`Filtered by: ${currentStatusFilter.replace('_', ' ').toUpperCase()}`, 14, 34);
+        }
+
+        // Create reports table
         doc.autoTable({
-            head: [["Reporter", "Waste Type", "Location", "Status"]],
+            head: [["Reporter", "Waste Type", "Location", "Collection Date", "Status"]],
             body: rows,
-            startY: 30,
-            theme: "grid"
+            startY: currentStatusFilter !== 'all' ? 38 : 34,
+            theme: "grid",
+            styles: {
+                fontSize: 8,
+                cellPadding: 2
+            },
+            headStyles: {
+                fillColor: [0, 36, 124],
+                textColor: 255,
+                fontStyle: 'bold'
+            },
+            columnStyles: {
+                0: { cellWidth: 40 },  // Reporter
+                1: { cellWidth: 35 },  // Waste Type
+                2: { cellWidth: 45 },  // Location
+                3: { cellWidth: 35 },  // Collection Date
+                4: { cellWidth: 25 }   // Status
+            }
         });
+
+        // Footer
+        const finalY = doc.lastAutoTable.finalY || 34;
+        doc.setFontSize(9);
+        doc.text(`Total Reports: ${rows.length}`, 14, finalY + 10);
     }
 
-    doc.save(`waste_management_${activeTab}.pdf`);
+    // Save the PDF
+    const filename = `waste_management_${activeTab}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(filename);
+
+    // Success notification
+    Swal.fire({
+        icon: 'success',
+        title: 'Exported Successfully!',
+        text: `${rows.length} ${activeTab === 'schedules' ? 'schedule(s)' : 'report(s)'} exported to PDF`,
+        timer: 2000,
+        showConfirmButton: false
+    });
 }

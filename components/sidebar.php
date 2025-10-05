@@ -35,9 +35,9 @@
             <a href="request_certificates.php"
                 class="<?= ($current_page == 'request_certificates.php') ? 'active' : '' ?>">
                 <i class="fa-solid fa-file-lines"></i>
-                <span class="links_name">Requests</span>
+                <span class="links_name">Documents</span>
             </a>
-            <span class="tooltip">Requests</span>
+            <span class="tooltip">Documents</span>
         </li>
 
         <li>
