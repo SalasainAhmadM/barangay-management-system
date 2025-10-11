@@ -1137,143 +1137,181 @@ function deleteReport(id) {
 // Export Data
 function exportData() {
     const activeTab = new URLSearchParams(window.location.search).get('tab') || 'schedules';
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
 
-    // Title
-    doc.setFontSize(16);
-    doc.setFont(undefined, 'bold');
-    const title = activeTab === 'schedules' ? "Waste Collection Schedules Report" : "Missed Collection Reports";
-    doc.text(title, 14, 20);
-
-    // Date and time
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    const now = new Date();
-    doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
-
-    const rows = [];
-
-    if (activeTab === 'schedules') {
-        // Collect schedules data
-        document.querySelectorAll("#schedulesTable tbody tr").forEach(row => {
-            if (row.style.display !== "none" && !row.querySelector('.no-data')) {
-                const wasteType = row.cells[1]?.textContent.trim() || "";
-                const days = row.cells[2]?.textContent.trim() || "";
-                const description = row.cells[3]?.textContent.trim().substring(0, 40) || "";
-                const status = row.cells[4]?.textContent.trim() || "";
-                rows.push([wasteType, days, description, status]);
-            }
-        });
-
-        if (rows.length === 0) {
-            Swal.fire({
-                icon: "warning",
-                title: "No data to export",
-                text: "There are no schedules matching your current filters.",
-                confirmButtonColor: '#00247c'
-            });
-            return;
-        }
-
-        // Create schedules table
-        doc.autoTable({
-            head: [["Waste Type", "Collection Days", "Description", "Status"]],
-            body: rows,
-            startY: 34,
-            theme: "grid",
-            styles: {
-                fontSize: 9,
-                cellPadding: 3
-            },
-            headStyles: {
-                fillColor: [0, 36, 124],
-                textColor: 255,
-                fontStyle: 'bold'
-            },
-            columnStyles: {
-                0: { cellWidth: 40 },  // Waste Type
-                1: { cellWidth: 50 },  // Collection Days
-                2: { cellWidth: 60 },  // Description
-                3: { cellWidth: 30 }   // Status
-            }
-        });
-
-        // Footer
-        const finalY = doc.lastAutoTable.finalY || 34;
-        doc.setFontSize(9);
-        doc.text(`Total Schedules: ${rows.length}`, 14, finalY + 10);
-
-    } else {
-        // Collect reports data
-        document.querySelectorAll("#reportsTable tbody tr").forEach(row => {
-            if (row.style.display !== "none" && !row.querySelector('.no-data') && row.id !== 'noDataFilterMsg') {
-                const reporter = row.cells[0]?.textContent.trim().split('\n')[0] || "";
-                const wasteType = row.cells[1]?.textContent.trim() || "";
-                const location = row.cells[2]?.textContent.trim().substring(0, 30) || "";
-                const collectionDate = row.cells[3]?.textContent.trim() || "";
-                const status = row.cells[4]?.textContent.trim() || "";
-                rows.push([reporter, wasteType, location, collectionDate, status]);
-            }
-        });
-
-        if (rows.length === 0) {
-            Swal.fire({
-                icon: "warning",
-                title: "No data to export",
-                text: "There are no reports matching your current filters.",
-                confirmButtonColor: '#00247c'
-            });
-            return;
-        }
-
-        // Add filter info if active
-        if (currentStatusFilter !== 'all') {
-            doc.setFontSize(9);
-            doc.setTextColor(100);
-            doc.text(`Filtered by: ${currentStatusFilter.replace('_', ' ').toUpperCase()}`, 14, 34);
-        }
-
-        // Create reports table
-        doc.autoTable({
-            head: [["Reporter", "Waste Type", "Location", "Collection Date", "Status"]],
-            body: rows,
-            startY: currentStatusFilter !== 'all' ? 38 : 34,
-            theme: "grid",
-            styles: {
-                fontSize: 8,
-                cellPadding: 2
-            },
-            headStyles: {
-                fillColor: [0, 36, 124],
-                textColor: 255,
-                fontStyle: 'bold'
-            },
-            columnStyles: {
-                0: { cellWidth: 40 },  // Reporter
-                1: { cellWidth: 35 },  // Waste Type
-                2: { cellWidth: 45 },  // Location
-                3: { cellWidth: 35 },  // Collection Date
-                4: { cellWidth: 25 }   // Status
-            }
-        });
-
-        // Footer
-        const finalY = doc.lastAutoTable.finalY || 34;
-        doc.setFontSize(9);
-        doc.text(`Total Reports: ${rows.length}`, 14, finalY + 10);
-    }
-
-    // Save the PDF
-    const filename = `waste_management_${activeTab}_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(filename);
-
-    // Success notification
+    // Show loading state
     Swal.fire({
-        icon: 'success',
-        title: 'Exported Successfully!',
-        text: `${rows.length} ${activeTab === 'schedules' ? 'schedule(s)' : 'report(s)'} exported to PDF`,
-        timer: 2000,
-        showConfirmButton: false
+        title: 'Generating PDF...',
+        text: `Please wait while we export all ${activeTab === 'schedules' ? 'schedules' : 'reports'}`,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
     });
+
+    // Determine which endpoint to fetch from
+    const endpoint = activeTab === 'schedules'
+        ? './endpoints/get_all_schedules.php'
+        : './endpoints/get_all_reports.php';
+
+    // Fetch all data
+    fetch(endpoint)
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                Swal.fire({
+                    icon: "error",
+                    title: "Error",
+                    text: data.message || "Failed to fetch data.",
+                    confirmButtonColor: '#00247c'
+                });
+                return;
+            }
+
+            const items = activeTab === 'schedules' ? data.schedules : data.reports;
+
+            if (items.length === 0) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "No data to export",
+                    text: `There are no ${activeTab} in the database.`,
+                    confirmButtonColor: '#00247c'
+                });
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Title
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            const title = activeTab === 'schedules'
+                ? "Waste Collection Schedules Report"
+                : "Missed Collection Reports";
+            doc.text(title, 14, 20);
+
+            // Date and time
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const now = new Date();
+            doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
+
+            let rows = [];
+            let headers = [];
+            let columnStyles = {};
+
+            if (activeTab === 'schedules') {
+                // Prepare schedules data
+                headers = ["Waste Type", "Collection Days", "Description", "Status"];
+                rows = items.map(schedule => {
+                    const wasteType = schedule.waste_type || 'N/A';
+                    const days = schedule.collection_days || 'N/A';
+                    const description = (schedule.description || 'N/A').substring(0, 60) +
+                        (schedule.description && schedule.description.length > 60 ? '...' : '');
+                    const status = schedule.is_active ? 'Active' : 'Inactive';
+
+                    return [wasteType, days, description, status];
+                });
+
+                columnStyles = {
+                    0: { cellWidth: 40 },  // Waste Type
+                    1: { cellWidth: 50 },  // Collection Days
+                    2: { cellWidth: 60 },  // Description
+                    3: { cellWidth: 30 }   // Status
+                };
+
+            } else {
+                // Prepare reports data
+                headers = ["Reporter", "Waste Type", "Location", "Collection Date", "Status"];
+                rows = items.map(report => {
+                    const fullName = `${report.first_name || ''} ${report.middle_name || ''} ${report.last_name || ''}`.trim() || 'N/A';
+                    const wasteType = report.waste_type || 'N/A';
+                    const location = (report.location || 'N/A').substring(0, 35) +
+                        (report.location && report.location.length > 35 ? '...' : '');
+                    const collectionDate = report.collection_date
+                        ? new Date(report.collection_date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        })
+                        : 'N/A';
+                    const status = report.status ? report.status.charAt(0).toUpperCase() + report.status.slice(1) : 'N/A';
+
+                    return [fullName, wasteType, location, collectionDate, status];
+                });
+
+                columnStyles = {
+                    0: { cellWidth: 40 },  // Reporter
+                    1: { cellWidth: 35 },  // Waste Type
+                    2: { cellWidth: 45 },  // Location
+                    3: { cellWidth: 35 },  // Collection Date
+                    4: { cellWidth: 25 }   // Status
+                };
+            }
+
+            // Create table
+            doc.autoTable({
+                head: [headers],
+                body: rows,
+                startY: 34,
+                theme: "grid",
+                styles: {
+                    fontSize: activeTab === 'schedules' ? 9 : 8,
+                    cellPadding: activeTab === 'schedules' ? 3 : 2
+                },
+                headStyles: {
+                    fillColor: [0, 36, 124],
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                columnStyles: columnStyles
+            });
+
+            // Footer with total count
+            const finalY = doc.lastAutoTable.finalY || 34;
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Total ${activeTab === 'schedules' ? 'Schedules' : 'Reports'}: ${rows.length}`, 14, finalY + 10);
+
+            // Add statistics for reports
+            if (activeTab === 'reports') {
+                const statusCounts = {
+                    pending: items.filter(r => r.status === 'pending').length,
+                    investigating: items.filter(r => r.status === 'investigating').length,
+                    resolved: items.filter(r => r.status === 'resolved').length,
+                    rejected: items.filter(r => r.status === 'rejected').length
+                };
+
+                doc.setFont(undefined, 'normal');
+                doc.setFontSize(8);
+                doc.text(
+                    `Pending: ${statusCounts.pending} | Investigating: ${statusCounts.investigating} | Resolved: ${statusCounts.resolved} | Rejected: ${statusCounts.rejected}`,
+                    14,
+                    finalY + 16
+                );
+            }
+
+            // Save the PDF
+            const filename = `waste_management_${activeTab}_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(filename);
+
+            // Success notification
+            Swal.fire({
+                icon: 'success',
+                title: 'Exported Successfully!',
+                text: `${rows.length} ${activeTab === 'schedules' ? 'schedule(s)' : 'report(s)'} exported to PDF`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+        })
+        .catch(error => {
+            console.error('Export error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Export Failed',
+                text: 'There was an error exporting the data. Please try again.',
+                confirmButtonColor: '#00247c'
+            });
+        });
 }

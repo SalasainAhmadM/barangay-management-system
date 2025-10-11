@@ -351,92 +351,125 @@ function deleteNotification(id) {
     });
 }
 
-// ==================== EXPORT FUNCTION ====================
-
 // Export notifications to PDF
 function exportNotification() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    // Title
-    doc.setFontSize(16);
-    doc.setFont(undefined, 'bold');
-    doc.text("Notifications Report", 14, 20);
-
-    // Date and time
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    const now = new Date();
-    doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
-
-    // Collect visible rows
-    const rows = [];
-    document.querySelectorAll("#notificationsTable tbody tr").forEach(row => {
-        if (!row.querySelector('.no-data')) {
-            const id = row.cells[0]?.textContent.trim() || "";
-            const user = row.cells[1]?.querySelector('.resident-name')?.textContent.trim() || "";
-            const type = row.cells[2]?.textContent.trim() || "";
-            const title = row.cells[3]?.textContent.trim() || "";
-            const message = row.cells[4]?.textContent.trim().substring(0, 40) + '...' || "";
-            const status = row.cells[5]?.textContent.trim() || "";
-            const date = row.cells[6]?.textContent.trim() || "";
-
-            rows.push([id, user, type, title, message, status, date]);
-        }
-    });
-
-    // Check if there's data to export
-    if (rows.length === 0) {
-        Swal.fire({
-            icon: "warning",
-            title: "No data to export",
-            text: "There are no notifications to export.",
-            confirmButtonColor: '#6366f1'
-        });
-        return;
-    }
-
-    // Create table
-    doc.autoTable({
-        head: [["ID", "User", "Type", "Title", "Message", "Status", "Date"]],
-        body: rows,
-        startY: 34,
-        theme: "grid",
-        styles: {
-            fontSize: 8,
-            cellPadding: 2
-        },
-        headStyles: {
-            fillColor: [99, 102, 241],
-            textColor: 255,
-            fontStyle: 'bold'
-        },
-        columnStyles: {
-            0: { cellWidth: 15 },  // ID
-            1: { cellWidth: 30 },  // User
-            2: { cellWidth: 25 },  // Type
-            3: { cellWidth: 35 },  // Title
-            4: { cellWidth: 40 },  // Message
-            5: { cellWidth: 20 },  // Status
-            6: { cellWidth: 25 }   // Date
-        }
-    });
-
-    // Footer with total count
-    const finalY = doc.lastAutoTable.finalY || 34;
-    doc.setFontSize(9);
-    doc.text(`Total Notifications: ${rows.length}`, 14, finalY + 10);
-
-    // Save the PDF
-    const filename = `notifications_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(filename);
-
-    // Success notification
+    // Show loading state
     Swal.fire({
-        icon: 'success',
-        title: 'Exported Successfully!',
-        text: `${rows.length} notification(s) exported to PDF`,
-        timer: 2000,
-        showConfirmButton: false
+        title: 'Generating PDF...',
+        text: 'Please wait while we export all notifications',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
     });
+
+    // Fetch all notifications data
+    fetch('./endpoints/get_all_notifications.php')
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success || data.notifications.length === 0) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "No data to export",
+                    text: "There are no notifications in the database.",
+                    confirmButtonColor: '#6366f1'
+                });
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Title
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text("Notifications Report", 14, 20);
+
+            // Date and time
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const now = new Date();
+            doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
+
+            // Prepare rows from fetched data
+            const rows = data.notifications.map(notif => {
+                const id = `#${notif.id}`;
+                const fullName = `${notif.first_name || ''} ${notif.middle_name || ''} ${notif.last_name || ''}`.trim();
+                const type = notif.type.charAt(0).toUpperCase() + notif.type.slice(1);
+                const title = notif.title || 'N/A';
+                const message = (notif.message || '').substring(0, 50) + (notif.message.length > 50 ? '...' : '');
+                const status = notif.is_read ? 'Read' : 'Unread';
+                const createdDate = new Date(notif.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                return [id, fullName, type, title, message, status, createdDate];
+            });
+
+            // Create table
+            doc.autoTable({
+                head: [["ID", "User", "Type", "Title", "Message", "Status", "Date"]],
+                body: rows,
+                startY: 34,
+                theme: "grid",
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2
+                },
+                headStyles: {
+                    fillColor: [99, 102, 241],
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                columnStyles: {
+                    0: { cellWidth: 15 },  // ID
+                    1: { cellWidth: 30 },  // User
+                    2: { cellWidth: 22 },  // Type
+                    3: { cellWidth: 35 },  // Title
+                    4: { cellWidth: 40 },  // Message
+                    5: { cellWidth: 18 },  // Status
+                    6: { cellWidth: 30 }   // Date
+                }
+            });
+
+            // Footer with total count and statistics
+            const finalY = doc.lastAutoTable.finalY || 34;
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Total Notifications: ${rows.length}`, 14, finalY + 10);
+
+            // Add statistics
+            const readCount = data.notifications.filter(n => n.is_read).length;
+            const unreadCount = data.notifications.filter(n => !n.is_read).length;
+
+            doc.setFont(undefined, 'normal');
+            doc.text(`Read: ${readCount} | Unread: ${unreadCount}`, 14, finalY + 16);
+
+            // Save the PDF
+            const filename = `notifications_report_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(filename);
+
+            // Success notification
+            Swal.fire({
+                icon: 'success',
+                title: 'Exported Successfully!',
+                text: `${rows.length} notification(s) exported to PDF`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+        })
+        .catch(error => {
+            console.error('Export error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Export Failed',
+                text: 'There was an error exporting the data. Please try again.',
+                confirmButtonColor: '#6366f1'
+            });
+        });
 }

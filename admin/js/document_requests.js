@@ -704,97 +704,142 @@ function deleteRequest(requestId) {
 
 // Export requests data to PDF
 function exportRequests() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    // Title
-    doc.setFontSize(16);
-    doc.setFont(undefined, 'bold');
-    doc.text("Document Requests Report", 14, 20);
-
-    // Date and time
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    const now = new Date();
-    doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
-
-    // Collect visible rows
-    const rows = [];
-    document.querySelectorAll("#requestsTable tbody tr").forEach(row => {
-        if (row.style.display !== "none" && !row.querySelector('.no-data') && row.id !== 'noDataFilterMsg') {
-            const requestId = row.cells[0]?.textContent.trim() || "";
-            const requester = row.cells[1]?.textContent.trim().split('\n')[0] || "";
-            const document = row.cells[2]?.textContent.trim() || "";
-            const type = row.cells[3]?.textContent.trim() || "";
-            const purpose = row.cells[4]?.textContent.trim().substring(0, 30) + '...' || "";
-            const fee = row.cells[5]?.textContent.trim() || "";
-            const status = row.cells[6]?.textContent.trim() || "";
-            const date = row.cells[7]?.textContent.trim() || "";
-
-            rows.push([requestId, requester, document, type, purpose, fee, status, date]);
-        }
-    });
-
-    // Check if there's data to export
-    if (rows.length === 0) {
-        Swal.fire({
-            icon: "warning",
-            title: "No data to export",
-            text: "There are no requests matching your current filters.",
-            confirmButtonColor: '#00247c'
-        });
-        return;
-    }
-
-    // Add filter info if active
-    if (currentStatusFilter !== 'all') {
-        doc.setFontSize(9);
-        doc.setTextColor(100);
-        doc.text(`Filtered by: ${currentStatusFilter.replace('_', ' ').toUpperCase()}`, 14, 34);
-    }
-
-    // Create table
-    doc.autoTable({
-        head: [["Request ID", "Requester", "Document", "Type", "Purpose", "Fee", "Status", "Date"]],
-        body: rows,
-        startY: currentStatusFilter !== 'all' ? 38 : 34,
-        theme: "grid",
-        styles: {
-            fontSize: 8,
-            cellPadding: 2
-        },
-        headStyles: {
-            fillColor: [0, 36, 124],
-            textColor: 255,
-            fontStyle: 'bold'
-        },
-        columnStyles: {
-            0: { cellWidth: 22 },  // Request ID
-            1: { cellWidth: 25 },  // Requester
-            2: { cellWidth: 30 },  // Document
-            3: { cellWidth: 18 },  // Type
-            4: { cellWidth: 35 },  // Purpose
-            5: { cellWidth: 18 },  // Fee
-            6: { cellWidth: 22 },  // Status
-            7: { cellWidth: 22 }   // Date
-        }
-    });
-
-    // Footer with total count
-    const finalY = doc.lastAutoTable.finalY || 34;
-    doc.setFontSize(9);
-    doc.text(`Total Requests: ${rows.length}`, 14, finalY + 10);
-
-    // Save the PDF
-    const filename = `document_requests_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(filename);
-
-    // Success notification
+    // Show loading state
     Swal.fire({
-        icon: 'success',
-        title: 'Exported Successfully!',
-        text: `${rows.length} request(s) exported to PDF`,
-        timer: 2000,
-        showConfirmButton: false
+        title: 'Generating PDF...',
+        text: 'Please wait while we export all document requests',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
     });
+
+    // Fetch all requests data
+    fetch('./endpoints/get_all_requests.php')
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success || data.requests.length === 0) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "No data to export",
+                    text: "There are no document requests in the database.",
+                    confirmButtonColor: '#00247c'
+                });
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('landscape'); // Use landscape for more columns
+
+            // Title
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text("Document Requests Report", 14, 20);
+
+            // Date and time
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const now = new Date();
+            doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
+
+            // Prepare rows from fetched data
+            const rows = data.requests.map(request => {
+                const requestId = request.request_id || 'N/A';
+                const fullName = `${request.first_name || ''} ${request.middle_name || ''} ${request.last_name || ''}`.trim();
+                const document = request.document_name || 'N/A';
+                const type = request.document_type ? request.document_type.charAt(0).toUpperCase() + request.document_type.slice(1) : 'N/A';
+                const purpose = (request.purpose || 'N/A').substring(0, 40) + (request.purpose && request.purpose.length > 40 ? '...' : '');
+                const fee = request.fee == 0 ? 'Free' : '₱' + parseFloat(request.fee).toFixed(2);
+                const status = request.status ? request.status.charAt(0).toUpperCase() + request.status.slice(1).replace('_', ' ') : 'N/A';
+                const submittedDate = request.submitted_date
+                    ? new Date(request.submitted_date).toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'short',
+                        day: 'numeric'
+                    })
+                    : 'N/A';
+
+                return [requestId, fullName, document, type, purpose, fee, status, submittedDate];
+            });
+
+            // Create table
+            doc.autoTable({
+                head: [["Request ID", "Requester", "Document", "Type", "Purpose", "Fee", "Status", "Date"]],
+                body: rows,
+                startY: 34,
+                theme: "grid",
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2
+                },
+                headStyles: {
+                    fillColor: [0, 36, 124],
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                columnStyles: {
+                    0: { cellWidth: 28 },  // Request ID
+                    1: { cellWidth: 35 },  // Requester
+                    2: { cellWidth: 40 },  // Document
+                    3: { cellWidth: 25 },  // Type
+                    4: { cellWidth: 50 },  // Purpose
+                    5: { cellWidth: 25 },  // Fee
+                    6: { cellWidth: 30 },  // Status
+                    7: { cellWidth: 30 }   // Date
+                }
+            });
+
+            // Footer with statistics
+            const finalY = doc.lastAutoTable.finalY || 34;
+            doc.setFontSize(9);
+            doc.setFont(undefined, 'bold');
+            doc.text(`Total Requests: ${rows.length}`, 14, finalY + 10);
+
+            // Add status breakdown
+            const statusCounts = {
+                pending: data.requests.filter(r => r.status === 'pending').length,
+                processing: data.requests.filter(r => r.status === 'processing').length,
+                approved: data.requests.filter(r => r.status === 'approved').length,
+                ready: data.requests.filter(r => r.status === 'ready').length,
+                completed: data.requests.filter(r => r.status === 'completed').length,
+                rejected: data.requests.filter(r => r.status === 'rejected').length,
+                cancelled: data.requests.filter(r => r.status === 'cancelled').length
+            };
+
+            doc.setFont(undefined, 'normal');
+            doc.setFontSize(8);
+            doc.text(
+                `Pending: ${statusCounts.pending} | Processing: ${statusCounts.processing} | Approved: ${statusCounts.approved} | Ready: ${statusCounts.ready}`,
+                14,
+                finalY + 16
+            );
+            doc.text(
+                `Completed: ${statusCounts.completed} | Rejected: ${statusCounts.rejected} | Cancelled: ${statusCounts.cancelled}`,
+                14,
+                finalY + 22
+            );
+
+            // Save the PDF
+            const filename = `document_requests_report_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(filename);
+
+            // Success notification
+            Swal.fire({
+                icon: 'success',
+                title: 'Exported Successfully!',
+                text: `${rows.length} request(s) exported to PDF`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+        })
+        .catch(error => {
+            console.error('Export error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Export Failed',
+                text: 'There was an error exporting the data. Please try again.',
+                confirmButtonColor: '#00247c'
+            });
+        });
 }

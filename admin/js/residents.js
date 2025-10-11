@@ -101,82 +101,115 @@ function jumpToPage(page) {
 }
 
 function exportData() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-
-    // Title
-    doc.setFontSize(16);
-    doc.setFont(undefined, 'bold');
-    doc.text("Residents Report", 14, 20);
-
-    // Date and time
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'normal');
-    const now = new Date();
-    doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
-
-    // Collect visible rows
-    const rows = [];
-    document.querySelectorAll("#residentsTable tbody tr").forEach(row => {
-        if (row.style.display !== "none" && !row.querySelector('.no-data')) {
-            const name = row.querySelector(".resident-name")?.textContent.trim() || "";
-            const email = row.querySelector(".resident-email")?.textContent.trim() || "";
-            const contact = row.querySelector(".contact-number")?.textContent.trim() || "";
-            const date = row.querySelector(".date-created")?.textContent.trim() || "";
-            rows.push([name, email, contact, date]);
-        }
-    });
-
-    if (rows.length === 0) {
-        Swal.fire({
-            icon: "warning",
-            title: "No data to export",
-            text: "There are no residents matching your current filters.",
-            confirmButtonColor: '#00247c'
-        });
-        return;
-    }
-
-    // Create table
-    doc.autoTable({
-        head: [["Name", "Email", "Contact", "Created Date"]],
-        body: rows,
-        startY: 34,
-        theme: "grid",
-        styles: {
-            fontSize: 9,
-            cellPadding: 3
-        },
-        headStyles: {
-            fillColor: [0, 36, 124],
-            textColor: 255,
-            fontStyle: 'bold'
-        },
-        columnStyles: {
-            0: { cellWidth: 50 },  // Name
-            1: { cellWidth: 60 },  // Email
-            2: { cellWidth: 35 },  // Contact
-            3: { cellWidth: 35 }   // Date
-        }
-    });
-
-    // Footer with total count
-    const finalY = doc.lastAutoTable.finalY || 34;
-    doc.setFontSize(9);
-    doc.text(`Total Residents: ${rows.length}`, 14, finalY + 10);
-
-    // Save the PDF
-    const filename = `residents_report_${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(filename);
-
-    // Success notification
+    // Show loading state
     Swal.fire({
-        icon: 'success',
-        title: 'Exported Successfully!',
-        text: `${rows.length} resident(s) exported to PDF`,
-        timer: 2000,
-        showConfirmButton: false
+        title: 'Generating PDF...',
+        text: 'Please wait while we export all residents',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
     });
+
+    // Fetch all residents data
+    fetch('./endpoints/get_all_residents.php')
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success || data.residents.length === 0) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "No data to export",
+                    text: "There are no residents in the database.",
+                    confirmButtonColor: '#00247c'
+                });
+                return;
+            }
+
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            // Title
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text("Residents Report", 14, 20);
+
+            // Date and time
+            doc.setFontSize(10);
+            doc.setFont(undefined, 'normal');
+            const now = new Date();
+            doc.text(`Generated: ${now.toLocaleDateString()} ${now.toLocaleTimeString()}`, 14, 28);
+
+            // Prepare rows from fetched data
+            const rows = data.residents.map(resident => {
+                const fullName = `${resident.first_name || ''} ${resident.middle_name || ''} ${resident.last_name || ''}`.trim();
+                const email = resident.email || 'N/A';
+                const contact = resident.contact_number || 'N/A';
+                const address = [resident.house_number, resident.street_name, resident.barangay]
+                    .filter(Boolean)
+                    .join(', ') || 'N/A';
+                const status = resident.status ? resident.status.charAt(0).toUpperCase() + resident.status.slice(1) : 'Inactive';
+                const createdDate = new Date(resident.created_at).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+
+                return [fullName, email, contact, address, status, createdDate];
+            });
+
+            // Create table
+            doc.autoTable({
+                head: [["Name", "Email", "Contact", "Address", "Status", "Created Date"]],
+                body: rows,
+                startY: 34,
+                theme: "grid",
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2
+                },
+                headStyles: {
+                    fillColor: [0, 36, 124],
+                    textColor: 255,
+                    fontStyle: 'bold'
+                },
+                columnStyles: {
+                    0: { cellWidth: 35 },  // Name
+                    1: { cellWidth: 45 },  // Email
+                    2: { cellWidth: 28 },  // Contact
+                    3: { cellWidth: 40 },  // Address
+                    4: { cellWidth: 20 },  // Status
+                    5: { cellWidth: 25 }   // Date
+                }
+            });
+
+            // Footer with total count
+            const finalY = doc.lastAutoTable.finalY || 34;
+            doc.setFontSize(9);
+            doc.text(`Total Residents: ${rows.length}`, 14, finalY + 10);
+
+            // Save the PDF
+            const filename = `residents_report_${new Date().toISOString().split('T')[0]}.pdf`;
+            doc.save(filename);
+
+            // Success notification
+            Swal.fire({
+                icon: 'success',
+                title: 'Exported Successfully!',
+                text: `${rows.length} resident(s) exported to PDF`,
+                timer: 2000,
+                showConfirmButton: false
+            });
+        })
+        .catch(error => {
+            console.error('Export error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Export Failed',
+                text: 'There was an error exporting the data. Please try again.',
+                confirmButtonColor: '#00247c'
+            });
+        });
 }
 
 function addResident() {
