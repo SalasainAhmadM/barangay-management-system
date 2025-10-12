@@ -615,11 +615,165 @@ $stmt->close();
     }
 
     function applyCertificate(id, name) {
-      window.location.href = `apply_document.php?type=certificate&id=${id}`;
+      // Show loading
+      Swal.fire({
+        title: 'Checking...',
+        text: 'Please wait while we verify your request limit.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Check daily limit first
+      fetch('./endpoints/check_daily_limit.php')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && !data.limit_reached) {
+            // User can proceed - show remaining requests info
+            const remainingText = data.remaining === 1
+              ? 'This is your last request for today.'
+              : `You have ${data.remaining} request${data.remaining > 1 ? 's' : ''} remaining today.`;
+
+            Swal.fire({
+              title: 'Proceed with Application?',
+              html: `
+            <p>You are about to apply for <strong>${name}</strong>.</p>
+            <p class="text-muted" style="font-size: 14px; margin-top: 10px;">
+              <i class="fas fa-info-circle"></i> ${remainingText}
+            </p>
+          `,
+              icon: 'info',
+              showCancelButton: true,
+              confirmButtonColor: '#667eea',
+              cancelButtonColor: '#6c757d',
+              confirmButtonText: 'Continue',
+              cancelButtonText: 'Cancel'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                window.location.href = `apply_document.php?type=certificate&id=${id}`;
+              }
+            });
+          } else if (data.limit_reached) {
+            // Daily limit reached
+            Swal.fire({
+              icon: 'warning',
+              title: 'Daily Limit Reached',
+              html: `
+            <p>You've reached your daily limit of <strong>${data.daily_limit}</strong> document requests.</p>
+            <p class="text-muted" style="margin-top: 10px;">
+              <i class="fas fa-clock"></i> You can submit more requests tomorrow.
+            </p>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+              <p style="margin: 0; font-size: 14px; color: #6c757d;">
+                <strong>Today's Requests:</strong> ${data.current_count} / ${data.daily_limit}
+              </p>
+            </div>
+          `,
+              confirmButtonText: 'Understood',
+              confirmButtonColor: '#667eea',
+              footer: '<span style="color: #6c757d; font-size: 12px;">This limit helps us process requests efficiently.</span>'
+            });
+          } else {
+            // Error occurred
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: data.message || 'Unable to verify request limit. Please try again.',
+              confirmButtonColor: '#667eea'
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Connection Error',
+            text: 'Unable to connect to server. Please try again.',
+            confirmButtonColor: '#667eea'
+          });
+        });
     }
 
     function applyPermit(id, name) {
-      window.location.href = `apply_document.php?type=permit&id=${id}`;
+      // Show loading
+      Swal.fire({
+        title: 'Checking...',
+        text: 'Please wait while we verify your request limit.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      // Check daily limit first
+      fetch('./endpoints/check_daily_limit.php')
+        .then(response => response.json())
+        .then(data => {
+          if (data.success && !data.limit_reached) {
+            // User can proceed - show remaining requests info
+            const remainingText = data.remaining === 1
+              ? 'This is your last request for today.'
+              : `You have ${data.remaining} request${data.remaining > 1 ? 's' : ''} remaining today.`;
+
+            Swal.fire({
+              title: 'Proceed with Application?',
+              html: `
+            <p>You are about to apply for <strong>${name}</strong>.</p>
+            <p class="text-muted" style="font-size: 14px; margin-top: 10px;">
+              <i class="fas fa-info-circle"></i> ${remainingText}
+            </p>
+          `,
+              icon: 'info',
+              showCancelButton: true,
+              confirmButtonColor: '#667eea',
+              cancelButtonColor: '#6c757d',
+              confirmButtonText: 'Continue',
+              cancelButtonText: 'Cancel'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                window.location.href = `apply_document.php?type=permit&id=${id}`;
+              }
+            });
+          } else if (data.limit_reached) {
+            // Daily limit reached
+            Swal.fire({
+              icon: 'warning',
+              title: 'Daily Limit Reached',
+              html: `
+            <p>You've reached your daily limit of <strong>${data.daily_limit}</strong> document requests.</p>
+            <p class="text-muted" style="margin-top: 10px;">
+              <i class="fas fa-clock"></i> You can submit more requests tomorrow.
+            </p>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-top: 15px;">
+              <p style="margin: 0; font-size: 14px; color: #6c757d;">
+                <strong>Today's Requests:</strong> ${data.current_count} / ${data.daily_limit}
+              </p>
+            </div>
+          `,
+              confirmButtonText: 'Understood',
+              confirmButtonColor: '#667eea',
+              footer: '<span style="color: #6c757d; font-size: 12px;">This limit helps us process requests efficiently.</span>'
+            });
+          } else {
+            // Error occurred
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: data.message || 'Unable to verify request limit. Please try again.',
+              confirmButtonColor: '#667eea'
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Connection Error',
+            text: 'Unable to connect to server. Please try again.',
+            confirmButtonColor: '#667eea'
+          });
+        });
     }
 
     function viewRequestDetails(requestId) {

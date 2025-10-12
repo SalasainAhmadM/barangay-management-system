@@ -84,6 +84,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        $today = date('Y-m-d');
+        $limit_query = "INSERT INTO user_daily_request_limits (user_id, request_date, certificate_count) 
+                    VALUES (?, ?, 1) 
+                    ON DUPLICATE KEY UPDATE certificate_count = certificate_count + 1";
+        $limit_stmt = $conn->prepare($limit_query);
+        $limit_stmt->bind_param("is", $user_id, $today);
+        $limit_stmt->execute();
+        $limit_stmt->close();
         header("Location: certificates.php?success=request_submitted");
         exit();
     } else {
