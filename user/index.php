@@ -306,6 +306,9 @@ $announcement_count = count($announcements);
   <?php if (isset($_SESSION["show_user_welcome"]) && $_SESSION["show_user_welcome"] === true): ?>
     <script>
       document.addEventListener('DOMContentLoaded', function () {
+        // Determine if first-time login
+        const isFirstLogin = <?php echo isset($_SESSION["is_first_login"]) && $_SESSION["is_first_login"] ? 'true' : 'false'; ?>;
+
         // Show the welcome toast
         const Toast = Swal.mixin({
           toast: true,
@@ -319,56 +322,49 @@ $announcement_count = count($announcements);
           }
         });
 
+        // Different messages for first-time vs returning users
+        const welcomeMessage = isFirstLogin
+          ? 'Welcome to Barangay Management System, <?php echo htmlspecialchars($_SESSION["user_name"]); ?>!'
+          : 'Welcome back, <?php echo htmlspecialchars($_SESSION["user_name"]); ?>!';
+
         Toast.fire({
           icon: 'success',
-          text: 'Welcome back, <?php echo htmlspecialchars($_SESSION["user_name"]); ?>!'
+          text: welcomeMessage
         }).then(() => {
           <?php if (isset($_SESSION["needs_details"]) && $_SESSION["needs_details"]): ?>
             // Show the complete profile modal *after* welcome toast
             Swal.fire({
               title: 'Complete Your Profile',
               html: `
-              <div class="swal-form">
-                  <div class="form-group">
-                      <label for="date-of-birth" class="form-label">Date of Birth</label>
-                      <input type="date" id="date-of-birth" class="swal2-input" required>
-                  </div>
-                  <div class="form-group">
-                      <label for="gender" class="form-label">Gender</label>
-                      <select id="gender" class="swal2-select" required>
-                          <option value="">-- Select Gender --</option>
-                          <option value="male">Male</option>
-                          <option value="female">Female</option>
-                      </select>
-                  </div>
-                  <div class="form-group">
-                      <label for="civil-status" class="form-label">Civil Status</label>
-                      <select id="civil-status" class="swal2-select">
-                          <option value="">-- Select Status --</option>
-                          <option value="single">Single</option>
-                          <option value="married">Married</option>
-                          <option value="divorced">Divorced</option>
-                          <option value="widowed">Widowed</option>
-                      </select>
-                  </div>
-                  <div class="form-group">
-                      <label for="occupation" class="form-label">Occupation</label>
-                      <input type="text" id="occupation" class="swal2-input" placeholder="e.g. Teacher">
-                  </div>
-                  <div class="form-group">
-                      <label for="house-number" class="form-label">House Number</label>
-                      <input type="text" id="house-number" class="swal2-input" placeholder="e.g. 123">
-                  </div>
-                  <div class="form-group">
-                      <label for="street-name" class="form-label">Street Name</label>
-                      <input type="text" id="street-name" class="swal2-input" placeholder="e.g. Mango St.">
-                  </div>
-                  <div class="form-group">
-                      <label for="barangay" class="form-label">Barangay</label>
-                      <input type="text" id="barangay" class="swal2-input" value="Baliwasan">
-                  </div>
-              </div>
-            `,
+            <div class="swal-form">
+                <div class="form-group">
+                    <label for="date-of-birth" class="form-label">Date of Birth</label>
+                    <input type="date" id="date-of-birth" class="swal2-input" required>
+                </div>
+                <div class="form-group">
+                    <label for="gender" class="form-label">Gender</label>
+                    <select id="gender" class="swal2-select" required>
+                        <option value="">-- Select Gender --</option>
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="civil-status" class="form-label">Civil Status</label>
+                    <select id="civil-status" class="swal2-select">
+                        <option value="">-- Select Status --</option>
+                        <option value="single">Single</option>
+                        <option value="married">Married</option>
+                        <option value="divorced">Divorced</option>
+                        <option value="widowed">Widowed</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="occupation" class="form-label">Occupation</label>
+                    <input type="text" id="occupation" class="swal2-input" placeholder="e.g. Teacher">
+                </div>
+            </div>
+          `,
               focusConfirm: false,
               showCancelButton: true,
               confirmButtonText: 'Save',
@@ -390,10 +386,7 @@ $announcement_count = count($announcements);
                   date_of_birth: dob,
                   gender: gender,
                   civil_status: document.getElementById('civil-status').value,
-                  occupation: document.getElementById('occupation').value,
-                  house_number: document.getElementById('house-number').value,
-                  street_name: document.getElementById('street-name').value,
-                  barangay: document.getElementById('barangay').value
+                  occupation: document.getElementById('occupation').value
                 };
               }
             }).then((result) => {
@@ -436,9 +429,13 @@ $announcement_count = count($announcements);
         });
       });
     </script>
-    <?php unset($_SESSION["show_user_welcome"]); ?>
-    <?php if (isset($_SESSION["needs_details"]))
-      unset($_SESSION["needs_details"]); ?>
+    <?php
+    unset($_SESSION["show_user_welcome"]);
+    if (isset($_SESSION["needs_details"]))
+      unset($_SESSION["needs_details"]);
+    if (isset($_SESSION["is_first_login"]))
+      unset($_SESSION["is_first_login"]);
+    ?>
   <?php endif; ?>
 
 </body>

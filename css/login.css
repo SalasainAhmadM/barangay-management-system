@@ -2,23 +2,23 @@
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.2/css/all.min.css");
 
 .swal2-confirm {
-    background-color: #00247c !important; 
-    color: #fff !important;              
+  background-color: #00247c !important;
+  color: #fff !important;
 }
 
-.swal2-cancel{
-    background-color: #808080 !important;
-    color: #fff !important;             
+.swal2-cancel {
+  background-color: #808080 !important;
+  color: #fff !important;
 }
 
 .swal2-confirm:hover {
-    background-color: #0ca5b6 !important; 
-    color: #fff !important;              
+  background-color: #0ca5b6 !important;
+  color: #fff !important;
 }
 
 .swal2-cancel:hover {
-    background-color: #8B0000 !important;
-    color: #fff !important;             
+  background-color: #8B0000 !important;
+  color: #fff !important;
 }
 
 * {
@@ -44,7 +44,7 @@ body {
   height: 580px;
   position: relative;
   overflow-x: hidden;
-  border-radius: 10px; 
+  border-radius: 10px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
@@ -111,8 +111,8 @@ body {
   max-width: 100%;
   height: auto;
   display: block;
-  margin: 0 auto 20px auto; 
-  object-fit: contain; 
+  margin: 0 auto 20px auto;
+  object-fit: contain;
 }
 
 .container .forms-container .form-control.signin-form {
@@ -233,6 +233,7 @@ body {
 .checkbox-group input[type="checkbox"] {
   margin-right: 5px;
 }
+
 .input-wrapper {
   position: relative;
   width: 100%;
@@ -240,20 +241,21 @@ body {
 
 .input-wrapper input {
   width: 100%;
-  padding-right: 40px; 
+  padding-right: 40px;
   box-sizing: border-box;
 }
+
 .input-wrapper .toggle-password {
   position: absolute;
   top: 0;
   right: 0;
   height: 100%;
-  width: 40px; 
+  width: 40px;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  user-select: none; 
+  user-select: none;
 }
 
 .input-wrapper .toggle-password i {
@@ -261,7 +263,9 @@ body {
   color: #999;
 }
 
-.flex-wrapper {
+.flex-wrapper,
+.flex-wrapper-address,
+.flex-wrapper-contact {
   display: flex;
   gap: 10px;
 }
@@ -273,6 +277,23 @@ body {
 .flex-wrapper input:last-child {
   flex: 1;
 }
+
+.flex-wrapper-address input:first-child {
+  flex: 3;
+}
+
+.flex-wrapper-address input:last-child {
+  flex: 3;
+}
+
+.flex-wrapper-contact input:first-child {
+  flex: 3;
+}
+
+.flex-wrapper-contact input:last-child {
+  flex: 3;
+}
+
 .forgot-password-link {
   margin-top: 8px;
   margin-bottom: 10px;
@@ -287,6 +308,7 @@ body {
 .forgot-password-link a:hover {
   text-decoration: underline;
 }
+
 /* CSS for Signup Button and Password Strength Indicators */
 #signup-button {
   width: 100%;
@@ -328,6 +350,7 @@ body {
   display: block;
   height: 15px;
 }
+
 #loader {
   position: absolute;
   left: 50%;
@@ -376,12 +399,14 @@ body {
   }
 
   .container .forms-container .form-control.signup-form {
-    left: 100%; /* Offscreen by default */
+    left: 100%;
+    /* Offscreen by default */
     margin-top: 70px;
   }
 
   .container .forms-container .form-control.signin-form {
-    left: 0; /* Visible by default */
+    left: 0;
+    /* Visible by default */
   }
 
   .container .intros-container {
@@ -397,29 +422,35 @@ body {
     width: 100%;
     transition: transform 0.5s ease-in-out;
   }
+
   .intro-control__inner img {
     max-width: 50%;
     height: auto;
     display: block;
-    margin: 0 auto 20px auto; 
-    object-fit: contain; 
+    margin: 0 auto 20px auto;
+    object-fit: contain;
   }
+
   /* When in "signup" state */
   .change .forms-container .form-control.signup-form {
-    transform: translateX(-100%); /* Bring signup form into view */
+    transform: translateX(-100%);
+    /* Bring signup form into view */
   }
 
   .change .forms-container .form-control.signin-form {
-    transform: translateX(-100%); /* Push signin form out of view */
+    transform: translateX(-100%);
+    /* Push signin form out of view */
   }
 
   /* When in "signup" state, swap intros */
   .change .intros-container .signin-intro {
-    transform: translateX(100%); /* Push signin intro out of view */
+    transform: translateX(100%);
+    /* Push signin intro out of view */
   }
 
   .change .intros-container .signup-intro {
-    transform: translateX(0%); /* Bring signup intro into view */
+    transform: translateX(0%);
+    /* Bring signup intro into view */
   }
 }
 
@@ -451,41 +482,41 @@ body {
 }
 
 .swal-form {
-    text-align: left;
-    padding: 10px 0;
+  text-align: left;
+  padding: 10px 0;
 }
 
 .form-group {
-    margin-bottom: 20px;
+  margin-bottom: 20px;
 }
 
 .form-label {
-    display: block;
-    margin-bottom: 8px;
-    font-weight: 600;
-    color: #374151;
-    font-size: 14px;
-    text-align: left;
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: #374151;
+  font-size: 14px;
+  text-align: left;
 }
 
 .swal2-input {
-    width: 100% !important;
-    padding: 12px 16px !important;
-    border: 2px solid #e5e7eb !important;
-    border-radius: 8px !important;
-    font-size: 14px !important;
-    transition: border-color 0.2s ease !important;
-    box-sizing: border-box !important;
-    margin: 0 !important;
+  width: 100% !important;
+  padding: 12px 16px !important;
+  border: 2px solid #e5e7eb !important;
+  border-radius: 8px !important;
+  font-size: 14px !important;
+  transition: border-color 0.2s ease !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
 }
 
 .swal2-input:focus {
-    border-color: #3b82f6 !important;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
-    outline: none !important;
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1) !important;
+  outline: none !important;
 }
 
 .swal2-input::placeholder {
-    color: #9ca3af !important;
-    font-size: 14px !important;
+  color: #9ca3af !important;
+  font-size: 14px !important;
 }

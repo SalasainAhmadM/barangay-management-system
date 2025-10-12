@@ -1,3 +1,4 @@
+<?php session_start(); ?>
 <!DOCTYPE html>
 <html lang="en">
 
@@ -40,6 +41,14 @@
                     <input type="email" id="signup-email" name="email" placeholder="Email" required />
                     <input type="number" id="signup-contact" name="contact" placeholder="Contact Number" required />
                     <div class="validation-text" id="signup_contact_validation"></div>
+
+                    <!-- Address Fields -->
+                    <div class="input-wrapper flex-wrapper-address">
+                        <input type="text" name="house_number" id="house-number" placeholder="House Number" required />
+                        <input type="text" name="street_name" id="street-name" placeholder="Street Name" required />
+                    </div>
+                    <input style="display: none;" type="text" name="barangay" id="barangay" value="Baliwasan" />
+
                     <div class="input-wrapper">
                         <input type="password" id="signup-password" name="password" placeholder="Password" required />
                         <span class="toggle-password">
@@ -56,7 +65,6 @@
                     <button type="submit" id="signup-button" disabled>Sign up</button>
                     <div class="password-strength" id="signup_password_strength"></div>
                     <div class="password-strength" id="signup_instruction_text"></div>
-
                 </form>
             </div>
         </div>
@@ -89,8 +97,7 @@
                     icon: 'error',
                     title: 'Login Failed',
                     text: '<?php echo isset($_SESSION['login_error']) ? $_SESSION['login_error'] : "Invalid email or password"; ?>',
-                    confirmButtonText: 'Yes, proceed',
-                    cancelButtonText: 'Cancel',
+                    confirmButtonText: 'OK',
                     didOpen: () => {
                         document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
                         document.body.classList.remove("swal2-shown", "swal2-height-auto");
@@ -98,6 +105,7 @@
                 });
                 window.history.replaceState({}, document.title, window.location.pathname);
             };
+            <?php unset($_SESSION['login_error']); ?>
         <?php elseif (isset($_GET['register']) && $_GET['register'] === 'success'): ?>
             window.onload = function () {
                 Swal.fire({
@@ -112,6 +120,25 @@
                 });
                 window.history.replaceState({}, document.title, window.location.pathname);
             };
+            <?php unset($_SESSION['register_success']); ?>
+        <?php elseif (isset($_GET['register']) && $_GET['register'] === 'error'): ?>
+            window.onload = function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Registration Failed',
+                    text: '<?php echo isset($_SESSION['register_error']) ? $_SESSION['register_error'] : "Something went wrong. Please try again."; ?>',
+                    confirmButtonText: 'OK',
+                    didOpen: () => {
+                        document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                        document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                    },
+                }).then(() => {
+                    // Automatically switch to signup form after error
+                    document.querySelector('.container').classList.add('sign-up-mode');
+                });
+                window.history.replaceState({}, document.title, window.location.pathname);
+            };
+            <?php unset($_SESSION['register_error']); ?>
         <?php elseif (isset($_GET['auth']) && $_GET['auth'] === 'error'): ?>
             window.onload = function () {
                 Swal.fire({
@@ -136,6 +163,7 @@
         function closeModal(modalId) {
             document.getElementById(modalId).style.display = "none";
         }
+
         // Signup form event listener
         document.querySelector('form[action="./conn/endpoint/register.php"]').addEventListener('submit', function (e) {
             // Show the loader
@@ -451,18 +479,6 @@
                 passwordInput.type = 'password';
                 toggleIcon.classList.remove('fa-eye-slash');
                 toggleIcon.classList.add('fa-eye');
-            }
-        }
-
-        // Function to check password strength (if not already defined)
-        function checkPasswordStrength(password) {
-            const regexStrong = /(?=(.*[a-z]){5,})(?=.*[A-Z])(?=(.*[0-9]){2,})/;
-            if (password.length >= 8 && regexStrong.test(password)) {
-                return 'Strong';
-            } else if (password.length >= 6) {
-                return 'Moderate';
-            } else {
-                return 'Weak';
             }
         }
 
