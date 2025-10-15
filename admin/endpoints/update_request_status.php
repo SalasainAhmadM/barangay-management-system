@@ -39,11 +39,30 @@ if ($status === 'rejected' && empty($rejectionReason)) {
 try {
     $conn->begin_transaction();
 
-    // Get document info for logging
+    // Get complete document info for logging and PDF generation
     $info_stmt = $conn->prepare("
-        SELECT dr.id, dr.user_id, dt.name AS document_name
+        SELECT 
+            dr.id,
+            dr.user_id,
+            dr.request_id,
+            dr.purpose,
+            dr.submitted_date,
+            dt.name AS document_name,
+            dt.type AS document_type,
+            dt.fee,
+            u.first_name,
+            u.middle_name,
+            u.last_name,
+            u.email,
+            u.contact_number,
+            CONCAT(
+                COALESCE(u.house_number, ''), ' ',
+                COALESCE(u.street_name, ''), ', ',
+                COALESCE(u.barangay, '')
+            ) as address
         FROM document_requests dr
         INNER JOIN document_types dt ON dr.document_type_id = dt.id
+        INNER JOIN user u ON dr.user_id = u.id
         WHERE dr.id = ?
     ");
     $info_stmt->bind_param("i", $requestId);
@@ -83,6 +102,18 @@ try {
         $types .= "s";
     }
 
+    // Generate PDF if status is 'ready' or 'completed'
+    $pdfFilename = null;
+    if (in_array($status, ['ready', 'completed'])) {
+        $pdfFilename = generateDocumentPDF($requestInfo);
+        
+        if ($pdfFilename) {
+            $updateFields .= ", document_file = ?";
+            $params[] = $pdfFilename;
+            $types .= "s";
+        }
+    }
+
     // Add WHERE clause
     $params[] = $requestId;
     $types .= "i";
@@ -99,6 +130,10 @@ try {
 
             // Build readable description
             $description = "Updated the status of request ID {$requestId} for '{$docName}' to '{$status}'.";
+
+            if ($pdfFilename) {
+                $description .= " Document file generated: {$pdfFilename}.";
+            }
 
             if (!empty($notes)) {
                 $description .= " Notes: {$notes}.";
@@ -117,7 +152,11 @@ try {
             $log_stmt->close();
 
             $conn->commit();
-            echo json_encode(['success' => true, 'message' => 'Status updated successfully']);
+            echo json_encode([
+                'success' => true, 
+                'message' => 'Status updated successfully',
+                'pdf_generated' => ($pdfFilename !== null)
+            ]);
         } else {
             $conn->rollback();
             echo json_encode(['success' => false, 'message' => 'Request not found or no changes made']);
@@ -129,9 +168,201 @@ try {
 
     $stmt->close();
 } catch (Exception $e) {
-    $conn->rollback();
+    if (isset($conn)) {
+        $conn->rollback();
+    }
+    error_log("Error in update_request_status: " . $e->getMessage());
     echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
 }
 
-$conn->close();
+if (isset($conn)) {
+    $conn->close();
+}
+
+/**
+ * Generate PDF document for certificate or permit
+ * @param array $requestInfo - Request information from database
+ * @return string|false - Returns filename on success, false on failure
+ */
+function generateDocumentPDF($requestInfo) {
+    try {
+        // Load TCPDF
+        require_once('../../vendor/autoload.php');
+        
+        // Get absolute path to upload directory
+        $uploadDir = dirname(dirname(__DIR__)) . '/uploads/document_requests/';
+        
+        // Create directory if it doesn't exist
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+
+        // Generate filename using request_id
+        $filename = $requestInfo['request_id'] . ".pdf";
+        $filePath = $uploadDir . $filename;
+
+        // Verify the directory is writable
+        if (!is_writable($uploadDir)) {
+            error_log("Directory not writable: " . $uploadDir);
+            return false;
+        }
+
+        // Create PDF using TCPDF
+        $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+        
+        // Set document information
+        $pdf->SetCreator('Barangay Management System');
+        $pdf->SetAuthor('Barangay Office');
+        $pdf->SetTitle($requestInfo['document_name']);
+        $pdf->SetSubject($requestInfo['document_type']);
+        
+        // Remove default header/footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        
+        // Set margins
+        $pdf->SetMargins(25, 25, 25);
+        $pdf->SetAutoPageBreak(true, 25);
+        
+        // Add a page
+        $pdf->AddPage();
+        
+        // Set font
+        $pdf->SetFont('helvetica', '', 11);
+        
+        // Generate HTML content
+        $html = generateDocumentHTML($requestInfo);
+        
+        // Write HTML to PDF
+        $pdf->writeHTML($html, true, false, true, false, '');
+        
+        // Save PDF to file using absolute path
+        $pdf->Output($filePath, 'F');
+        
+        // Verify file was created
+        if (!file_exists($filePath)) {
+            error_log("PDF file was not created: " . $filePath);
+            return false;
+        }
+        
+        error_log("PDF successfully created: " . $filePath);
+        return $filename; // Return only filename, not full path
+        
+    } catch (Exception $e) {
+        error_log("PDF Generation Error: " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        return false;
+    }
+}
+
+/**
+ * Generate HTML content for the PDF document
+ * @param array $requestInfo - Request information
+ * @return string - HTML content
+ */
+function generateDocumentHTML($requestInfo) {
+    $fullName = trim($requestInfo['first_name'] . ' ' . ($requestInfo['middle_name'] ?? '') . ' ' . $requestInfo['last_name']);
+    $currentDate = date('F d, Y');
+    
+    // Handle fee display
+    $fee = floatval($requestInfo['fee'] ?? 0);
+    $feeDisplay = ($fee == 0) ? '<span style="color: #059669; font-weight: bold;">FREE / NO COST</span>' : 'Php' . number_format($fee, 2);
+    
+    $html = '
+    <style>
+        body { font-family: helvetica, sans-serif; }
+        .header-text {
+            text-align: center;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .title {
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            margin: 25px 0 15px 0;
+            text-decoration: underline;
+        }
+        .info-box {
+            margin: 15px 0;
+            font-size: 10px;
+        }
+        .content {
+            text-align: justify;
+            line-height: 1.8;
+            font-size: 11px;
+        }
+        .signature-section {
+            margin-top: 40px;
+            text-align: right;
+        }
+        .signature-line {
+            border-bottom: 1px solid #000;
+            width: 200px;
+            display: inline-block;
+            margin: 5px 0;
+        }
+        .footer-info {
+            margin-top: 30px;
+            font-size: 9px;
+        }
+    </style>
+    
+    <div class="header-text">
+        <b>Republic of the Philippines</b><br>
+        <b>Province of Zamboanga Del Sur</b><br>
+        <b>City of Zamboanga</b><br>
+        <b>BARANGAY BALIWASAN</b><br>
+        <b>Office of the Barangay Captain</b>
+    </div>
+    
+    <div class="title">' . strtoupper(htmlspecialchars($requestInfo['document_name'])) . '</div>
+    
+    <div class="info-box">
+        <b>Request ID:</b> ' . htmlspecialchars($requestInfo['request_id']) . '<br>
+        <b>Date Issued:</b> ' . $currentDate . '
+    </div>
+    
+    <div class="content">
+        <p><b>TO WHOM IT MAY CONCERN:</b></p>
+        
+        <p style="text-indent: 40px;">
+            This is to certify that <b>' . strtoupper(htmlspecialchars($fullName)) . '</b>, 
+            a resident of <b>' . htmlspecialchars($requestInfo['address']) . '</b>, 
+            has requested this document for the following purpose:
+        </p>
+        
+        <p style="text-indent: 40px; font-style: italic;">
+            <b>"' . htmlspecialchars($requestInfo['purpose']) . '"</b>
+        </p>
+        
+        <p style="text-indent: 40px;">
+            This certification is being issued upon the request of the above-named person 
+            for whatever legal purpose it may serve.
+        </p>
+        
+        <p style="text-indent: 40px;">
+            Issued this <b>' . date('jS') . '</b> day of <b>' . date('F Y') . '</b> 
+            at the Barangay Hall, Baliwasan, Zamboanga City, Zamboanga Del Sur 7000, Philippines.
+        </p>
+    </div>
+    
+    <div class="signature-section">
+        <div class="signature-line"></div><br>
+        <b>BARANGAY CAPTAIN</b><br>
+        <i>Punong Barangay</i>
+    </div>
+    
+    <div class="footer-info">
+        <b>Paid under O.R. No.:</b> ' . ($fee == 0 ? 'N/A' : '__________') . '<br>
+        <b>Amount Paid:</b> ' . $feeDisplay . '<br>
+        <b>Date Paid:</b> ' . ($fee == 0 ? 'N/A' : $currentDate) . '
+    </div>
+    
+    <div style="margin-top: 20px; font-size: 8px; text-align: center; color: #666;">
+        <i>Not valid without official seal</i>
+    </div>';
+    
+    return $html;
+}
 ?>

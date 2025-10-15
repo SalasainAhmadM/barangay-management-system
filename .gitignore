@@ -5,3 +5,4 @@ phpdotenv/
 # Ignore SMS sender script
 send_sms.php
 
+/vendor/
