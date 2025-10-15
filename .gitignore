@@ -1,2 +1,7 @@
 .env
+# Ignore custom environment loader
+phpdotenv/
+
+# Ignore SMS sender script
+send_sms.php
 

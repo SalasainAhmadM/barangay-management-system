@@ -1,10 +1,45 @@
 <?php
 session_start();
+
+// ✅ Set timezone to Asia/Manila at the very start
+date_default_timezone_set('Asia/Manila');
+
 require_once("../conn/conn.php");
 
 if (!isset($_SESSION["admin_id"])) {
     header("Location: ../index.php?auth=error");
     exit();
+}
+
+// ✅ Load .env manually (no composer)
+$env_path = __DIR__ . '/../.env';
+if (file_exists($env_path)) {
+    $lines = file($env_path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    foreach ($lines as $line) {
+        if (strpos(trim($line), '#') === 0)
+            continue; // skip comments
+        list($name, $value) = explode('=', $line, 2);
+        $_ENV[trim($name)] = trim($value);
+    }
+}
+
+// Get Semaphore API key
+$api_key = $_ENV['SEMAPHORE_API_KEY'] ?? '';
+
+// ✅ Fetch Semaphore account credits
+$credits_data = null;
+if (!empty($api_key)) {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, "https://api.semaphore.co/api/v4/account?apikey=$api_key");
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    $credits_response = curl_exec($ch);
+    $curl_error = curl_error($ch);
+    curl_close($ch);
+
+    if (!$curl_error && $credits_response) {
+        $credits_data = json_decode($credits_response, true);
+    }
 }
 ?>
 
@@ -31,6 +66,57 @@ if (!isset($_SESSION["admin_id"])) {
             </div>
         </div>
 
+        <!-- SMS Credits Balance Section -->
+        <div class="table-container" style="background: #fff; margin-bottom: 20px;">
+            <div class="table-header" style="background: #fff;">
+                <div style="display: flex; align-items: center; gap: 15px;">
+                    <img src="../assets/logo/semaphore.png" alt="SMS"
+                        style="width: 40px; height: 40px; object-fit: contain;">
+                    <div>
+                        <h2 class="table-title" style="color: #374151;margin-bottom: 5px;">
+                            <?php
+                            if ($credits_data && isset($credits_data['credit_balance'])) {
+                                echo number_format($credits_data['credit_balance'], 2);
+                            } else {
+                                echo 'Unavailable';
+                            }
+                            ?>
+                        </h2>
+                        <span style="color: #374151; font-size: 14px; opacity: 0.95;">SMS Credits Balance</span>
+                    </div>
+                </div>
+                <div class="table-actions" style="display: flex; align-items: center; gap: 20px;">
+                    <div style="text-align: right;">
+                        <div style="color: #374151;font-size: 13px; opacity: 0.9; margin-bottom: 3px;">Service Provider:
+                            <strong>Semaphore API</strong>
+                        </div>
+                        <div style="color: #374151;font-size: 13px; opacity: 0.9; margin-bottom: 3px;">Last Updated:
+                            <strong><?php echo date('g:i A'); ?></strong>
+                        </div>
+                        <div style="color: #374151;font-size: 13px; opacity: 0.9;">
+                            Status:
+                            <?php
+                            if ($credits_data && isset($credits_data['credit_balance'])) {
+                                $balance = floatval($credits_data['credit_balance']);
+                                if ($balance >= 100) {
+                                    echo '<strong>HEALTHY BALANCE</strong>';
+                                } elseif ($balance >= 50) {
+                                    echo '<strong>LOW BALANCE</strong>';
+                                } elseif ($balance > 0) {
+                                    echo '<strong>CRITICAL</strong>';
+                                } else {
+                                    echo '<strong>NO CREDITS</strong>';
+                                }
+                            } else {
+                                echo '<strong>CONNECTION ERROR</strong>';
+                            }
+                            ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <?php
         // Fetch dashboard statistics
         
@@ -42,7 +128,7 @@ if (!isset($_SESSION["admin_id"])) {
         $activeHouseholdsQuery = $conn->query("SELECT COUNT(DISTINCT CONCAT(house_number, street_name)) as total FROM user WHERE status = 'active' AND house_number IS NOT NULL");
         $activeHouseholds = $activeHouseholdsQuery->fetch_assoc()['total'];
 
-        // New residents this month
+        // New residents this month (using Asia/Manila timezone)
         $currentMonth = date('Y-m');
         $newResidentsQuery = $conn->query("SELECT COUNT(*) as total FROM user WHERE DATE_FORMAT(created_at, '%Y-%m') = '$currentMonth'");
         $newResidents = $newResidentsQuery->fetch_assoc()['total'];
@@ -67,18 +153,18 @@ if (!isset($_SESSION["admin_id"])) {
         $activeSchedulesQuery = $conn->query("SELECT COUNT(*) as total FROM waste_schedules WHERE is_active = 1");
         $activeSchedules = $activeSchedulesQuery->fetch_assoc()['total'];
 
-        // Missed collection reports this week
+        // Missed collection reports this week (using Asia/Manila timezone)
         $startOfWeek = date('Y-m-d', strtotime('monday this week'));
         $missedReportsQuery = $conn->query("SELECT COUNT(*) as total FROM missed_collections 
                                             WHERE created_at >= '$startOfWeek' AND status = 'pending'");
         $missedReports = $missedReportsQuery->fetch_assoc()['total'];
 
-        // Activity logs this month
+        // Activity logs this month (using Asia/Manila timezone)
         $activityLogsQuery = $conn->query("SELECT COUNT(*) as total FROM activity_logs 
                                            WHERE DATE_FORMAT(created_at, '%Y-%m') = '$currentMonth'");
         $monthlyActivities = $activityLogsQuery->fetch_assoc()['total'];
 
-        // Resolved reports this month
+        // Resolved reports this month (using Asia/Manila timezone)
         $resolvedReportsQuery = $conn->query("SELECT COUNT(*) as total FROM missed_collections 
                                               WHERE DATE_FORMAT(resolved_date, '%Y-%m') = '$currentMonth' 
                                               AND status = 'resolved'");
@@ -253,9 +339,6 @@ if (!isset($_SESSION["admin_id"])) {
             </div>
             <ul class="recent-list">
                 <?php
-                // Set timezone to Asia/Manila
-                date_default_timezone_set('Asia/Manila');
-
                 // Fetch last 5 activity logs
                 $stmt = $conn->prepare("SELECT activity, description, created_at 
                                 FROM activity_logs 
@@ -266,7 +349,7 @@ if (!isset($_SESSION["admin_id"])) {
 
                 if ($result->num_rows > 0) {
                     while ($row = $result->fetch_assoc()) {
-                        // Format time ago
+                        // Format time ago (already using Asia/Manila timezone set at the top)
                         $createdAt = new DateTime($row["created_at"], new DateTimeZone('Asia/Manila'));
                         $now = new DateTime("now", new DateTimeZone('Asia/Manila'));
                         $diff = $now->diff($createdAt);
