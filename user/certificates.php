@@ -1028,7 +1028,7 @@ $stmt->close();
     }
 
     function downloadDocument(requestId) {
-      window.location.href = `download_document.php?id=${requestId}`;
+      window.location.href = `./endpoints/download_document.php?id=${requestId}`;
     }
 
     function showPickupLocation() {
