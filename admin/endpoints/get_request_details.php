@@ -17,6 +17,7 @@ if (!isset($_GET['id'])) {
 $requestId = (int) $_GET['id'];
 
 try {
+    // Fetch request details with user and document type info
     $stmt = $conn->prepare("
         SELECT 
             dr.*,
@@ -56,6 +57,32 @@ try {
         if (empty($request['address'])) {
             $request['address'] = 'N/A';
         }
+
+        // Fetch uploaded documents/attachments for this request
+        $filesStmt = $conn->prepare("
+            SELECT 
+                id,
+                request_id,
+                file_name,
+                file_path,
+                file_type,
+                uploaded_at
+            FROM request_attachments
+            WHERE request_id = ?
+            ORDER BY uploaded_at DESC
+        ");
+
+        $filesStmt->bind_param("i", $requestId);
+        $filesStmt->execute();
+        $filesResult = $filesStmt->get_result();
+
+        $files = [];
+        while ($file = $filesResult->fetch_assoc()) {
+            $files[] = $file;
+        }
+
+        $request['uploaded_files'] = $files;
+        $filesStmt->close();
 
         echo json_encode(['success' => true, 'request' => $request]);
     } else {

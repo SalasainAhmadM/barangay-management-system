@@ -128,6 +128,111 @@ $totalItems = $activeTab === 'requests' ? $totalRequests : $totalTypes;
     <?php include '../components/header_links.php'; ?>
     <?php include '../components/admin_side_header.php'; ?>
 </head>
+<style>
+    /* Uploaded Files Section */
+    .uploaded-files-grid {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 24px;
+    }
+
+    .file-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: #f8f9fa;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .file-item:hover {
+        background: #e9ecef;
+        border-color: #dee2e6;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+
+    .file-icon {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 8px;
+        font-size: 20px;
+    }
+
+    .file-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .file-name {
+        font-size: 14px;
+        font-weight: 500;
+        color: #212529;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 2px;
+    }
+
+    .file-meta {
+        font-size: 12px;
+        color: #6c757d;
+    }
+
+    .file-action {
+        flex-shrink: 0;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
+        border-radius: 6px;
+        color: #00247c;
+        font-size: 14px;
+        transition: all 0.2s ease;
+    }
+
+    .file-item:hover .file-action {
+        background: #00247c;
+        color: white;
+    }
+
+    /* Responsive file grid */
+    @media (max-width: 768px) {
+        .file-item {
+            padding: 10px 12px;
+        }
+
+        .file-icon {
+            width: 36px;
+            height: 36px;
+            font-size: 18px;
+        }
+
+        .file-name {
+            font-size: 13px;
+        }
+
+        .file-meta {
+            font-size: 11px;
+        }
+
+        .file-action {
+            width: 28px;
+            height: 28px;
+            font-size: 12px;
+        }
+    }
+</style>
 
 <body>
     <?php include '../components/sidebar.php'; ?>

@@ -199,7 +199,7 @@ function switchTab(tab) {
     window.location.href = `?tab=${tab}`;
 }
 
-// View request details in SweetAlert modal
+// View request details in SweetAlert modal with file handling
 function viewRequestDetails(requestId) {
     Swal.fire({
         title: 'Loading...',
@@ -279,6 +279,55 @@ function viewRequestDetails(requestId) {
                     'background: #ddd6fe; color: #7c3aed;' :
                     'background: #fef3c7; color: #d97706;';
 
+                // Generate uploaded files HTML
+                let filesHTML = '';
+                if (request.uploaded_files && request.uploaded_files.length > 0) {
+                    filesHTML = `
+                        <div class="section-header-simple">Uploaded Documents</div>
+                        <div class="uploaded-files-grid">
+                    `;
+
+                    request.uploaded_files.forEach(file => {
+                        const fileExt = file.file_type.toLowerCase();
+                        const isPDF = fileExt === 'pdf';
+                        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt);
+
+                        let fileIcon = 'fa-file';
+                        let iconColor = '#6c757d';
+
+                        if (isPDF) {
+                            fileIcon = 'fa-file-pdf';
+                            iconColor = '#dc3545';
+                        } else if (isImage) {
+                            fileIcon = 'fa-file-image';
+                            iconColor = '#28a745';
+                        }
+
+                        const uploadDate = new Date(file.uploaded_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                        });
+
+                        filesHTML += `
+                            <div class="file-item" onclick="handleFileClick('${file.file_path}', '${fileExt}', '${file.file_name}')">
+                                <div class="file-icon">
+                                    <i class="fas ${fileIcon}" style="color: ${iconColor};"></i>
+                                </div>
+                                <div class="file-info">
+                                    <div class="file-name">${file.file_name}</div>
+                                    <div class="file-meta">${uploadDate} • ${fileExt.toUpperCase()}</div>
+                                </div>
+                                <div class="file-action">
+                                    <i class="fas ${isImage ? 'fa-eye' : 'fa-download'}"></i>
+                                </div>
+                            </div>
+                        `;
+                    });
+
+                    filesHTML += '</div>';
+                }
+
                 Swal.fire({
                     title: 'Document Request Details',
                     html: `
@@ -345,6 +394,8 @@ function viewRequestDetails(requestId) {
                             </div>
                             ` : ''}
                         </div>
+                        
+                        ${filesHTML}
                         
                         <!-- Requester Details Section -->
                         <div class="section-header-simple">Requester Information</div>
@@ -454,6 +505,37 @@ function viewRequestDetails(requestId) {
                 confirmButtonColor: '#00247c'
             });
         });
+}
+
+// Handle file click - view image or download PDF
+function handleFileClick(filePath, fileType, fileName) {
+    const fileExt = fileType.toLowerCase();
+    const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt);
+
+    if (isImage) {
+        // Show image in modal
+        Swal.fire({
+            title: fileName,
+            html: `
+                <div style="max-width: 100%; max-height: 70vh; overflow: auto;">
+                    <img src="${filePath}" alt="${fileName}" style="max-width: 100%; height: auto; border-radius: 8px;">
+                </div>
+            `,
+            confirmButtonText: 'Close',
+            confirmButtonColor: '#00247c',
+            width: '800px',
+            showCloseButton: true
+        });
+    } else {
+        // Download PDF
+        const link = document.createElement('a');
+        link.href = filePath;
+        link.download = fileName;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 }
 
 {/* <div class="info-item-simple">
