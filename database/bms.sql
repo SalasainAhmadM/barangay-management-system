@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 15, 2025 at 01:32 AM
+-- Generation Time: Oct 20, 2025 at 01:40 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -93,7 +93,13 @@ INSERT INTO `activity_logs` (`id`, `activity`, `description`, `created_at`) VALU
 (52, 'New Account', 'A new user account was created for Rocks D Xebec (rocks@gmail.com)', '2025-10-12 21:23:59'),
 (53, 'User Login', 'User Rocks D. Xebec (rocks@gmail.com) has logged in.', '2025-10-12 21:24:23'),
 (54, 'User Login', 'User Rocks D. Xebec (rocks@gmail.com) has logged in.', '2025-10-12 21:29:18'),
-(55, 'User Login', 'User Rocks D. Xebec (rocks@gmail.com) has logged in.', '2025-10-12 21:29:46');
+(55, 'User Login', 'User Rocks D. Xebec (rocks@gmail.com) has logged in.', '2025-10-12 21:29:46'),
+(56, 'User Login', 'User John K. Cena12 (test@gmail.com) has logged in.', '2025-10-16 23:45:47'),
+(57, 'User Login', 'User John K. Cena12 (test@gmail.com) has logged in.', '2025-10-16 23:54:59'),
+(58, 'User Login', 'User John K. Cena12 (test@gmail.com) has logged in.', '2025-10-17 09:14:18'),
+(59, 'Updated document request status', 'Updated the status of request ID 16 for \'Business Permit\' to \'ready\'. Document file generated: BR-2025-818678.pdf.', '2025-10-17 09:18:42'),
+(60, 'Updated document request status', 'Updated the status of request ID 17 for \'Excavation Permit\' to \'completed\'. Document file generated: BR-2025-738321.pdf.', '2025-10-17 09:18:48'),
+(61, 'User Login', 'User John K. Cena12 (test@gmail.com) has logged in.', '2025-10-17 09:18:56');
 
 -- --------------------------------------------------------
 
@@ -143,24 +149,28 @@ CREATE TABLE `document_requests` (
   `rejection_reason` text DEFAULT NULL,
   `notes` text DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `document_file` varchar(255) DEFAULT NULL,
+  `document_file1` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `document_requests`
 --
 
-INSERT INTO `document_requests` (`id`, `request_id`, `user_id`, `document_type_id`, `purpose`, `additional_info`, `status`, `payment_status`, `payment_reference`, `submitted_date`, `approved_date`, `released_date`, `expected_date`, `rejection_reason`, `notes`, `created_at`, `updated_at`) VALUES
-(3, 'BR-2025-653431', 1, 8, 'Employment', 'qwerty', 'approved', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13'),
-(6, 'BR-2025-653432', 1, 7, 'Employment', 'qwerty', 'completed', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13'),
-(8, 'BR-2025-653433', 1, 3, 'Employment', 'qwerty', 'pending', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13'),
-(9, 'BR-2025-653434', 1, 10, 'Employment', 'qwerty', 'processing', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13'),
-(10, 'BR-2025-653435', 1, 4, 'Employment', 'qwerty', 'ready', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13'),
-(11, 'BR-2025-653436', 1, 9, 'Employment', 'qwerty', 'pending', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 23:55:26'),
-(12, 'BR-2025-653437', 1, 5, 'Employment', 'qwerty', 'cancelled', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13'),
-(13, 'BR-2025-037993', 1, 8, 'Employment', 'qwe', 'pending', 'unpaid', NULL, '2025-10-12 12:18:58', NULL, NULL, '2025-10-22', NULL, NULL, '2025-10-12 04:18:58', '2025-10-12 04:18:58'),
-(14, 'BR-2025-363976', 1, 3, 'Employment', 'qqq', 'pending', 'unpaid', NULL, '2025-10-12 12:19:15', NULL, NULL, '2025-10-17', NULL, NULL, '2025-10-12 04:19:15', '2025-10-12 04:19:15'),
-(15, 'BR-2025-264220', 1, 1, 'Employment', '', 'pending', 'unpaid', NULL, '2025-10-12 12:19:24', NULL, NULL, '2025-10-15', NULL, NULL, '2025-10-12 04:19:24', '2025-10-12 04:19:24');
+INSERT INTO `document_requests` (`id`, `request_id`, `user_id`, `document_type_id`, `purpose`, `additional_info`, `status`, `payment_status`, `payment_reference`, `submitted_date`, `approved_date`, `released_date`, `expected_date`, `rejection_reason`, `notes`, `created_at`, `updated_at`, `document_file`, `document_file1`) VALUES
+(3, 'BR-2025-653431', 1, 8, 'Employment', 'qwerty', 'approved', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13', NULL, NULL),
+(6, 'BR-2025-653432', 1, 7, 'Employment', 'qwerty', 'completed', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13', NULL, NULL),
+(8, 'BR-2025-653433', 1, 3, 'Employment', 'qwerty', 'pending', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13', NULL, NULL),
+(9, 'BR-2025-653434', 1, 10, 'Employment', 'qwerty', 'processing', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13', NULL, NULL),
+(10, 'BR-2025-653435', 1, 4, 'Employment', 'qwerty', 'ready', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13', NULL, NULL),
+(11, 'BR-2025-653436', 1, 9, 'Employment', 'qwerty', 'pending', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 23:55:26', NULL, NULL),
+(12, 'BR-2025-653437', 1, 5, 'Employment', 'qwerty', 'cancelled', 'unpaid', NULL, '2025-10-04 23:10:12', '2025-10-05 17:41:13', NULL, '2025-10-14', NULL, 'test change', '2025-10-04 15:10:12', '2025-10-05 09:41:13', NULL, NULL),
+(13, 'BR-2025-037993', 1, 8, 'Employment', 'qwe', 'pending', 'unpaid', NULL, '2025-10-12 12:18:58', NULL, NULL, '2025-10-22', NULL, NULL, '2025-10-12 04:18:58', '2025-10-12 04:18:58', NULL, NULL),
+(14, 'BR-2025-363976', 1, 3, 'Employment', 'qqq', 'pending', 'unpaid', NULL, '2025-10-12 12:19:15', NULL, NULL, '2025-10-17', NULL, NULL, '2025-10-12 04:19:15', '2025-10-12 04:19:15', NULL, NULL),
+(15, 'BR-2025-264220', 1, 1, 'Employment', '', 'pending', 'unpaid', NULL, '2025-10-12 12:19:24', NULL, NULL, '2025-10-15', NULL, NULL, '2025-10-12 04:19:24', '2025-10-12 04:19:24', NULL, NULL),
+(16, 'BR-2025-818678', 1, 7, 'Employment', '123', 'ready', 'unpaid', NULL, '2025-10-16 23:46:17', NULL, NULL, '2025-10-23', NULL, NULL, '2025-10-16 15:46:17', '2025-10-17 01:18:42', 'BR-2025-818678.pdf', NULL),
+(17, 'BR-2025-738321', 1, 10, 'Employment', '123', 'completed', 'unpaid', NULL, '2025-10-16 23:55:19', NULL, '2025-10-17 09:18:48', '2025-10-23', NULL, NULL, '2025-10-16 15:55:19', '2025-10-17 01:18:48', 'BR-2025-738321.pdf', NULL);
 
 -- --------------------------------------------------------
 
@@ -311,6 +321,14 @@ CREATE TABLE `request_attachments` (
   `uploaded_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `request_attachments`
+--
+
+INSERT INTO `request_attachments` (`id`, `request_id`, `file_name`, `file_path`, `file_type`, `uploaded_at`) VALUES
+(3, 16, '2.jpg', '../uploads/document_requests/BR-2025-818678_1760629577_0.jpg', 'jpg', '2025-10-16 15:46:17'),
+(4, 17, 'SappariAbsar_Resume.pdf', '../uploads/document_requests/BR-2025-738321_1760630119_0.pdf', 'pdf', '2025-10-16 15:55:19');
+
 -- --------------------------------------------------------
 
 --
@@ -344,7 +362,7 @@ CREATE TABLE `user` (
 --
 
 INSERT INTO `user` (`id`, `first_name`, `middle_name`, `last_name`, `email`, `password`, `image`, `contact_number`, `date_of_birth`, `gender`, `civil_status`, `occupation`, `house_number`, `street_name`, `barangay`, `status`, `is_new`, `created_at`, `updated_at`) VALUES
-(1, 'John', 'Kena', 'Cena12', 'test@gmail.com', '$2y$10$SLPDs4w0FlvhFRaedzq3LOH1aZXhZe5qBLnmCAdw6KbG55otyhAb2', 'profile_1_1759043733.jpg', '09551088233', '1999-10-09', 'male', 'single', 'Developer', '1234', 'Loop5', 'Baliwasan', 'active', 1, '2025-09-11 22:12:51', '2025-09-28 12:28:41'),
+(1, 'John', 'Kena', 'Cena12', 'test@gmail.com', '$2y$10$SLPDs4w0FlvhFRaedzq3LOH1aZXhZe5qBLnmCAdw6KbG55otyhAb2', 'profile_1_1759043733.jpg', '09551088233', '1999-10-09', 'male', 'single', 'Developer', '1234', 'Loop5', 'Baliwasan', 'active', 0, '2025-09-11 22:12:51', '2025-10-16 15:45:47'),
 (2, 'Sheena', 'K', 'Ricalde', 'test2@gmail.com', '$2y$10$SLPDs4w0FlvhFRaedzq3LOH1aZXhZe5qBLnmCAdw6KbG55otyhAb2', '', '09771078233', NULL, NULL, NULL, NULL, NULL, NULL, 'Baliwasan', 'active', 1, '2025-09-11 22:17:09', '2025-10-12 13:01:32'),
 (4, 'Aiah', 'D', 'Arceta', 'binimaloi352@gmail.com', '', '', '123', NULL, NULL, NULL, NULL, NULL, NULL, 'Baliwasan', 'active', 1, '2025-09-19 07:03:44', NULL),
 (5, 'Takenori', 'D', 'Akagi', 'akagi@gmail.com', '', '', '09551078233', NULL, NULL, NULL, NULL, NULL, NULL, 'Baliwasan', 'active', 1, '2025-09-21 22:16:35', NULL),
@@ -374,7 +392,8 @@ CREATE TABLE `user_daily_request_limits` (
 --
 
 INSERT INTO `user_daily_request_limits` (`id`, `user_id`, `request_date`, `certificate_count`, `created_at`, `updated_at`) VALUES
-(1, 1, '2025-10-11', 3, '2025-10-11 04:18:58', '2025-10-11 04:19:24');
+(1, 1, '2025-10-11', 3, '2025-10-11 04:18:58', '2025-10-11 04:19:24'),
+(4, 1, '2025-10-16', 2, '2025-10-16 15:46:17', '2025-10-16 15:55:19');
 
 -- --------------------------------------------------------
 
@@ -496,7 +515,7 @@ ALTER TABLE `waste_schedules`
 -- AUTO_INCREMENT for table `activity_logs`
 --
 ALTER TABLE `activity_logs`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=56;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=62;
 
 --
 -- AUTO_INCREMENT for table `admin`
@@ -508,7 +527,7 @@ ALTER TABLE `admin`
 -- AUTO_INCREMENT for table `document_requests`
 --
 ALTER TABLE `document_requests`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `document_types`
@@ -538,7 +557,7 @@ ALTER TABLE `notification_preferences`
 -- AUTO_INCREMENT for table `request_attachments`
 --
 ALTER TABLE `request_attachments`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `user`
@@ -550,7 +569,7 @@ ALTER TABLE `user`
 -- AUTO_INCREMENT for table `user_daily_request_limits`
 --
 ALTER TABLE `user_daily_request_limits`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
 
 --
 -- AUTO_INCREMENT for table `waste_schedules`
