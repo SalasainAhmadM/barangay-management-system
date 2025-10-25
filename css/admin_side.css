@@ -597,6 +597,7 @@
 
 @media (max-width: 480px) {
   .home-section {
+    margin-left: 75px;
     left: 0;
     width: 100%;
   }

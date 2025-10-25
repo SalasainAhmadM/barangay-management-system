@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', function () {
     checkbox.addEventListener('change', function () {
       // Hide all role fields initially
       roleFields.forEach(field => field.style.display = 'none');
-      
+
       // Uncheck all other checkboxes
       roleCheckboxes.forEach(cb => {
         if (cb !== checkbox) {
@@ -39,7 +39,7 @@ document.addEventListener('DOMContentLoaded', function () {
     button.addEventListener('click', function () {
       const input = this.previousElementSibling;
       const icon = this.querySelector('i');
-      
+
       if (input.type === 'password') {
         input.type = 'text';
         icon.classList.remove('fa-eye');

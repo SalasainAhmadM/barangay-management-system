@@ -227,29 +227,29 @@
         });
 
         // Password validation event listener
-        signupPasswordField.addEventListener('input', function () {
-            const password = signupPasswordField.value;
-            const strength = checkPasswordStrength(password);
-            signupStrengthIndicator.textContent = `Password Strength: ${strength}`;
+        // signupPasswordField.addEventListener('input', function () {
+        //     const password = signupPasswordField.value;
+        //     const strength = checkPasswordStrength(password);
+        //     signupStrengthIndicator.textContent = `Password Strength: ${strength}`;
 
-            if (strength === 'Weak' || strength === 'Moderate') {
-                signupStrengthIndicator.style.color = '#8B0000';
-            } else {
-                signupStrengthIndicator.style.color = '#00247c';
-            }
+        //     if (strength === 'Weak' || strength === 'Moderate') {
+        //         signupStrengthIndicator.style.color = '#8B0000';
+        //     } else {
+        //         signupStrengthIndicator.style.color = '#00247c';
+        //     }
 
-            if (password.length >= 8 && strength !== 'Strong') {
-                signupInstructionText.style.color = '#8B0000';
-                signupInstructionText.textContent = 'Password must include at least 2 numbers, 5 lowercase letters, and 1 uppercase letter.';
-                signupButton.disabled = true;
-            } else if (strength === 'Strong' && signupConfirmPasswordField.value === password && signupEmailField.validity.valid) {
-                signupInstructionText.textContent = '';
-                signupButton.disabled = false;
-            } else {
-                signupInstructionText.textContent = '';
-                signupButton.disabled = true;
-            }
-        });
+        //     if (password.length >= 8 && strength !== 'Strong') {
+        //         signupInstructionText.style.color = '#8B0000';
+        //         signupInstructionText.textContent = 'Password must include at least 2 numbers, 5 lowercase letters, and 1 uppercase letter.';
+        //         signupButton.disabled = true;
+        //     } else if (strength === 'Strong' && signupConfirmPasswordField.value === password && signupEmailField.validity.valid) {
+        //         signupInstructionText.textContent = '';
+        //         signupButton.disabled = false;
+        //     } else {
+        //         signupInstructionText.textContent = '';
+        //         signupButton.disabled = true;
+        //     }
+        // });
 
         // Confirm password match check
         signupConfirmPasswordField.addEventListener('input', function () {
@@ -258,23 +258,27 @@
                 signupButton.disabled = true;
             } else {
                 signupConfirmPasswordField.setCustomValidity('');
-                if (checkPasswordStrength(signupPasswordField.value) === 'Strong' && signupEmailField.validity.valid) {
+                // Enable sign-up button once passwords match (no need for strong password check)
+                if (signupEmailField.validity.valid && signupContactField.validity.valid) {
                     signupButton.disabled = false;
+                } else {
+                    signupButton.disabled = true;
                 }
             }
         });
 
-        function checkPasswordStrength(password) {
-            const regexStrong = /(?=(.*[a-z]){5,})(?=.*[A-Z])(?=(.*[0-9]){2,})/;
 
-            if (password.length >= 8 && regexStrong.test(password)) {
-                return 'Strong';
-            } else if (password.length >= 6) {
-                return 'Moderate';
-            } else {
-                return 'Weak';
-            }
-        }
+        // function checkPasswordStrength(password) {
+        //     const regexStrong = /(?=(.*[a-z]){5,})(?=.*[A-Z])(?=(.*[0-9]){2,})/;
+
+        //     if (password.length >= 8 && regexStrong.test(password)) {
+        //         return 'Strong';
+        //     } else if (password.length >= 6) {
+        //         return 'Moderate';
+        //     } else {
+        //         return 'Weak';
+        //     }
+        // }
 
         function forgotPassword() {
             Swal.fire({
