@@ -267,10 +267,139 @@ function generateDocumentHTML($requestInfo)
         return generateIndigencyCertificateHTML($requestInfo);
     } elseif (strpos($docName, 'residency') !== false) {
         return generateResidencyCertificateHTML($requestInfo);
+    } elseif (strpos($docName, 'clearance') !== false) {
+        return generateClearanceCertificateHTML($requestInfo);
     } else {
         return generateDefaultCertificateHTML($requestInfo);
     }
+
 }
+/** 
+ * Generate HTML content specifically for Barangay Clearance 
+ * @param array $requestInfo - Request information
+ * @return string - HTML content
+ */
+function generateClearanceCertificateHTML($requestInfo)
+{
+    $fullName = trim($requestInfo['first_name'] . ' ' . ($requestInfo['middle_name'] ?? '') . ' ' . $requestInfo['last_name']);
+    $address = $requestInfo['address'];
+    $purpose = $requestInfo['purpose'];
+    $day = date('j');
+    $month = date('F');
+    $year = date('Y');
+
+    // Image paths (ensure these exist in tcpdf/images/)
+    $headerLogo = K_PATH_IMAGES . 'barangaycouncil.png';
+    $footerLogo = K_PATH_IMAGES . 'logocabatoadmin.png';
+
+    $html = '
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 12pt;
+            color: #000;
+        }
+        .title {
+            font-size: 16pt;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: underline;
+            margin-top: 25px;
+            margin-bottom: 25px;
+        }
+        .content {
+            margin: 0 40px;
+            text-align: justify;
+            line-height: 1.8;
+        }
+        .indent {
+            text-indent: 50px;
+        }
+        .signature {
+            margin-top: 70px;
+            text-align: right;
+            padding-right: 70px;
+        }
+        .signature .name {
+            font-weight: bold;
+            text-transform: uppercase;
+            text-decoration: underline;
+        }
+        .signature .position {
+            font-weight: bold;
+        }
+        .seal {
+            position: absolute;
+            left: 100px;
+            margin-top: 100px;
+            font-style: italic;
+        }
+    </style>
+
+    <table cellspacing="0" cellpadding="0" style="width:100%;">
+        <tr>
+            <td style="width:20%; text-align:right; vertical-align:middle;">
+                <img src="' . $headerLogo . '" width="70">
+            </td>
+            <td style="width:60%; text-align:center; line-height:1.5;">
+                <span>Republic of the Philippines</span><br>
+                <b>OFFICE OF THE BARANGAY COUNCIL</b><br>
+                Baliwasan, Zamboanga City<br>
+                <a href="https://www.facebook.com/barangaybaliwasan" style="text-decoration:none; color:black;">
+                    www.facebook.com/barangaybaliwasan
+                </a>
+            </td>
+        </tr>
+    </table>
+    <br>
+    <hr style="border: 2px solid black; width: 100%; margin: 0 auto;">
+    <br>
+
+    <div class="title">BARANGAY CLEARANCE</div>
+
+    <div class="content">
+        <p class="indent">
+            This is to certify that <b><u>' . strtoupper(htmlspecialchars($fullName)) . '</u></b>
+            is a bonafide resident of <b><u>' . htmlspecialchars($address) . '</u></b>.
+        </p>
+
+        <p class="indent">
+            This further certifies that the above-mentioned person is of good moral
+            standing without any derogatory record as far as this office is concern.
+        </p>
+
+        <p class="indent">
+            This certification is being issued upon request for <b><u>' . strtoupper(htmlspecialchars($purpose)) . '</u></b> requirements.
+        </p>
+
+        <p class="indent" style="margin-top: 25px;">
+            Issued this <b><u>' . $day . ' day of ' . $month . ' ' . $year . '</u></b>
+            at Barangay Baliwasan, Zamboanga City.
+        </p>
+    </div>
+
+    <div class="signature">
+        <b class="name">HON. MA. JAMIELY CZARINA N. CABATO</b><br>
+        <b class="position">Punong Barangay</b>
+    </div>
+    <br><br><br><br><br>
+    <table cellspacing="0" cellpadding="0" style="width:100%; position:absolute; bottom:25px; left:25px; right:25px;">
+        <tr>
+            <td style="width:80%; text-align:center; vertical-align:middle; font-size:8pt; line-height:1.3;">
+                <b>Baliwasan Barangay Hall San Jose Road corner Baliwasan Chico Barangay Hall</b><br>
+                Zamboanga City, Philippines | facebook.com/barangaybaliwasanofficeofthepunongbarangay<br>
+                992-6211 | 926-2639
+            </td>
+            <td style="width:20%; text-align:right; vertical-align:middle;">
+                <img src="' . $footerLogo . '" width="70">
+            </td>
+        </tr>
+    </table>';
+
+    return $html;
+}
+
+
 /**
  * Generate HTML content specifically for Certificate of Residency
  * @param array $requestInfo - Request information
@@ -397,7 +526,7 @@ function generateResidencyCertificateHTML($requestInfo)
         <b class="name" style="text-decoration: underline;">HON. MA. JEMIELY CZARINA L. CABATO</b><br>
         <b class="position">Punong Barangay</b>
     </div>
-
+    <br><br><br><br><br>
     <div class="seal">- SEAL -</div>
 
     <table cellspacing="0" cellpadding="0" style="width:100%; position:absolute; bottom:20px; left:25px; right:25px;">
@@ -559,7 +688,7 @@ function generateIndigencyCertificateHTML($requestInfo)
         <b class="name" style="text-decoration: underline;">HON. MA. JEMIELY CZARINA L. CABATO</b><br>
         <b class="position">Punong Barangay</b>
     </div>
-
+    <br><br><br><br><br>
     <div class="seal">- SEAL -</div>
 
     <div class="footer-section">
