@@ -262,16 +262,160 @@ function generateDocumentPDF($requestInfo)
  */
 function generateDocumentHTML($requestInfo)
 {
-    // Check if this is a Certificate of Indigency
-    $isIndigency = (stripos($requestInfo['document_name'], 'indigency') !== false);
-
-    if ($isIndigency) {
+    $docName = strtolower($requestInfo['document_name']);
+    if (strpos($docName, 'indigency') !== false) {
         return generateIndigencyCertificateHTML($requestInfo);
+    } elseif (strpos($docName, 'residency') !== false) {
+        return generateResidencyCertificateHTML($requestInfo);
     } else {
         return generateDefaultCertificateHTML($requestInfo);
     }
 }
+/**
+ * Generate HTML content specifically for Certificate of Residency
+ * @param array $requestInfo - Request information
+ * @return string - HTML content
+ */
+function generateResidencyCertificateHTML($requestInfo)
+{
+    $fullName = trim($requestInfo['first_name'] . ' ' . ($requestInfo['middle_name'] ?? '') . ' ' . $requestInfo['last_name']);
+    $address = $requestInfo['address'];
+    $purpose = $requestInfo['purpose'];
+    $day = date('j');
+    $month = date('F');
+    $year = date('Y');
 
+    // Paths for images (ensure both exist in tcpdf/images/)
+    $headerLogo = K_PATH_IMAGES . 'barangaycouncil.png';
+    $footerLogo = K_PATH_IMAGES . 'logocabatoadmin.png';
+
+    $html = '
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 12pt;
+            color: #000;
+        }
+        .header-section {
+            text-align: center;
+            line-height: 1.3;
+            margin-bottom: 25px;
+            position: relative;
+        }
+        .header-section img {
+            width: 75px;
+            height: 75px;
+            position: absolute;
+            top: 15px;
+            left: 60px;
+        }
+        .title {
+            font-size: 14pt;
+            font-weight: bold;
+            text-align: center;
+            margin: 35px 0 20px 0;
+            text-decoration: underline;
+        }
+        .content {
+            margin: 0 30px;
+            text-align: justify;
+            line-height: 1.9;
+        }
+        .to-whom {
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .indent {
+            text-indent: 50px;
+        }
+        .signature {
+            margin-top: 60px;
+            text-align: right;
+            padding-right: 60px;
+        }
+        .signature .name {
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .signature .position {
+            font-weight: bold;
+        }
+        .seal {
+            position: absolute;
+            left: 80px;
+            margin-top: 100px;
+            font-style: italic;
+        }
+    </style>
+
+    <table cellspacing="0" cellpadding="0" style="width:100%;">
+        <tr>
+            <td style="width:20%; text-align:right; vertical-align:middle;">
+                <img src="' . $headerLogo . '" width="70">
+            </td>
+            <td style="width:60%; text-align:center; line-height:1.4;">
+                <span>Republic of the Philippines</span><br>
+                <b>OFFICE OF THE BARANGAY COUNCIL</b><br>
+                Baliwasan, Zamboanga City<br>
+                <a href="https://www.facebook.com/barangaybaliwasan" style="text-decoration:none; color:black;">
+                    www.facebook.com/barangaybaliwasan
+                </a>
+            </td>
+            <td style="width:20%;"></td>
+        </tr>
+    </table>
+
+    <br>
+    <hr style="border: 2px solid black; width: 100%; margin: 0 auto;">
+    <br>
+
+    <div class="title">CERTIFICATION OF RESIDENCY</div>
+
+    <div class="content">
+        <div class="to-whom">TO WHOM IT MAY CONCERN:</div>
+
+        <p class="indent">
+            This is to certify that <b><u>' . strtoupper(htmlspecialchars($fullName)) . '</u></b>
+            is a bonafide resident of <b><u>' . htmlspecialchars($address) . '</u></b>.
+        </p>
+
+        <p class="indent">
+            This further certifies that the above-mentioned person is a native resident of this barangay.
+        </p>
+
+        <p class="indent">
+            This certification is being issued upon request for <b><u>' . strtoupper(htmlspecialchars($purpose)) . '</u></b>.
+        </p>
+
+        <p class="indent" style="margin-top: 25px;">
+            Issued this <b><u>' . $day . ' day of ' . $month . ' ' . $year . '</u></b> 
+            at Barangay Baliwasan, Zamboanga City.
+        </p>
+    </div>
+
+    <div class="signature">
+        <b class="name" style="text-decoration: underline;">HON. MA. JEMIELY CZARINA L. CABATO</b><br>
+        <b class="position">Punong Barangay</b>
+    </div>
+
+    <div class="seal">- SEAL -</div>
+
+    <table cellspacing="0" cellpadding="0" style="width:100%; position:absolute; bottom:20px; left:25px; right:25px;">
+        <tr>
+            <td style="width:80%; text-align:center; vertical-align:middle; font-size:8pt; line-height:1.3;">
+                <b>Baliwasan Barangay Hall San Jose Road corner Baliwasan Chico Barangay Hall</b><br>
+                Zamboanga City, Philippines | facebook.com/barangaybaliwasanofficeofthepunongbarangay<br>
+                992-6211 | 926-2639
+            </td>
+            <td style="width:20%; text-align:left; vertical-align:middle; padding-left:10px;">
+                <img src="' . $footerLogo . '" width="70">
+            </td>
+        </tr>
+    </table>
+';
+
+    return $html;
+}
 /**
  * Generate HTML content specifically for Certificate of Indigency
  * @param array $requestInfo - Request information
