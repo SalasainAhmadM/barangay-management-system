@@ -106,7 +106,7 @@ try {
     $pdfFilename = null;
     if (in_array($status, ['ready', 'completed'])) {
         $pdfFilename = generateDocumentPDF($requestInfo);
-        
+
         if ($pdfFilename) {
             $updateFields .= ", document_file = ?";
             $params[] = $pdfFilename;
@@ -153,7 +153,7 @@ try {
 
             $conn->commit();
             echo json_encode([
-                'success' => true, 
+                'success' => true,
                 'message' => 'Status updated successfully',
                 'pdf_generated' => ($pdfFilename !== null)
             ]);
@@ -184,14 +184,15 @@ if (isset($conn)) {
  * @param array $requestInfo - Request information from database
  * @return string|false - Returns filename on success, false on failure
  */
-function generateDocumentPDF($requestInfo) {
+function generateDocumentPDF($requestInfo)
+{
     try {
         // Load TCPDF
         require_once('../../vendor/autoload.php');
-        
+
         // Get absolute path to upload directory
         $uploadDir = dirname(dirname(__DIR__)) . '/uploads/document_requests/';
-        
+
         // Create directory if it doesn't exist
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0755, true);
@@ -209,65 +210,239 @@ function generateDocumentPDF($requestInfo) {
 
         // Create PDF using TCPDF
         $pdf = new TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
-        
+
         // Set document information
         $pdf->SetCreator('Barangay Management System');
         $pdf->SetAuthor('Barangay Office');
         $pdf->SetTitle($requestInfo['document_name']);
         $pdf->SetSubject($requestInfo['document_type']);
-        
+
         // Remove default header/footer
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
-        
+
         // Set margins
         $pdf->SetMargins(25, 25, 25);
         $pdf->SetAutoPageBreak(true, 25);
-        
+
         // Add a page
         $pdf->AddPage();
-        
+
         // Set font
         $pdf->SetFont('helvetica', '', 11);
-        
+
         // Generate HTML content
         $html = generateDocumentHTML($requestInfo);
-        
+
         // Write HTML to PDF
         $pdf->writeHTML($html, true, false, true, false, '');
-        
+
         // Save PDF to file using absolute path
         $pdf->Output($filePath, 'F');
-        
+
         // Verify file was created
         if (!file_exists($filePath)) {
             error_log("PDF file was not created: " . $filePath);
             return false;
         }
-        
+
         error_log("PDF successfully created: " . $filePath);
         return $filename; // Return only filename, not full path
-        
+
     } catch (Exception $e) {
         error_log("PDF Generation Error: " . $e->getMessage());
         error_log("Stack trace: " . $e->getTraceAsString());
         return false;
     }
 }
-
 /**
  * Generate HTML content for the PDF document
  * @param array $requestInfo - Request information
  * @return string - HTML content
  */
-function generateDocumentHTML($requestInfo) {
+function generateDocumentHTML($requestInfo)
+{
+    // Check if this is a Certificate of Indigency
+    $isIndigency = (stripos($requestInfo['document_name'], 'indigency') !== false);
+
+    if ($isIndigency) {
+        return generateIndigencyCertificateHTML($requestInfo);
+    } else {
+        return generateDefaultCertificateHTML($requestInfo);
+    }
+}
+
+/**
+ * Generate HTML content specifically for Certificate of Indigency
+ * @param array $requestInfo - Request information
+ * @return string - HTML content
+ */
+function generateIndigencyCertificateHTML($requestInfo)
+{
+    $fullName = trim($requestInfo['first_name'] . ' ' . ($requestInfo['middle_name'] ?? '') . ' ' . $requestInfo['last_name']);
+    $address = $requestInfo['address'];
+    $purpose = $requestInfo['purpose'];
+    $day = date('j');
+    $month = date('F');
+    $year = date('Y');
+
+    // ✅ Use absolute path for TCPDF image rendering
+    $imagePath = K_PATH_IMAGES . 'barangaycouncil.png'; // Make sure bms.png is inside tcpdf/images folder
+
+    $html = '
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 12pt;
+            color: #000;
+        }
+        .header-section {
+            text-align: center;
+            line-height: 1.3;
+            margin-bottom: 25px;
+            position: relative;
+        }
+        .header-section img {
+            width: 75px;
+            height: 75px;
+            position: absolute;
+            top: 15px;
+            left: 60px;
+        }
+        .barangay-name {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+        .facebook-link {
+            font-size: 9pt;
+            margin-top: 2px;
+        }
+        .title {
+            font-size: 14pt;
+            font-weight: bold;
+            text-align: center;
+            margin: 35px 0 20px 0;
+            text-decoration: underline;
+        }
+        .content {
+            margin: 0 30px;
+            text-align: justify;
+            line-height: 1.9;
+        }
+        .to-whom {
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .indent {
+            text-indent: 50px;
+        }
+        .signature {
+            margin-top: 60px;
+            text-align: right;
+            padding-right: 60px;
+        }
+        .signature .name {
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .signature .position {
+            font-weight: bold;
+        }
+        .seal {
+            position: absolute;
+            left: 80px;
+            margin-top: 100px;
+            font-style: italic;
+        }
+        .footer-section {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 8pt;
+            line-height: 1.3;
+        }
+    </style>
+
+    <table cellspacing="0" cellpadding="0" style="width:100%;">
+        <tr>
+            <td style="width:20%; text-align:right; vertical-align:middle;">
+                <img src="' . $imagePath . '" width="70">
+            </td>
+            <td style="width:60%; text-align:center; line-height:1.4;">
+                <span>Republic of the Philippines</span><br>
+                <b>OFFICE OF THE BARANGAY COUNCIL</b><br>
+                Baliwasan, Zamboanga City<br>
+                <a href="https://www.facebook.com/barangaybaliwasan" style="text-decoration:none; color:black;">
+                    www.facebook.com/barangaybaliwasan
+                </a>
+            </td>
+            <td style="width:20%;"></td>
+        </tr>
+    </table>
+
+    <br>
+    <hr style="border: 2px solid black; width: 100%; margin: 0 auto;">
+    <br>
+
+    <div class="title">CERTIFICATE OF INDIGENCY</div>
+
+    <div class="content">
+        <div class="to-whom">TO WHOM IT MAY CONCERN:</div>
+
+        <p class="indent">
+            This is to certify that <b><u>' . strtoupper(htmlspecialchars($fullName)) . '</u></b> 
+            is a bonafide resident of <b><u>' . htmlspecialchars($address) . '</u></b>.
+        </p>
+
+        <p class="indent">
+            This further certifies that the above-mentioned person belongs to the indigent sector of the community.
+        </p>
+
+        <p class="indent">
+            This certification is being issued upon request for <b><u>' . strtoupper(htmlspecialchars($purpose)) . '</u></b>.
+        </p>
+
+        <p class="indent" style="margin-top: 25px;">
+            Issued this <b><u>' . $day . ' day of ' . $month . ' ' . $year . '</u></b> 
+            at Barangay Baliwasan, Zamboanga City.
+        </p>
+    </div>
+
+    <div class="signature">
+        <b class="name" style="text-decoration: underline;">HON. MA. JEMIELY CZARINA L. CABATO</b><br>
+        <b class="position">Punong Barangay</b>
+    </div>
+
+    <div class="seal">- SEAL -</div>
+
+    <div class="footer-section">
+        <b>Baliwasan Barangay Hall San Jose Road corner Baliwasan Chico Barangay Hall</b><br>
+        Zamboanga City, Philippines | facebook.com/barangaybaliwasanofficeofthepunongbarangay<br>
+        992-6211 | 926-2639
+    </div>';
+
+    return $html;
+}
+
+
+
+/**
+ * Generate HTML content for default certificates
+ * @param array $requestInfo - Request information
+ * @return string - HTML content
+ */
+function generateDefaultCertificateHTML($requestInfo)
+{
     $fullName = trim($requestInfo['first_name'] . ' ' . ($requestInfo['middle_name'] ?? '') . ' ' . $requestInfo['last_name']);
     $currentDate = date('F d, Y');
-    
+
     // Handle fee display
     $fee = floatval($requestInfo['fee'] ?? 0);
-    $feeDisplay = ($fee == 0) ? '<span style="color: #059669; font-weight: bold;">FREE / NO COST</span>' : 'Php' . number_format($fee, 2);
-    
+    $feeDisplay = ($fee == 0) ? '<span style="color: #059669; font-weight: bold;">FREE / NO COST</span>' : 'Php ' . number_format($fee, 2);
+
     $html = '
     <style>
         body { font-family: helvetica, sans-serif; }
@@ -362,7 +537,7 @@ function generateDocumentHTML($requestInfo) {
     <div style="margin-top: 20px; font-size: 8px; text-align: center; color: #666;">
         <i>Not valid without official seal</i>
     </div>';
-    
+
     return $html;
 }
 ?>
