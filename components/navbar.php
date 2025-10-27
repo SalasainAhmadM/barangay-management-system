@@ -1,8 +1,17 @@
 <nav class="nav">
     <i class="fa-solid fa-bars navOpenBtn"></i>
+    <?php
+    // Fetch system settings for display
+    $settingsQuery = $conn->query("SELECT system_name, system_logo FROM system_settings LIMIT 1");
+    $systemSettings = $settingsQuery->fetch_assoc();
 
+    $systemName = $systemSettings['system_name'] ?? 'BMS';
+    $systemLogo = !empty($systemSettings['system_logo'])
+        ? "../assets/images/settings/" . $systemSettings['system_logo']
+        : "../assets/logo/bms.png";
+    ?>
     <a href="#" class="logo">
-        <img src="../assets/logo/bms.png" alt="BMS Logo" class="logo-img" />
+        <img src="<?= htmlspecialchars($systemLogo) ?>" alt="BMS Logo" class="logo-img" />
         <span>BMS</span>
     </a>
 

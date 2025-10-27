@@ -1,10 +1,30 @@
-<?php session_start(); ?>
+<?php session_start();
+
+require_once("./conn/conn.php");
+// Fetch system settings for display
+$settingsQuery = $conn->query("SELECT system_name, system_logo, login_bg FROM system_settings LIMIT 1");
+$systemSettings = $settingsQuery->fetch_assoc();
+
+$systemName = $systemSettings['system_name'] ?? 'BMS';
+$systemLoginLogo = !empty($systemSettings['system_logo'])
+    ? "./assets/images/settings/" . $systemSettings['system_logo']
+    : "./assets/logo/bms.png";
+
+$loginBg = !empty($systemSettings['login_bg'])
+    ? "./assets/images/settings/" . $systemSettings['login_bg']
+    : "./assets/images/settings/bg.jpg";
+?>
 <!DOCTYPE html>
 <html lang="en">
+<style>
+    body {
+        background-image: url('<?= htmlspecialchars($loginBg) ?>');
+    }
+</style>
 
 <head>
     <?php include './components/header_links.php'; ?>
-    <link rel="icon" href="./assets/logo/bms.png" type="image/icon type">
+    <link rel="icon" href="<?= htmlspecialchars($systemLoginLogo) ?>" type="image/icon type">
     <link rel="stylesheet" href="./css/login.css">
 </head>
 
@@ -71,13 +91,13 @@
         <div class="intros-container">
             <div class="intro-control signin-intro">
                 <div class="intro-control__inner">
-                    <img src="./assets/logo/bms.png">
+                    <img src="<?= htmlspecialchars($systemLoginLogo) ?>">
                     <button style="font-weight: bold;" id="signup-btn">No account yet? Sign up.</button>
                 </div>
             </div>
             <div class="intro-control signup-intro">
                 <div class="intro-control__inner">
-                    <img src="./assets/logo/bms.png">
+                    <img src="<?= htmlspecialchars($systemLoginLogo) ?>">
                     <button style="font-weight: bold;" id="signin-btn">Already have an account? Sign in.</button>
                 </div>
             </div>

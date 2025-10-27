@@ -35,6 +35,12 @@ body {
   height: 100vh;
   background-color: #ddd;
   font-size: 14px;
+  /* background-image: url('./assets/images/settings/bg.jpg'); */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  position: relative;
 }
 
 .container {

@@ -1,9 +1,20 @@
 <div class="sidebar">
-    <div class="logo-details">
-        <img src="../assets/logo/bms.png" alt="BMS Logo" class="logo-img">
-        <div class="logo_name">BMS</div>
+    <div class="logo-details" style="cursor: pointer;" title="Click to edit system settings">
+        <?php
+        // Fetch system settings for display
+        $settingsQuery = $conn->query("SELECT system_name, system_logo FROM system_settings LIMIT 1");
+        $systemSettings = $settingsQuery->fetch_assoc();
+
+        $systemName = $systemSettings['system_name'] ?? 'BMS';
+        $systemLogo = !empty($systemSettings['system_logo'])
+            ? "../assets/images/settings/" . $systemSettings['system_logo']
+            : "../assets/logo/bms.png";
+        ?>
+        <img src="<?= htmlspecialchars($systemLogo) ?>" alt="System Logo" class="logo-img">
+        <div class="logo_name"><?= htmlspecialchars($systemName) ?></div>
         <i class="fa-solid fa-bars" id="btn"></i>
     </div>
+
 
     <?php
     $current_page = basename($_SERVER['PHP_SELF']);
@@ -483,4 +494,209 @@
             reader.readAsDataURL(input.files[0]);
         }
     }
+
+    function editSystemSettings() {
+        Swal.fire({
+            title: 'Loading...',
+            text: 'Fetching system settings.',
+            allowOutsideClick: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        fetch('./endpoints/get_system_settings.php')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const settings = data.settings;
+
+                    // Determine the correct paths for display
+                    const logoSrc = settings.system_logo
+                        ? '../assets/images/settings/' + settings.system_logo
+                        : '../assets/logo/bms.png';
+
+                    const bgSrc = settings.login_bg
+                        ? '../assets/images/settings/' + settings.login_bg
+                        : '../assets/images/settings/bg.jpg'; // Fixed path to default bg
+
+                    Swal.fire({
+                        title: 'Edit System Logos and Background',
+                        html: `
+                <div class="swal-form" style="padding-top: 10px">
+                    <!-- System Logo Section -->
+                    <div class="form-group profile-image-section">
+                        <label class="form-label">System Logo</label>
+                        <div class="profile-image-container">
+                            <img id="editLogoPreview" 
+                                 src="${logoSrc}"  
+                                 alt="Logo Preview" 
+                                 class="profile-preview"
+                                 onclick="document.getElementById('editLogoInput').click();">
+                            <div class="camera-overlay"
+                                 onclick="document.getElementById('editLogoInput').click();">
+                                <i class="fas fa-camera"></i>
+                            </div>
+                        </div>
+                        <input type="file" 
+                               id="editLogoInput" 
+                               accept="image/*" 
+                               class="image-input-hidden"
+                               onchange="previewSettingsImage(this, 'editLogoPreview')">
+                        <div class="upload-instruction">Click to change system logo</div>
+                    </div>
+
+                    <!-- Login Background Section -->
+                    <div class="form-group profile-image-section" style="margin-top: 20px;">
+                        <label class="form-label">Login Background</label>
+                        <div class="profile-image-container" style="width: 100%; height: 200px;">
+                            <img id="editBgPreview" 
+                                 src="${bgSrc}"  
+                                 alt="Background Preview" 
+                                 class="profile-preview"
+                                 style="width: 100%; height: 100%; border-radius: 8px; object-fit: cover;"
+                                 onclick="document.getElementById('editBgInput').click();">
+                            <div class="camera-overlay"
+                                 onclick="document.getElementById('editBgInput').click();">
+                                <i class="fas fa-camera"></i>
+                            </div>
+                        </div>
+                        <input type="file" 
+                               id="editBgInput" 
+                               accept="image/*" 
+                               class="image-input-hidden"
+                               onchange="previewSettingsImage(this, 'editBgPreview')">
+                        <div class="upload-instruction">Click to change login background</div>
+                    </div>
+
+                    <div class="form-group" style="display: none">
+                        <label for="system-name" class="form-label">System Name *</label>
+                        <input type="text" id="system-name" class="swal2-input" value="${settings.system_name}" placeholder="Enter System Name" required>
+                    </div>
+                </div>
+                `,
+                        focusConfirm: false,
+                        showCancelButton: true,
+                        confirmButtonText: 'Update Settings',
+                        cancelButtonText: 'Cancel',
+                        width: '600px',
+                        didOpen: () => {
+                            const logoImg = document.getElementById('editLogoPreview');
+                            const bgImg = document.getElementById('editBgPreview');
+
+                            [logoImg, bgImg].forEach(img => {
+                                img.addEventListener('mouseenter', function () {
+                                    this.style.transform = 'scale(1.05)';
+                                    this.style.borderColor = '#3b82f6';
+                                });
+                                img.addEventListener('mouseleave', function () {
+                                    this.style.transform = 'scale(1)';
+                                    this.style.borderColor = '#e5e7eb';
+                                });
+                            });
+                        },
+                        preConfirm: () => {
+                            const systemName = document.getElementById('system-name').value.trim();
+                            const logoFile = document.getElementById('editLogoInput').files[0];
+                            const bgFile = document.getElementById('editBgInput').files[0];
+
+                            if (!systemName) {
+                                Swal.showValidationMessage('System Name is required');
+                                return false;
+                            }
+
+                            const formData = new FormData();
+                            formData.append('id', settings.id);
+                            formData.append('system_name', systemName);
+                            if (logoFile) formData.append('system_logo', logoFile);
+                            if (bgFile) formData.append('login_bg', bgFile);
+
+                            return formData;
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire({
+                                title: 'Updating Settings...',
+                                text: 'Please wait while we process your request.',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                }
+                            });
+
+                            fetch('./endpoints/update_system_settings.php', {
+                                method: 'POST',
+                                body: result.value
+                            })
+                                .then(res => res.json())
+                                .then(data => {
+                                    if (data.success) {
+                                        Swal.fire({
+                                            title: 'Updated!',
+                                            text: 'System settings have been updated.',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK'
+                                        }).then(() => {
+                                            location.reload();
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            title: 'Error',
+                                            text: data.message || 'Could not save settings.',
+                                            icon: 'error'
+                                        });
+                                    }
+                                })
+                                .catch(() => {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: 'Unable to save settings.',
+                                        icon: 'error'
+                                    });
+                                });
+                        }
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error!',
+                        text: data.message || 'Unable to load system settings',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            })
+            .catch(() => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Connection Error!',
+                    text: 'Error fetching system settings',
+                    confirmButtonText: 'OK'
+                });
+            });
+    }
+
+    function previewSettingsImage(input, previewId) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const preview = document.getElementById(previewId);
+                preview.src = e.target.result;
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // Make logo section clickable (add this event listener)
+    document.addEventListener('DOMContentLoaded', function () {
+        const logoDetails = document.querySelector('.logo-details');
+        if (logoDetails) {
+            logoDetails.style.cursor = 'pointer';
+            logoDetails.addEventListener('click', function (e) {
+                // Don't trigger on menu button click
+                if (!e.target.closest('#btn')) {
+                    editSystemSettings();
+                }
+            });
+        }
+    });
 </script>
