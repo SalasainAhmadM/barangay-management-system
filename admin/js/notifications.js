@@ -1,13 +1,23 @@
 
+// Create notification with SMS confirmation
 function createNotification() {
     // Fetch all users for the dropdown
     fetch('./endpoints/get_all_users.php')
         .then(res => res.json())
         .then(data => {
             if (data.success) {
-                const userOptions = data.users.map(user =>
-                    `<option value="${user.id}">${user.first_name} ${user.last_name} (${user.email})</option>`
-                ).join('');
+                const userOptions = data.users.map(user => {
+                    const fullName = `${user.first_name} ${user.last_name}`;
+                    return `<option value="${user.id}" 
+                            data-name="${fullName}" 
+                            data-contact="${user.contact_number || ''}"
+                            data-waste="${user.preferences.waste_reminders}"
+                            data-request="${user.preferences.request_updates}"
+                            data-announcement="${user.preferences.announcements}"
+                            data-sms="${user.preferences.sms_notifications}">
+                            ${fullName} (${user.email})
+                        </option>`;
+                }).join('');
 
                 Swal.fire({
                     title: '<i class="fas fa-plus-circle"></i> Create New Notification',
@@ -31,9 +41,9 @@ function createNotification() {
                                 </div>
                                 <select class="enhanced-input" id="notifType" style="margin-top: 8px;">
                                     <option value="">Select type...</option>
-                                    <option value="waste">Waste Collection</option>
-                                    <option value="request">Document Request</option>
-                                    <option value="announcement">Announcement</option>
+                                    <option value="waste" data-pref="waste_reminders">Waste Collection</option>
+                                    <option value="request" data-pref="request_updates">Document Request</option>
+                                    <option value="announcement" data-pref="announcements">Announcement</option>
                                     <option value="alert">Alert</option>
                                     <option value="success">Success</option>
                                 </select>
@@ -62,6 +72,45 @@ function createNotification() {
                     cancelButtonText: '<i class="fas fa-times"></i> Cancel',
                     confirmButtonColor: '#6366f1',
                     cancelButtonColor: '#6b7280',
+                    didOpen: () => {
+                        const userSelect = document.getElementById('userId');
+                        const typeSelect = document.getElementById('notifType');
+
+                        // Filter notification types based on selected user's preferences
+                        userSelect.addEventListener('change', function () {
+                            const selectedOption = this.options[this.selectedIndex];
+
+                            if (this.value === 'all' || this.value === '') {
+                                // Show all options for "All Users" or no selection
+                                Array.from(typeSelect.options).forEach(option => {
+                                    if (option.value) option.disabled = false;
+                                });
+                            } else {
+                                // Filter based on user preferences
+                                const wasteEnabled = selectedOption.dataset.waste === 'true';
+                                const requestEnabled = selectedOption.dataset.request === 'true';
+                                const announcementEnabled = selectedOption.dataset.announcement === 'true';
+
+                                Array.from(typeSelect.options).forEach(option => {
+                                    const prefType = option.dataset.pref;
+                                    if (prefType === 'waste_reminders' && !wasteEnabled) {
+                                        option.disabled = true;
+                                    } else if (prefType === 'request_updates' && !requestEnabled) {
+                                        option.disabled = true;
+                                    } else if (prefType === 'announcements' && !announcementEnabled) {
+                                        option.disabled = true;
+                                    } else if (option.value) {
+                                        option.disabled = false;
+                                    }
+                                });
+
+                                // Reset selection if currently selected type is now disabled
+                                if (typeSelect.value && typeSelect.options[typeSelect.selectedIndex].disabled) {
+                                    typeSelect.value = '';
+                                }
+                            }
+                        });
+                    },
                     preConfirm: () => {
                         const userId = document.getElementById('userId').value;
                         const type = document.getElementById('notifType').value;
@@ -85,46 +134,28 @@ function createNotification() {
                             return false;
                         }
 
-                        return { userId, type, title, message };
+                        // Get user data for SMS
+                        const userSelect = document.getElementById('userId');
+                        const selectedOption = userSelect.options[userSelect.selectedIndex];
+                        const userName = selectedOption.dataset.name || '';
+                        const userContact = selectedOption.dataset.contact || '';
+                        const smsEnabled = selectedOption.dataset.sms === 'true';
+
+                        return {
+                            userId,
+                            type,
+                            title,
+                            message,
+                            userName,
+                            userContact,
+                            smsEnabled,
+                            allUsers: data.users // Store all users for bulk SMS
+                        };
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        Swal.fire({
-                            title: 'Sending Notification...',
-                            allowOutsideClick: false,
-                            didOpen: () => Swal.showLoading()
-                        });
-
-                        fetch('./endpoints/create_notification.php', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(result.value)
-                        })
-                            .then(res => res.json())
-                            .then(data => {
-                                if (data.success) {
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Success!',
-                                        text: data.message || 'Notification sent successfully!',
-                                        confirmButtonColor: '#6366f1'
-                                    }).then(() => location.reload());
-                                } else {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error!',
-                                        text: data.message || 'Failed to send notification'
-                                    });
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Connection Error!',
-                                    text: 'Unable to connect to server'
-                                });
-                            });
+                        // Show SMS confirmation dialog
+                        showSMSConfirmation(result.value);
                     }
                 });
             } else {
@@ -145,6 +176,345 @@ function createNotification() {
         });
 }
 
+// Show SMS confirmation dialog
+function showSMSConfirmation(notificationData) {
+    const { userId, type, title, message, userName, userContact, smsEnabled, allUsers } = notificationData;
+    const defaultSMSMessage = `Hello! You have a new ${type} notification:\n${title}\n${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`;
+
+    const isAllUsers = userId === 'all';
+
+    // For bulk notifications, count eligible SMS recipients
+    let eligibleSMSCount = 0;
+    if (isAllUsers) {
+        eligibleSMSCount = allUsers.filter(user =>
+            user.preferences.sms_notifications &&
+            user.contact_number &&
+            user.contact_number.trim() !== ''
+        ).length;
+    }
+
+    // Determine if SMS can be sent
+    const canSendSMS = isAllUsers ? eligibleSMSCount > 0 : (smsEnabled && userContact && userContact.trim() !== '');
+
+    let smsWarningMessage = '';
+    if (!canSendSMS) {
+        if (isAllUsers && eligibleSMSCount === 0) {
+            smsWarningMessage = '<i class="fas fa-exclamation-triangle"></i> No users have SMS notifications enabled with valid contact numbers';
+        } else if (!smsEnabled) {
+            smsWarningMessage = '<i class="fas fa-exclamation-triangle"></i> User has disabled SMS notifications';
+        } else if (!userContact) {
+            smsWarningMessage = '<i class="fas fa-exclamation-triangle"></i> Contact number not available for this user';
+        }
+    }
+
+    Swal.fire({
+        title: '<i class="fas fa-check-circle"></i> Confirm Notification',
+        html: `
+            <div class="enhanced-form" style="text-align: left;">
+                <div style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <i class="fas fa-info-circle" style="color: #10b981; font-size: 20px;"></i>
+                        <strong style="color: #059669;">Notification Ready to Send</strong>
+                    </div>
+                    <p style="margin: 0; color: #047857; font-size: 14px;">
+                        ${isAllUsers ? 'This notification will be sent to all users with enabled preferences' : `This notification will be sent to ${userName}`}
+                    </p>
+                </div>
+                
+                <div class="form-section">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                        <input type="checkbox" id="sendSMSCheckbox" style="width: 18px; height: 18px; cursor: pointer;" ${!canSendSMS ? 'disabled' : ''}>
+                        <label for="sendSMSCheckbox" style="cursor: pointer; font-weight: 600; color: #374151; margin: 0;">
+                            <i class="fas fa-sms"></i> Send SMS notification ${isAllUsers ? `(${eligibleSMSCount} recipients)` : ''}
+                        </label>
+                    </div>
+                    
+                    ${!canSendSMS ?
+                `<div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; padding: 10px; margin-top: 10px;">
+                            <small style="color: #92400e;">
+                                ${smsWarningMessage}
+                            </small>
+                        </div>`
+                : ''
+            }
+                    
+                    <div id="smsMessageSection" style="display: none; margin-top: 15px;">
+                        ${!isAllUsers ?
+                `<div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">
+                                    <i class="fas fa-user"></i> Recipient: <strong>${userName}</strong>
+                                </div>
+                                <div style="font-size: 12px; color: #6b7280;">
+                                    <i class="fas fa-phone"></i> Contact: <strong>${userContact}</strong>
+                                </div>
+                            </div>`
+                :
+                `<div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                                <div style="font-size: 12px; color: #6b7280;">
+                                    <i class="fas fa-users"></i> Recipients: <strong>${eligibleSMSCount} users</strong> with SMS enabled
+                                </div>
+                            </div>`
+            }
+                        
+                        <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">
+                            <i class="fas fa-comment-alt"></i> SMS Message:
+                        </label>
+                        <textarea id="smsMessage" class="enhanced-textarea" rows="5" 
+                                  style="resize: vertical;">${defaultSMSMessage}</textarea>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 6px;">
+                            <i class="fas fa-info-circle"></i> Character count: <span id="charCount">${defaultSMSMessage.length}</span>/160
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        width: '600px',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-paper-plane"></i> Confirm',
+        cancelButtonText: '<i class="fas fa-times"></i> Cancel',
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#6b7280',
+        didOpen: () => {
+            const checkbox = document.getElementById('sendSMSCheckbox');
+            const messageSection = document.getElementById('smsMessageSection');
+            const messageTextarea = document.getElementById('smsMessage');
+            const charCount = document.getElementById('charCount');
+            const confirmButton = Swal.getConfirmButton();
+            // Toggle message section visibility
+            if (checkbox) {
+                checkbox.addEventListener('change', function () {
+                    if (this.checked) {
+                        messageSection.style.display = 'block';
+                        confirmButton.innerHTML = '<i class="fas fa-paper-plane"></i> Confirm & Send';
+                    } else {
+                        messageSection.style.display = 'none';
+                        confirmButton.innerHTML = '<i class="fas fa-paper-plane"></i> Confirm';
+                    }
+                });
+            }
+
+            // Update character count
+            if (messageTextarea) {
+                messageTextarea.addEventListener('input', function () {
+                    charCount.textContent = this.value.length;
+                    if (this.value.length > 160) {
+                        charCount.style.color = '#ef4444';
+                    } else {
+                        charCount.style.color = '#6b7280';
+                    }
+                });
+            }
+        },
+        preConfirm: () => {
+            const sendSMS = document.getElementById('sendSMSCheckbox').checked;
+            const smsMessage = document.getElementById('smsMessage')?.value || '';
+
+            if (sendSMS && !smsMessage.trim()) {
+                Swal.showValidationMessage('Please enter an SMS message');
+                return false;
+            }
+
+            return {
+                ...notificationData,
+                send_sms: sendSMS,
+                sms_message: smsMessage
+            };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            processNotificationSend(result.value);
+        }
+    });
+}
+
+// Process the notification send and SMS if needed
+function processNotificationSend(notificationData) {
+    Swal.fire({
+        title: 'Sending Notification...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading()
+    });
+
+    // Send notification first
+    fetch('./endpoints/create_notification.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            userId: notificationData.userId,
+            type: notificationData.type,
+            title: notificationData.title,
+            message: notificationData.message
+        })
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // If SMS should be sent
+                if (notificationData.send_sms) {
+                    if (notificationData.userId === 'all') {
+                        // Send bulk SMS
+                        sendBulkSMS(notificationData.allUsers, notificationData.sms_message, data.message);
+                    } else {
+                        // Send single SMS
+                        sendSMS(notificationData.userContact, notificationData.sms_message)
+                            .then(smsResult => {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Success!',
+                                    html: `
+                                        <p>${data.message || 'Notification sent successfully!'}</p>
+                                        <p style="color: #10b981; font-weight: 600;">
+                                            <i class="fas fa-check-circle"></i> SMS notification sent!
+                                        </p>
+                                    `,
+                                    confirmButtonColor: '#6366f1'
+                                }).then(() => location.reload());
+                            })
+                            .catch(error => {
+                                // Notification sent but SMS failed
+                                Swal.fire({
+                                    icon: 'warning',
+                                    title: 'Partial Success',
+                                    html: `
+                                        <p>${data.message || 'Notification sent successfully!'}</p>
+                                        <p style="color: #f59e0b;">
+                                            <i class="fas fa-exclamation-triangle"></i> SMS failed to send
+                                        </p>
+                                    `,
+                                    confirmButtonColor: '#6366f1'
+                                }).then(() => location.reload());
+                            });
+                    }
+                } else {
+                    // No SMS, just show success
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: data.message || 'Notification sent successfully!',
+                        confirmButtonColor: '#6366f1'
+                    }).then(() => location.reload());
+                }
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: data.message || 'Failed to send notification'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Connection Error!',
+                text: 'Unable to connect to server'
+            });
+        });
+}
+
+// Send SMS to single user
+function sendSMS(phoneNumber, message) {
+    return fetch('./endpoints/send.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            number: phoneNumber,
+            message: message
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                throw new Error(data.message || 'Failed to send SMS');
+            }
+            return data;
+        });
+}
+
+// Send bulk SMS to multiple users
+function sendBulkSMS(allUsers, message, notificationMessage) {
+    // Filter users with SMS enabled and valid contact numbers
+    const eligibleUsers = allUsers.filter(user =>
+        user.preferences.sms_notifications &&
+        user.contact_number &&
+        user.contact_number.trim() !== ''
+    );
+
+    if (eligibleUsers.length === 0) {
+        Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: notificationMessage || 'Notification sent successfully!',
+            confirmButtonColor: '#6366f1'
+        }).then(() => location.reload());
+        return;
+    }
+
+    // Extract phone numbers
+    const phoneNumbers = eligibleUsers.map(user => user.contact_number);
+
+    fetch('./endpoints/send_bulk.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            numbers: phoneNumbers,
+            message: message
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    html: `
+                        <p>${notificationMessage || 'Notification sent successfully!'}</p>
+                        <p style="color: #10b981; font-weight: 600;">
+                            <i class="fas fa-check-circle"></i> Bulk SMS sent to ${data.sent_count} recipients!
+                        </p>
+                        ${data.invalid_count > 0 ?
+                            `<p style="color: #f59e0b; font-size: 14px;">
+                                <i class="fas fa-exclamation-triangle"></i> ${data.invalid_count} invalid numbers skipped
+                            </p>`
+                            : ''
+                        }
+                    `,
+                    confirmButtonColor: '#6366f1'
+                }).then(() => location.reload());
+            } else {
+                // Notification sent but bulk SMS failed
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Partial Success',
+                    html: `
+                        <p>${notificationMessage || 'Notification sent successfully!'}</p>
+                        <p style="color: #f59e0b;">
+                            <i class="fas fa-exclamation-triangle"></i> Bulk SMS failed to send: ${data.message}
+                        </p>
+                    `,
+                    confirmButtonColor: '#6366f1'
+                }).then(() => location.reload());
+            }
+        })
+        .catch(error => {
+            console.error('Bulk SMS Error:', error);
+            Swal.fire({
+                icon: 'warning',
+                title: 'Partial Success',
+                html: `
+                    <p>${notificationMessage || 'Notification sent successfully!'}</p>
+                    <p style="color: #f59e0b;">
+                        <i class="fas fa-exclamation-triangle"></i> Bulk SMS failed to send
+                    </p>
+                `,
+                confirmButtonColor: '#6366f1'
+            }).then(() => location.reload());
+        });
+}
 // Edit notification
 function editNotification(id) {
     Swal.fire({
