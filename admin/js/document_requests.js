@@ -547,7 +547,7 @@ function handleFileClick(filePath, fileType, fileName) {
     </div>
 </div> */}
 
-// Update request status
+// Update request status with SMS notification
 function updateRequestStatus(requestId) {
     Swal.fire({
         title: 'Loading...',
@@ -656,53 +656,21 @@ function updateRequestStatus(requestId) {
                             request_id: requestId,
                             status: newStatus,
                             rejection_reason: rejectionReason,
-                            notes: adminNotes
+                            notes: adminNotes,
+                            requester_data: request // Pass requester data for SMS
                         };
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        Swal.fire({
-                            title: 'Updating Status...',
-                            allowOutsideClick: false,
-                            didOpen: () => {
-                                Swal.showLoading();
-                            }
-                        });
+                        const updateData = result.value;
 
-                        fetch('./endpoints/update_request_status.php', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify(result.value)
-                        })
-                            .then(response => response.json())
-                            .then(data => {
-                                if (data.success) {
-                                    Swal.fire({
-                                        icon: 'success',
-                                        title: 'Success!',
-                                        text: 'Request status has been updated successfully.',
-                                        confirmButtonColor: '#6366f1'
-                                    }).then(() => {
-                                        location.reload();
-                                    });
-                                } else {
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error!',
-                                        text: data.message || 'Failed to update status'
-                                    });
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error:', error);
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Connection Error!',
-                                    text: 'Unable to connect to server'
-                                });
-                            });
+                        // If status is "ready", show SMS confirmation dialog
+                        if (updateData.status === 'ready') {
+                            showSMSConfirmation(updateData);
+                        } else {
+                            // For other statuses, update directly
+                            processStatusUpdate(updateData);
+                        }
                     }
                 });
             } else {
@@ -720,6 +688,216 @@ function updateRequestStatus(requestId) {
                 title: 'Connection Error!',
                 text: 'Unable to connect to server'
             });
+        });
+}
+
+// Show SMS confirmation dialog for "Ready" status
+function showSMSConfirmation(updateData) {
+    const requester = updateData.requester_data;
+    const defaultMessage = `Good day ${requester.first_name}! Your document request (${updateData.requester_data.request_id}) for ${requester.document_name} is now ready for pickup. Please visit the barangay office between 8:00 AM and 5:00 PM, Monday to Friday. Thank you!`;
+
+    Swal.fire({
+        title: '<i class="fas fa-check-circle"></i> Document Ready for Pickup',
+        html: `
+            <div class="enhanced-form" style="text-align: left;">
+                <div style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <i class="fas fa-info-circle" style="color: #10b981; font-size: 20px;"></i>
+                        <strong style="color: #059669;">Status Update Confirmed</strong>
+                    </div>
+                    <p style="margin: 0; color: #047857; font-size: 14px;">
+                        The document request will be marked as "Ready for Pickup"
+                    </p>
+                </div>
+
+                <div class="form-section">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
+                        <input type="checkbox" id="sendSMSCheckbox" style="width: 18px; height: 18px; cursor: pointer;">
+                        <label for="sendSMSCheckbox" style="cursor: pointer; font-weight: 600; color: #374151; margin: 0;">
+                            <i class="fas fa-sms"></i> Send SMS notification to requester
+                        </label>
+                    </div>
+                    
+                    <div id="smsMessageSection" style="display: none; margin-top: 15px;">
+                        <div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">
+                                <i class="fas fa-user"></i> Recipient: <strong>${requester.first_name} ${requester.last_name}</strong>
+                            </div>
+                            <div style="font-size: 12px; color: #6b7280;">
+                                <i class="fas fa-phone"></i> Contact: <strong>${requester.contact_number || 'Not available'}</strong>
+                            </div>
+                        </div>
+                        
+                        <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">
+                            <i class="fas fa-comment-alt"></i> SMS Message:
+                        </label>
+                        <textarea id="smsMessage" class="enhanced-textarea" rows="5" 
+                                  style="resize: vertical;">${defaultMessage}</textarea>
+                        <div style="font-size: 12px; color: #6b7280; margin-top: 6px;">
+                            <i class="fas fa-info-circle"></i> Character count: <span id="charCount">${defaultMessage.length}</span>/160
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `,
+        width: '600px',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-paper-plane"></i> Confirm & Update',
+        cancelButtonText: '<i class="fas fa-times"></i> Cancel',
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#6b7280',
+        didOpen: () => {
+            const checkbox = document.getElementById('sendSMSCheckbox');
+            const messageSection = document.getElementById('smsMessageSection');
+            const messageTextarea = document.getElementById('smsMessage');
+            const charCount = document.getElementById('charCount');
+
+            // Toggle message section visibility
+            checkbox.addEventListener('change', function () {
+                if (this.checked) {
+                    messageSection.style.display = 'block';
+                } else {
+                    messageSection.style.display = 'none';
+                }
+            });
+
+            // Update character count
+            messageTextarea.addEventListener('input', function () {
+                charCount.textContent = this.value.length;
+                if (this.value.length > 160) {
+                    charCount.style.color = '#ef4444';
+                } else {
+                    charCount.style.color = '#6b7280';
+                }
+            });
+        },
+        preConfirm: () => {
+            const sendSMS = document.getElementById('sendSMSCheckbox').checked;
+            const smsMessage = document.getElementById('smsMessage').value;
+            const contactNumber = requester.contact_number;
+
+            if (sendSMS && !contactNumber) {
+                Swal.showValidationMessage('Requester contact number is not available');
+                return false;
+            }
+
+            if (sendSMS && !smsMessage.trim()) {
+                Swal.showValidationMessage('Please enter an SMS message');
+                return false;
+            }
+
+            return {
+                ...updateData,
+                send_sms: sendSMS,
+                sms_message: smsMessage,
+                contact_number: contactNumber
+            };
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            processStatusUpdate(result.value);
+        }
+    });
+}
+
+// Process the status update and send SMS if needed
+function processStatusUpdate(updateData) {
+    Swal.fire({
+        title: 'Updating Status...',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+
+    // Update the status first
+    fetch('./endpoints/update_request_status.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            request_id: updateData.request_id,
+            status: updateData.status,
+            rejection_reason: updateData.rejection_reason,
+            notes: updateData.notes
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // If SMS should be sent, send it now
+                if (updateData.send_sms) {
+                    sendSMS(updateData.contact_number, updateData.sms_message)
+                        .then(smsResult => {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Success!',
+                                html: `
+                                <p>Request status has been updated successfully.</p>
+                                <p style="color: #10b981; font-weight: 600;">
+                                    <i class="fas fa-check-circle"></i> SMS notification sent!
+                                </p>
+                            `,
+                                confirmButtonColor: '#6366f1'
+                            }).then(() => {
+                                location.reload();
+                            });
+                        });
+                } else {
+                    // No SMS, just show success
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success!',
+                        text: 'Request status has been updated successfully.',
+                        confirmButtonColor: '#6366f1'
+                    }).then(() => {
+                        location.reload();
+                    });
+                }
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: data.message || 'Failed to update status'
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Connection Error!',
+                text: 'Unable to connect to server'
+            });
+        });
+}
+
+// Send SMS using Semaphore API
+function sendSMS(phoneNumber, message) {
+    return fetch('./endpoints/send.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            number: phoneNumber,
+            message: message
+        })
+    })
+        .then(response => response.json())
+        .then(data => {
+            return {
+                success: data.success || false,
+                message: data.message || 'Unknown error'
+            };
+        })
+        .catch(error => {
+            console.error('SMS Error:', error);
+            return {
+                success: false,
+                message: 'Failed to send SMS'
+            };
         });
 }
 // Delete request
