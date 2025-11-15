@@ -1,0 +1,13 @@
+ALTER TABLE `user` 
+ADD COLUMN `selfie_image` VARCHAR(255) DEFAULT NULL AFTER `image`,
+ADD COLUMN `gov_id_type` VARCHAR(100) DEFAULT NULL AFTER `selfie_image`,
+ADD COLUMN `gov_id_image` VARCHAR(255) DEFAULT NULL AFTER `gov_id_type`,
+ADD COLUMN `is_approved` ENUM('pending', 'approved', 'rejected') DEFAULT 'pending' AFTER `is_new`;
+
+
+ALTER TABLE `admin`
+ADD COLUMN `gcash_qr` varchar(255) DEFAULT NULL AFTER `logo`;
+
+ALTER TABLE `document_requests` 
+ADD COLUMN `payment_receipt` VARCHAR(255) DEFAULT NULL AFTER `document_file1`,
+ADD COLUMN `payment_date` DATETIME DEFAULT NULL AFTER `payment_receipt`;
