@@ -33,15 +33,39 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         }
     }
 
-    // Check user
-    $stmt = $conn->prepare("SELECT id, first_name, middle_name, last_name, email, contact_number, date_of_birth, gender, password, is_new FROM user WHERE email = ?");
+    // Check user with approval status
+    $stmt = $conn->prepare("SELECT id, first_name, middle_name, last_name, email, contact_number, date_of_birth, gender, password, is_new, is_approved FROM user WHERE email = ?");
     $stmt->bind_param("s", $email);
     $stmt->execute();
     $userResult = $stmt->get_result();
 
     if ($userResult->num_rows === 1) {
         $user = $userResult->fetch_assoc();
-        if (password_verify($password, $user["password"])) {
+
+        // Verify password first
+        if (!password_verify($password, $user["password"])) {
+            $_SESSION["login_error"] = "Invalid email or password.";
+            header("Location: ../../index.php?login=error");
+            exit();
+        }
+
+        // Check approval status
+        if ($user["is_approved"] === "pending") {
+            $_SESSION["login_error_type"] = "pending";
+            $_SESSION["login_error"] = "Your account is pending approval. Please wait for an administrator to review your registration.";
+            header("Location: ../../index.php?login=pending");
+            exit();
+        }
+
+        if ($user["is_approved"] === "rejected") {
+            $_SESSION["login_error_type"] = "rejected";
+            $_SESSION["login_error"] = "Your account registration has been rejected. Please contact the administrator for more information.";
+            header("Location: ../../index.php?login=rejected");
+            exit();
+        }
+
+        // Only proceed if approved
+        if ($user["is_approved"] === "approved") {
             $_SESSION["user_id"] = $user["id"];
             $userName = $user["first_name"];
             if (!empty($user["middle_name"])) {
@@ -72,10 +96,6 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $log_stmt->close();
 
             header("Location: ../../user/index.php");
-            exit();
-        } else {
-            $_SESSION["login_error"] = "Invalid email or password.";
-            header("Location: ../../index.php?login=error");
             exit();
         }
     }

@@ -20,6 +20,47 @@ $loginBg = !empty($systemSettings['login_bg'])
     body {
         background-image: url('<?= htmlspecialchars($loginBg) ?>');
     }
+
+    .swal-verification-form {
+        text-align: left;
+    }
+
+    .swal-verification-form .form-group {
+        margin-bottom: 20px;
+    }
+
+    .swal-verification-form label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .swal-verification-form select,
+    .swal-verification-form input[type="file"] {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        font-size: 14px;
+    }
+
+    .swal-verification-form .required {
+        color: red;
+    }
+
+    .file-preview {
+        margin-top: 10px;
+        max-width: 200px;
+        max-height: 200px;
+    }
+
+    .file-preview img {
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 5px;
+        border: 1px solid #ddd;
+    }
 </style>
 
 <head>
@@ -110,8 +151,43 @@ $loginBg = !empty($systemSettings['login_bg'])
     <?php include './components/cdn_scripts.php'; ?>
 
     <script>
-
-        <?php if (isset($_GET['login']) && $_GET['login'] === 'error'): ?>
+        <?php if (isset($_GET['register']) && $_GET['register'] === 'verify'): ?>
+            window.onload = function () {
+                showVerificationModal();
+            };
+        <?php elseif (isset($_GET['login']) && $_GET['login'] === 'pending'): ?>
+            window.onload = function () {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Account Pending Approval',
+                    text: '<?php echo isset($_SESSION['login_error']) ? $_SESSION['login_error'] : "Your account is pending approval. Please wait for an administrator to review your registration."; ?>',
+                    confirmButtonText: 'OK',
+                    didOpen: () => {
+                        document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                        document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                    },
+                });
+                window.history.replaceState({}, document.title, window.location.pathname);
+            };
+            <?php unset($_SESSION['login_error']);
+            unset($_SESSION['login_error_type']); ?>
+        <?php elseif (isset($_GET['login']) && $_GET['login'] === 'rejected'): ?>
+            window.onload = function () {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Account Rejected',
+                    text: '<?php echo isset($_SESSION['login_error']) ? $_SESSION['login_error'] : "Your account registration has been rejected. Please contact the administrator for more information."; ?>',
+                    confirmButtonText: 'OK',
+                    didOpen: () => {
+                        document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                        document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                    },
+                });
+                window.history.replaceState({}, document.title, window.location.pathname);
+            };
+            <?php unset($_SESSION['login_error']);
+            unset($_SESSION['login_error_type']); ?>
+        <?php elseif (isset($_GET['login']) && $_GET['login'] === 'error'): ?>
             window.onload = function () {
                 Swal.fire({
                     icon: 'error',
@@ -130,8 +206,8 @@ $loginBg = !empty($systemSettings['login_bg'])
             window.onload = function () {
                 Swal.fire({
                     icon: 'success',
-                    title: 'Registration Successful',
-                    text: '<?php echo isset($_SESSION['register_success']) ? $_SESSION['register_success'] : "Your account has been created successfully!"; ?>',
+                    title: 'Registration Complete',
+                    text: 'Please wait for admin approval to access your account.',
                     confirmButtonText: 'OK',
                     didOpen: () => {
                         document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
@@ -153,7 +229,6 @@ $loginBg = !empty($systemSettings['login_bg'])
                         document.body.classList.remove("swal2-shown", "swal2-height-auto");
                     },
                 }).then(() => {
-                    // Automatically switch to signup form after error
                     document.querySelector('.container').classList.add('sign-up-mode');
                 });
                 window.history.replaceState({}, document.title, window.location.pathname);
@@ -175,6 +250,142 @@ $loginBg = !empty($systemSettings['login_bg'])
             };
         <?php endif; ?>
 
+        function showVerificationModal() {
+            const govIdTypes = [
+                'Philippine Passport',
+                'National ID (PhilSys ID)',
+                'Driver\'s License',
+                'SSS ID / UMID Card',
+                'GSIS eCard',
+                'PRC ID',
+                'Postal ID',
+                'Voter\'s ID / Voter\'s Certification',
+                'Senior Citizen ID',
+                'PWD ID',
+                'OFW / OWWA ID',
+                'PhilHealth ID',
+                'Barangay ID'
+            ];
+
+            const optionsHtml = govIdTypes.map(id => `<option value="${id}">${id}</option>`).join('');
+
+            Swal.fire({
+                title: 'Complete Your Registration',
+                html: `
+                    <form id="verification-form" class="swal-verification-form" enctype="multipart/form-data">
+                        <div class="form-group">
+                            <label for="selfie-input">Take a Selfie <span class="required">*</span></label>
+                            <input type="file" id="selfie-input" name="selfie_image" accept="image/*" capture="user" required>
+                            <div id="selfie-preview" class="file-preview"></div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="gov-id-type">Government ID Type <span class="required">*</span></label>
+                            <select id="gov-id-type" name="gov_id_type" required>
+                                <option value="">Select ID Type</option>
+                                ${optionsHtml}
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="gov-id-input">Upload Government ID <span class="required">*</span></label>
+                            <input type="file" id="gov-id-input" name="gov_id_image" accept="image/*" required>
+                            <div id="gov-id-preview" class="file-preview"></div>
+                        </div>
+                    </form>
+                `,
+                showCancelButton: false,
+                confirmButtonText: 'Submit',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                    document.body.classList.remove("swal2-shown", "swal2-height-auto");
+
+                    // Preview selfie
+                    document.getElementById('selfie-input').addEventListener('change', function (e) {
+                        const preview = document.getElementById('selfie-preview');
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = function (e) {
+                                preview.innerHTML = `<img src="${e.target.result}" alt="Selfie Preview">`;
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+
+                    // Preview government ID
+                    document.getElementById('gov-id-input').addEventListener('change', function (e) {
+                        const preview = document.getElementById('gov-id-preview');
+                        const file = e.target.files[0];
+                        if (file) {
+                            const reader = new FileReader();
+                            reader.onload = function (e) {
+                                preview.innerHTML = `<img src="${e.target.result}" alt="ID Preview">`;
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                },
+                preConfirm: () => {
+                    const selfie = document.getElementById('selfie-input').files[0];
+                    const govIdType = document.getElementById('gov-id-type').value;
+                    const govId = document.getElementById('gov-id-input').files[0];
+
+                    if (!selfie) {
+                        Swal.showValidationMessage('Please take a selfie');
+                        return false;
+                    }
+                    if (!govIdType) {
+                        Swal.showValidationMessage('Please select a government ID type');
+                        return false;
+                    }
+                    if (!govId) {
+                        Swal.showValidationMessage('Please upload your government ID');
+                        return false;
+                    }
+
+                    return { selfie, govIdType, govId };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Show loading
+                    Swal.fire({
+                        title: 'Uploading...',
+                        text: 'Please wait while we process your verification documents.',
+                        allowOutsideClick: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+
+                    // Create FormData and submit
+                    const formData = new FormData();
+                    formData.append('selfie_image', result.value.selfie);
+                    formData.append('gov_id_type', result.value.govIdType);
+                    formData.append('gov_id_image', result.value.govId);
+
+                    fetch('./conn/endpoint/register.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(response => {
+                            if (response.redirected) {
+                                window.location.href = response.url;
+                            }
+                        })
+                        .catch(error => {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Upload Failed',
+                                text: 'Something went wrong. Please try again.',
+                                confirmButtonText: 'OK'
+                            });
+                        });
+                }
+            });
+        }
 
         function showModal(modalId) {
             document.getElementById(modalId).style.display = "block";
@@ -186,13 +397,8 @@ $loginBg = !empty($systemSettings['login_bg'])
 
         // Signup form event listener
         document.querySelector('form[action="./conn/endpoint/register.php"]').addEventListener('submit', function (e) {
-            // Show the loader
             document.getElementById('loader').style.display = "block";
-
-            // Disable the signup button to prevent multiple submissions
             document.getElementById('signup-button').disabled = true;
-
-            // Optional: Hide the form while the loader is shown (if desired)
             document.querySelector('.signup-form').style.opacity = '0.5';
         });
 
@@ -203,7 +409,7 @@ $loginBg = !empty($systemSettings['login_bg'])
         const signupInstructionText = document.getElementById('signup_instruction_text');
         const signupButton = document.getElementById('signup-button');
 
-        // Email validation event listener
+        // Email validation
         signupEmailField.addEventListener('input', function () {
             const email = signupEmailField.value;
             const emailRegex = /^[^\s@]+@gmail\.com$/;
@@ -222,20 +428,15 @@ $loginBg = !empty($systemSettings['login_bg'])
         const signupContactField = document.getElementById('signup-contact');
         const signupContactValidation = document.getElementById('signup_contact_validation');
 
-        // Contact number validation
+        // Contact validation
         signupContactField.addEventListener('input', function () {
             const contact = signupContactField.value;
-            const contactRegex = /^09\d{9}$/; // Must start with 09 and be 11 digits long
+            const contactRegex = /^09\d{9}$/;
 
             if (contactRegex.test(contact)) {
                 signupContactField.setCustomValidity('');
                 signupContactValidation.textContent = '';
-                // Re-enable button only if all other validations are also good
-                if (
-                    checkPasswordStrength(signupPasswordField.value) === 'Strong' &&
-                    signupConfirmPasswordField.value === signupPasswordField.value &&
-                    signupEmailField.validity.valid
-                ) {
+                if (signupConfirmPasswordField.value === signupPasswordField.value && signupEmailField.validity.valid) {
                     signupButton.disabled = false;
                 }
             } else {
@@ -246,39 +447,13 @@ $loginBg = !empty($systemSettings['login_bg'])
             }
         });
 
-        // Password validation event listener
-        // signupPasswordField.addEventListener('input', function () {
-        //     const password = signupPasswordField.value;
-        //     const strength = checkPasswordStrength(password);
-        //     signupStrengthIndicator.textContent = `Password Strength: ${strength}`;
-
-        //     if (strength === 'Weak' || strength === 'Moderate') {
-        //         signupStrengthIndicator.style.color = '#8B0000';
-        //     } else {
-        //         signupStrengthIndicator.style.color = '#00247c';
-        //     }
-
-        //     if (password.length >= 8 && strength !== 'Strong') {
-        //         signupInstructionText.style.color = '#8B0000';
-        //         signupInstructionText.textContent = 'Password must include at least 2 numbers, 5 lowercase letters, and 1 uppercase letter.';
-        //         signupButton.disabled = true;
-        //     } else if (strength === 'Strong' && signupConfirmPasswordField.value === password && signupEmailField.validity.valid) {
-        //         signupInstructionText.textContent = '';
-        //         signupButton.disabled = false;
-        //     } else {
-        //         signupInstructionText.textContent = '';
-        //         signupButton.disabled = true;
-        //     }
-        // });
-
-        // Confirm password match check
+        // Confirm password match
         signupConfirmPasswordField.addEventListener('input', function () {
             if (signupConfirmPasswordField.value !== signupPasswordField.value) {
                 signupConfirmPasswordField.setCustomValidity('Passwords do not match');
                 signupButton.disabled = true;
             } else {
                 signupConfirmPasswordField.setCustomValidity('');
-                // Enable sign-up button once passwords match (no need for strong password check)
                 if (signupEmailField.validity.valid && signupContactField.validity.valid) {
                     signupButton.disabled = false;
                 } else {
@@ -286,19 +461,6 @@ $loginBg = !empty($systemSettings['login_bg'])
                 }
             }
         });
-
-
-        // function checkPasswordStrength(password) {
-        //     const regexStrong = /(?=(.*[a-z]){5,})(?=.*[A-Z])(?=(.*[0-9]){2,})/;
-
-        //     if (password.length >= 8 && regexStrong.test(password)) {
-        //         return 'Strong';
-        //     } else if (password.length >= 6) {
-        //         return 'Moderate';
-        //     } else {
-        //         return 'Weak';
-        //     }
-        // }
 
         function forgotPassword() {
             Swal.fire({
@@ -327,12 +489,6 @@ $loginBg = !empty($systemSettings['login_bg'])
                     </div>
                     <div id="fp-password-match" style="margin-top: 5px; font-size: 12px;"></div>
                 </div>
-                
-                <div class="form-group">
-                    <small style="color: #666; font-size: 12px;">
-                        Password must contain at least 5 lowercase letters, 1 uppercase letter, 2 numbers, and be at least 8 characters long
-                    </small>
-                </div>
             </div>
         `,
                 focusConfirm: false,
@@ -342,72 +498,6 @@ $loginBg = !empty($systemSettings['login_bg'])
                 didOpen: () => {
                     document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
                     document.body.classList.remove("swal2-shown", "swal2-height-auto");
-
-                    // Get password field elements
-                    const newPasswordField = document.getElementById('fp-newpass');
-                    const confirmPasswordField = document.getElementById('fp-confirmpass');
-                    const passwordStrengthDiv = document.getElementById('fp-password-strength');
-                    const passwordMatchDiv = document.getElementById('fp-password-match');
-
-                    // Password strength check
-                    newPasswordField.addEventListener('input', function () {
-                        const password = this.value;
-                        const strength = checkPasswordStrength(password);
-
-                        if (password.length === 0) {
-                            passwordStrengthDiv.innerHTML = '';
-                            this.setCustomValidity('');
-                            return;
-                        }
-
-                        let strengthColor = '';
-                        let strengthText = '';
-
-                        switch (strength) {
-                            case 'Strong':
-                                strengthColor = '#28a745'; // Green
-                                strengthText = '✓ Strong password';
-                                this.setCustomValidity('');
-                                break;
-                            case 'Moderate':
-                                strengthColor = '#ffc107'; // Yellow
-                                strengthText = '⚠ Moderate password - add more complexity';
-                                this.setCustomValidity('Password is not strong enough');
-                                break;
-                            case 'Weak':
-                                strengthColor = '#dc3545'; // Red
-                                strengthText = '✗ Weak password - needs improvement';
-                                this.setCustomValidity('Password is too weak');
-                                break;
-                        }
-
-                        passwordStrengthDiv.innerHTML = `<span style="color: ${strengthColor};">${strengthText}</span>`;
-
-                        // Re-check confirm password when new password changes
-                        if (confirmPasswordField.value) {
-                            confirmPasswordField.dispatchEvent(new Event('input'));
-                        }
-                    });
-
-                    // Confirm password match check
-                    confirmPasswordField.addEventListener('input', function () {
-                        const newPassword = newPasswordField.value;
-                        const confirmPassword = this.value;
-
-                        if (confirmPassword.length === 0) {
-                            passwordMatchDiv.innerHTML = '';
-                            this.setCustomValidity('');
-                            return;
-                        }
-
-                        if (confirmPassword !== newPassword) {
-                            this.setCustomValidity('Passwords do not match');
-                            passwordMatchDiv.innerHTML = '<span style="color: #dc3545;">✗ Passwords do not match</span>';
-                        } else {
-                            this.setCustomValidity('');
-                            passwordMatchDiv.innerHTML = '<span style="color: #28a745;">✓ Passwords match</span>';
-                        }
-                    });
                 },
                 preConfirm: () => {
                     const email = document.getElementById('fp-email').value.trim();
@@ -419,17 +509,9 @@ $loginBg = !empty($systemSettings['login_bg'])
                         return false;
                     }
 
-                    // Validate email format
                     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                     if (!emailPattern.test(email)) {
                         Swal.showValidationMessage('Please enter a valid email address');
-                        return false;
-                    }
-
-                    // Validate password strength
-                    const passwordStrength = checkPasswordStrength(newPass);
-                    if (passwordStrength !== 'Strong') {
-                        Swal.showValidationMessage('Password must be strong (at least 5 lowercase letters, 1 uppercase letter, 2 numbers, and 8 characters long)');
                         return false;
                     }
 
@@ -442,7 +524,6 @@ $loginBg = !empty($systemSettings['login_bg'])
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    // Show loading state
                     Swal.fire({
                         title: 'Resetting Password...',
                         text: 'Please wait while we process your request.',
@@ -491,10 +572,8 @@ $loginBg = !empty($systemSettings['login_bg'])
             });
         }
 
-        // Function to toggle password visibility for forgot password
         function togglePasswordForgot(inputId, toggleIcon) {
             const passwordInput = document.getElementById(inputId);
-
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 toggleIcon.classList.remove('fa-eye');
@@ -505,7 +584,6 @@ $loginBg = !empty($systemSettings['login_bg'])
                 toggleIcon.classList.add('fa-eye');
             }
         }
-
     </script>
 </body>
 
