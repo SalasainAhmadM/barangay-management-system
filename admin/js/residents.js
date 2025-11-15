@@ -608,7 +608,7 @@ function viewResident(id) {
                     day: 'numeric'
                 }) : 'N/A';
 
-                // Calculate age if date of birth is available
+                // Calculate age
                 let age = 'N/A';
                 if (resident.date_of_birth) {
                     const birthDate = new Date(resident.date_of_birth);
@@ -621,10 +621,18 @@ function viewResident(id) {
                     age = age + ' years old';
                 }
 
-                // Get profile image path
+                // Get profile images
                 const profileImage = resident.image ?
                     `../assets/images/user/${resident.image}` :
                     '../assets/images/user.png';
+
+                const selfieImage = resident.selfie_image ?
+                    `../uploads/selfies/${resident.selfie_image}` :
+                    null;
+
+                const govIdImage = resident.gov_id_image ?
+                    `../uploads/gov_id/${resident.gov_id_image}` :
+                    null;
 
                 // Format address
                 const addressParts = [];
@@ -633,7 +641,7 @@ function viewResident(id) {
                 if (resident.barangay) addressParts.push(resident.barangay);
                 const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : 'N/A';
 
-                // Format status with color
+                // Format status badge
                 const getStatusClass = (status) => {
                     switch (status) {
                         case 'active': return 'status-active';
@@ -642,6 +650,65 @@ function viewResident(id) {
                         default: return 'status-inactive';
                     }
                 };
+
+                const getApprovalClass = (approval) => {
+                    switch (approval) {
+                        case 'approved': return 'approval-badge approved';
+                        case 'pending': return 'approval-badge pending';
+                        case 'rejected': return 'approval-badge rejected';
+                        default: return 'approval-badge pending';
+                    }
+                };
+
+                // Verification section (only show if images exist)
+                let verificationSection = '';
+                if (selfieImage || govIdImage) {
+                    verificationSection = `
+                        <div class="section-header-simple">Verification Documents</div>
+                        <div class="resident-info-grid-simple">
+                            ${selfieImage ? `
+                                <div class="info-item-simple">
+                                    <div class="info-label-simple">Selfie</div>
+                                    <div class="info-value-simple">
+                                        <img src="${selfieImage}" alt="Selfie" 
+                                             style="max-width: 200px; max-height: 200px; border-radius: 8px; cursor: pointer; border: 2px solid #e5e7eb;"
+                                             onclick="window.open('${selfieImage}', '_blank')">
+                                    </div>
+                                </div>
+                            ` : ''}
+                            
+                            ${govIdImage ? `
+                                <div class="info-item-simple">
+                                    <div class="info-label-simple">Government ID (${resident.gov_id_type || 'N/A'})</div>
+                                    <div class="info-value-simple">
+                                        <img src="${govIdImage}" alt="Government ID" 
+                                             style="max-width: 200px; max-height: 200px; border-radius: 8px; cursor: pointer; border: 2px solid #e5e7eb;"
+                                             onclick="window.open('${govIdImage}', '_blank')">
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+                // Approve/Reject buttons (only for pending status)
+                let approvalButtons = '';
+                if (resident.is_approved === 'pending') {
+                    approvalButtons = `
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px; padding-top: 20px; border-top: 2px solid #e5e7eb;">
+                            <button onclick="approveResident(${id})" 
+                                    class="btn btn-success" 
+                                    style="background: #10b981; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-check-circle"></i> Approve
+                            </button>
+                            <button onclick="rejectResident(${id})" 
+                                    class="btn btn-danger" 
+                                    style="background: #ef4444; color: white; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-times-circle"></i> Reject
+                            </button>
+                        </div>
+                    `;
+                }
 
                 Swal.fire({
                     title: 'Resident Details',
@@ -655,11 +722,18 @@ function viewResident(id) {
                     ${resident.first_name} ${resident.middle_name ? resident.middle_name + ' ' : ''}${resident.last_name}
                   </div>
                   <div class="resident-email-simple">${resident.email || 'N/A'}</div>
-                  <div class="resident-status-badge-simple ${getStatusClass(resident.status)}">
-                    ${(resident.status || 'inactive').toUpperCase()}
+                  <div style="display: flex; gap: 8px; margin-top: 8px;">
+                    <span class="${getApprovalClass(resident.is_approved)}">
+                      ${resident.is_approved.toUpperCase()}
+                    </span>
+                    <div class="resident-status-badge-simple ${getStatusClass(resident.status)}">
+                      ${(resident.status || 'inactive').toUpperCase()}
+                    </div>
                   </div>
                 </div>
               </div>
+              
+              ${verificationSection}
               
               <!-- Personal Information Section -->
               <div class="section-header-simple">Personal Information</div>
@@ -765,12 +839,17 @@ function viewResident(id) {
                   </div>
                 </div>
               </div>
+              
+              ${approvalButtons}
             </div>
           `,
                     customClass: {
                         popup: 'swal-view-simple'
                     },
+                    showConfirmButton: resident.is_approved !== 'pending',
+                    showCancelButton: resident.is_approved === 'pending',
                     confirmButtonText: 'Close',
+                    cancelButtonText: 'Close',
                     confirmButtonColor: '#00247c'
                 });
             } else {
@@ -791,6 +870,122 @@ function viewResident(id) {
                 confirmButtonText: 'OK'
             });
         });
+}
+
+function approveResident(id) {
+    Swal.fire({
+        title: 'Approve Resident',
+        text: 'Are you sure you want to approve this resident registration?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, approve',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#10b981'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Processing...',
+                text: 'Approving resident registration.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch('./endpoints/approve_resident.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, action: 'approve' })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Approved!',
+                            text: 'Resident registration has been approved.',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message || 'Unable to approve resident.',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Connection Error',
+                        text: 'Unable to connect to server.',
+                        confirmButtonText: 'OK'
+                    });
+                });
+        }
+    });
+}
+
+function rejectResident(id) {
+    Swal.fire({
+        title: 'Reject Resident',
+        text: 'Are you sure you want to reject this resident registration? This action cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Yes, reject',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#ef4444'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Processing...',
+                text: 'Rejecting resident registration.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            fetch('./endpoints/approve_resident.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id, action: 'reject' })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Rejected',
+                            text: 'Resident registration has been rejected.',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: data.message || 'Unable to reject resident.',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Connection Error',
+                        text: 'Unable to connect to server.',
+                        confirmButtonText: 'OK'
+                    });
+                });
+        }
+    });
 }
 
 function editResident(id) {
