@@ -462,6 +462,20 @@ $stmt->close();
                     <i class="fas fa-eye"></i> View Details
                   </button>
 
+                  <?php if ($request['status'] == 'approved' && $request['fee'] > 0 && $request['payment_status'] == 'unpaid'): ?>
+                    <button class="action-btn-small primary"
+                      onclick="showPaymentModal(<?php echo $request['id']; ?>, '<?php echo htmlspecialchars($request['document_name']); ?>', <?php echo $request['fee']; ?>)">
+                      <i class="fas fa-credit-card"></i> Pay Now
+                    </button>
+                  <?php endif; ?>
+
+                  <?php if ($request['status'] == 'approved' && $request['payment_status'] == 'paid'): ?>
+                    <span class="status-badge-large"
+                      style="background: #28a745; color: white; padding: 8px 16px; font-size: 13px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px;">
+                      <i class="fas fa-check-circle"></i> Payment Submitted
+                    </span>
+                  <?php endif; ?>
+
                   <?php if (in_array($request['status'], ['ready', 'completed'])): ?>
                     <button class="action-btn-small primary" onclick="downloadDocument(<?php echo $request['id']; ?>)">
                       <i class="fas fa-download"></i> Download Copy
@@ -1100,6 +1114,200 @@ $stmt->close();
             });
         }
       });
+    }
+
+    function showPaymentModal(requestId, documentName, fee) {
+      Swal.fire({
+        title: 'Loading Payment Details...',
+        text: 'Please wait',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      fetch(`./endpoints/get_gcash_qr.php?request_id=${requestId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            Swal.fire({
+              title: 'Payment for ' + documentName,
+              html: `
+            <div style="text-align: center; padding: 20px;">
+              <div style="background: #f8f9fa; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                <p style="font-size: 16px; color: #6c757d; margin-bottom: 10px;">Amount to Pay</p>
+                <p style="font-size: 32px; font-weight: bold; color: #28a745; margin: 0;">₱${parseFloat(fee).toFixed(2)}</p>
+                <p style="font-size: 12px; color: #6c757d; margin-top: 10px;">Request ID: ${data.request_id}</p>
+              </div>
+              
+              <div style="margin: 20px 0;">
+                <p style="font-weight: 600; margin-bottom: 15px; color: #495057;">Scan GCash QR Code to Pay</p>
+                <img src="../assets/images/gcash/${data.gcash_qr}" alt="GCash QR Code" 
+                     style="max-width: 300px; width: 100%; border: 3px solid #e9ecef; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+              </div>
+              
+              <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="color: #856404; margin: 0; font-size: 14px;">
+                  <i class="fas fa-exclamation-triangle"></i> 
+                  After payment, please upload your receipt/screenshot for verification.
+                </p>
+              </div>
+            </div>
+          `,
+              showCancelButton: true,
+              confirmButtonText: '<i class="fas fa-upload"></i> Upload Receipt',
+              cancelButtonText: 'Cancel',
+              confirmButtonColor: '#28a745',
+              cancelButtonColor: '#6c757d',
+              width: '600px'
+            }).then((result) => {
+              if (result.isConfirmed) {
+                showUploadReceiptModal(requestId, documentName, fee);
+              }
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: data.message || 'Unable to load payment details',
+              confirmButtonColor: '#667eea'
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Connection Error',
+            text: 'Unable to connect to server',
+            confirmButtonColor: '#667eea'
+          });
+        });
+    }
+
+    function showUploadReceiptModal(requestId, documentName, fee) {
+      Swal.fire({
+        title: 'Upload Payment Receipt',
+        html: `
+      <div style="text-align: left; padding: 20px;">
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <p style="margin: 5px 0;"><strong>Document:</strong> ${documentName}</p>
+          <p style="margin: 5px 0;"><strong>Amount Paid:</strong> ₱${parseFloat(fee).toFixed(2)}</p>
+        </div>
+        
+        <div style="margin: 20px 0;">
+          <label for="receipt-file" style="display: block; margin-bottom: 10px; font-weight: 600; color: #495057;">
+            <i class="fas fa-receipt"></i> Select Receipt/Screenshot
+          </label>
+          <input type="file" id="receipt-file" accept="image/*" 
+                 style="width: 100%; padding: 10px; border: 2px dashed #dee2e6; border-radius: 8px; cursor: pointer;"
+                 onchange="previewReceipt(this)">
+          <p style="font-size: 12px; color: #6c757d; margin-top: 8px;">
+            Supported formats: JPG, PNG, GIF (Max 5MB)
+          </p>
+        </div>
+        
+        <div id="receipt-preview" style="margin: 20px 0; display: none;">
+          <p style="font-weight: 600; margin-bottom: 10px; color: #495057;">Preview:</p>
+          <img id="preview-image" src="" alt="Receipt Preview" 
+               style="max-width: 100%; border: 2px solid #dee2e6; border-radius: 8px;">
+        </div>
+        
+        <div style="background: #d1ecf1; border: 1px solid #bee5eb; padding: 15px; border-radius: 8px; margin-top: 20px;">
+          <p style="color: #0c5460; margin: 0; font-size: 13px;">
+            <i class="fas fa-info-circle"></i> 
+            Your payment will be verified by the administrator. You will be notified once verified.
+          </p>
+        </div>
+      </div>
+    `,
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-paper-plane"></i> Submit Receipt',
+        cancelButtonText: 'Cancel',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        width: '600px',
+        preConfirm: () => {
+          const fileInput = document.getElementById('receipt-file');
+          if (!fileInput.files || fileInput.files.length === 0) {
+            Swal.showValidationMessage('Please select a receipt file');
+            return false;
+          }
+          return fileInput.files[0];
+        }
+      }).then((result) => {
+        if (result.isConfirmed && result.value) {
+          uploadReceipt(requestId, result.value);
+        }
+      });
+    }
+
+    function previewReceipt(input) {
+      if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          document.getElementById('preview-image').src = e.target.result;
+          document.getElementById('receipt-preview').style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+      }
+    }
+
+    function uploadReceipt(requestId, file) {
+      Swal.fire({
+        title: 'Uploading Receipt...',
+        text: 'Please wait while we process your payment receipt',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      const formData = new FormData();
+      formData.append('request_id', requestId);
+      formData.append('receipt', file);
+
+      fetch('./endpoints/upload_payment_receipt.php', {
+        method: 'POST',
+        body: formData
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            Swal.fire({
+              icon: 'success',
+              title: 'Receipt Uploaded!',
+              html: `
+            <p>${data.message}</p>
+            <div style="background: #d1ecf1; padding: 15px; border-radius: 8px; margin-top: 15px;">
+              <p style="color: #0c5460; margin: 0; font-size: 14px;">
+                <i class="fas fa-clock"></i> 
+                Your payment is now pending verification. This usually takes 1-2 business days.
+              </p>
+            </div>
+          `,
+              confirmButtonColor: '#28a745'
+            }).then(() => {
+              location.reload();
+            });
+          } else {
+            Swal.fire({
+              icon: 'error',
+              title: 'Upload Failed',
+              text: data.message || 'Failed to upload receipt',
+              confirmButtonColor: '#667eea'
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'An error occurred while uploading the receipt',
+            confirmButtonColor: '#667eea'
+          });
+        });
     }
   </script>
 

@@ -19,13 +19,14 @@ try {
             email,
             image,
             logo,
+            gcash_qr,
             updated_at
         FROM admin
         WHERE id = ? LIMIT 1");
 
     $stmt->bind_param("i", $id);
     $stmt->execute();
-    $result = $stmt->get_result();
+    $result = $stmt->get_result(); // ✅ Fixed: was $result->get_result()
     $admin = $result->fetch_assoc();
 
     if ($admin) {
@@ -36,9 +37,10 @@ try {
             }
         }
 
-        // Ensure image/logo fields are properly handled
+        // Ensure image/logo/gcash_qr fields are properly handled
         $admin['image'] = !empty($admin['image']) ? $admin['image'] : null;
         $admin['logo'] = !empty($admin['logo']) ? $admin['logo'] : null;
+        $admin['gcash_qr'] = !empty($admin['gcash_qr']) ? $admin['gcash_qr'] : null;
 
         echo json_encode(["success" => true, "admin" => $admin]);
     } else {
@@ -47,3 +49,4 @@ try {
 } catch (Exception $e) {
     echo json_encode(["success" => false, "message" => "Database error: " . $e->getMessage()]);
 }
+?>

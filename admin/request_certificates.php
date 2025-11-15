@@ -206,6 +206,80 @@ $totalItems = $activeTab === 'requests' ? $totalRequests : $totalTypes;
         color: white;
     }
 
+    .status-badge.approved-unpaid {
+        background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+        color: #856404;
+        border: 1px solid #ffc107;
+        font-weight: 600;
+    }
+
+    .status-badge.approved-paid {
+        background: linear-gradient(135deg, #d4edda 0%, #95e1d3 100%);
+        color: #155724;
+        border: 1px solid #28a745;
+        font-weight: 600;
+    }
+
+    .card-status.approved-unpaid {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffc107;
+    }
+
+    .card-status.approved-paid {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #28a745;
+    }
+
+    /* Payment receipt section styling */
+    .payment-receipt-section {
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        margin: 20px 0;
+        text-align: center;
+    }
+
+    .payment-receipt-section h4 {
+        color: #28a745;
+        margin-bottom: 15px;
+        font-size: 16px;
+        font-weight: 700;
+    }
+
+    .receipt-image {
+        max-width: 100%;
+        max-height: 400px;
+        border: 3px solid #dee2e6;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+
+    .receipt-image:hover {
+        transform: scale(1.02);
+    }
+
+    .payment-info-badge {
+        display: inline-block;
+        padding: 8px 16px;
+        background: #28a745;
+        color: white;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        margin: 10px 0;
+    }
+
+    .payment-date-info {
+        color: #6c757d;
+        font-size: 13px;
+        margin-top: 10px;
+    }
+
     /* Responsive file grid */
     @media (max-width: 768px) {
         .file-item {
@@ -359,8 +433,25 @@ $totalItems = $activeTab === 'requests' ? $totalRequests : $totalTypes;
                                             <?= $request['fee'] == 0 ? '<span style="color: #28a745; font-weight: 600;">Free</span>' : '₱' . number_format($request['fee'], 2); ?>
                                         </td>
                                         <td>
-                                            <span class="status-badge <?= htmlspecialchars($request['status']); ?>">
-                                                <?= ucfirst(str_replace('_', ' ', $request['status'])); ?>
+                                            <?php
+                                            $displayStatus = $request['status'];
+                                            $statusClass = $request['status'];
+
+                                            // If status is approved, show payment status
+                                            if ($request['status'] === 'approved') {
+                                                if ($request['fee'] > 0) {
+                                                    // Has fee - show payment status
+                                                    $displayStatus = $request['payment_status'] === 'paid' ? 'Approved-Paid' : 'Approved-Unpaid';
+                                                    $statusClass = $request['payment_status'] === 'paid' ? 'approved-paid' : 'approved-unpaid';
+                                                } else {
+                                                    // No fee - just show approved
+                                                    $displayStatus = 'Approved';
+                                                    $statusClass = 'approved';
+                                                }
+                                            }
+                                            ?>
+                                            <span class="status-badge <?= htmlspecialchars($statusClass); ?>">
+                                                <?= ucfirst(str_replace('_', ' ', $displayStatus)); ?>
                                             </span>
                                         </td>
                                         <td><?= date("M d, Y", strtotime($request['submitted_date'])); ?></td>

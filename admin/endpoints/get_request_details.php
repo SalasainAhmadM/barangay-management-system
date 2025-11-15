@@ -17,10 +17,24 @@ if (!isset($_GET['id'])) {
 $requestId = (int) $_GET['id'];
 
 try {
-    // Fetch request details with user and document type info
     $stmt = $conn->prepare("
         SELECT 
-            dr.*,
+            dr.id,
+            dr.request_id,
+            dr.user_id,
+            dr.document_type_id,
+            dr.purpose,
+            dr.additional_info,
+            dr.status,
+            dr.payment_status,
+            dr.payment_receipt,
+            dr.payment_date,
+            dr.submitted_date,
+            dr.approved_date,
+            dr.released_date,
+            dr.expected_date,
+            dr.rejection_reason,
+            dr.notes,
             dt.name as document_name,
             dt.icon,
             dt.type as document_type,
@@ -57,6 +71,11 @@ try {
         if (empty($request['address'])) {
             $request['address'] = 'N/A';
         }
+
+        // Ensure payment fields are set even if null
+        $request['payment_status'] = $request['payment_status'] ?? 'unpaid';
+        $request['payment_receipt'] = $request['payment_receipt'] ?? null;
+        $request['payment_date'] = $request['payment_date'] ?? null;
 
         // Fetch uploaded documents/attachments for this request
         $filesStmt = $conn->prepare("

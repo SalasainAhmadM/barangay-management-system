@@ -199,7 +199,7 @@ function switchTab(tab) {
     window.location.href = `?tab=${tab}`;
 }
 
-// View request details in SweetAlert modal with file handling
+// View request details in SweetAlert modal with file handling and payment info
 function viewRequestDetails(requestId) {
     Swal.fire({
         title: 'Loading...',
@@ -218,113 +218,139 @@ function viewRequestDetails(requestId) {
 
                 // Format dates
                 const submittedDate = request.submitted_date ? new Date(request.submitted_date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 }) : 'N/A';
 
                 const approvedDate = request.approved_date ? new Date(request.approved_date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 }) : 'N/A';
 
                 const releasedDate = request.released_date ? new Date(request.released_date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 }) : 'N/A';
 
                 const expectedDate = request.expected_date ? new Date(request.expected_date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
+                    year: 'numeric', month: 'long', day: 'numeric'
                 }) : 'N/A';
 
-                // Get user profile image path
-                const profileImage = request.user_image ?
-                    `../assets/images/user/${request.user_image}` :
-                    '../assets/images/user.png';
+                const paymentDate = request.payment_date ? new Date(request.payment_date).toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
+                }) : 'N/A';
 
-                // Format status with color
-                const getStatusStyle = (status) => {
+                // Profile image
+                const profileImage = request.user_image ? `../assets/images/user/${request.user_image}` : '../assets/images/user.png';
+
+                // Status styling with payment status
+                const getStatusStyle = (status, paymentStatus, fee) => {
+                    if (status === 'approved' && fee > 0) {
+                        return paymentStatus === 'paid'
+                            ? 'background: #d4edda; color: #155724; border: 1px solid #28a745;'
+                            : 'background: #fff3cd; color: #856404; border: 1px solid #ffc107;';
+                    }
                     switch (status) {
-                        case 'completed':
-                            return 'background: #e9ecef; color: #6c757d;';
-                        case 'approved':
-                            return 'background: #d4edda; color: #28a745;';
-                        case 'ready':
-                            return 'background: #c3e6cb; color: #20c997;';
-                        case 'processing':
-                            return 'background: #d1ecf1; color: #17a2b8;';
-                        case 'pending':
-                            return 'background: #fff3cd; color: #ffc107;';
-                        case 'rejected':
-                            return 'background: #f8d7da; color: #dc3545;';
-                        case 'cancelled':
-                            return 'background: #f8d7da; color: #dc3545;';
-                        default:
-                            return 'background: #fff3cd; color: #ffc107;';
+                        case 'completed': return 'background: #e9ecef; color: #6c757d;';
+                        case 'approved': return 'background: #d4edda; color: #28a745;';
+                        case 'ready': return 'background: #c3e6cb; color: #20c997;';
+                        case 'processing': return 'background: #d1ecf1; color: #17a2b8;';
+                        case 'pending': return 'background: #fff3cd; color: #ffc107;';
+                        case 'rejected': return 'background: #f8d7da; color: #dc3545;';
+                        case 'cancelled': return 'background: #f8d7da; color: #dc3545;';
+                        default: return 'background: #fff3cd; color: #ffc107;';
                     }
                 };
 
-                // Document type badge
-                const typeStyle = request.document_type === 'certificate' ?
-                    'background: #ddd6fe; color: #7c3aed;' :
-                    'background: #fef3c7; color: #d97706;';
+                const getStatusText = (status, paymentStatus, fee) => {
+                    if (status === 'approved' && fee > 0) {
+                        return paymentStatus === 'paid' ? 'APPROVED - PAID' : 'APPROVED - UNPAID';
+                    }
+                    return status.toUpperCase().replace('_', ' ');
+                };
 
-                // Generate uploaded files HTML
+                const typeStyle = request.document_type === 'certificate'
+                    ? 'background: #ddd6fe; color: #7c3aed;'
+                    : 'background: #fef3c7; color: #d97706;';
+
+                // Payment Receipt Section - Show if there's a receipt OR if approved with fee
+                let paymentReceiptHTML = '';
+                if (request.status === 'approved' && request.fee > 0) {
+                    paymentReceiptHTML = `<div class="section-header-simple">Payment Information</div>`;
+
+                    // Only show receipt if payment is verified/paid
+                    if (request.payment_receipt && request.payment_status === 'paid') {
+                        // Receipt exists and payment is verified - show it with file-item style
+                        const paymentStatusBadge = '<span style="display: inline-block; padding: 6px 12px; background: #d4edda; color: #28a745; border-radius: 12px; font-size: 11px; font-weight: 600; border: 1px solid #28a745;"><i class="fas fa-check-circle"></i> Payment Verified</span>';
+
+                        // Construct the receipt path - backend only sends filename
+                        const receiptPath = `../assets/images/receipt/${request.payment_receipt}`;
+
+                        paymentReceiptHTML += `
+                            <div style="margin-bottom: 12px;">
+                                ${paymentStatusBadge}
+                            </div>
+                            <div class="uploaded-files-grid">
+                                <div class="file-item" onclick="viewReceiptFullscreen('${receiptPath}')">
+                                    <div class="file-icon">
+                                        <i class="fas fa-receipt" style="color: #28a745;"></i>
+                                    </div>
+                                    <div class="file-info">
+                                        <div class="file-name">Payment Receipt</div>
+                                        <div class="file-meta">${paymentDate} • ${request.payment_receipt.split('.').pop().toUpperCase()}</div>
+                                    </div>
+                                    <div class="file-action">
+                                        <i class="fas fa-eye"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        // No receipt yet or payment pending - show in file-item style without click
+                        const statusText = request.payment_receipt ? 'Payment Pending Verification' : 'No Payment Receipt Yet';
+                        const statusColor = request.payment_receipt ? '#ffc107' : '#6c757d';
+
+                        paymentReceiptHTML += `
+                            <div class="uploaded-files-grid">
+                                <div class="file-item" style="background: #f8f9fa; border: 2px dashed #dee2e6; cursor: default;">
+                                    <div class="file-icon">
+                                        <i class="fas fa-receipt" style="color: ${statusColor};"></i>
+                                    </div>
+                                    <div class="file-info">
+                                        <div class="file-name" style="color: ${statusColor};">${statusText}</div>
+                                        <div class="file-meta">Amount Due: ₱${parseFloat(request.fee).toFixed(2)}</div>
+                                    </div>
+                                    <div class="file-action" style="background: transparent;">
+                                        <i class="fas fa-info-circle" style="color: ${statusColor};"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }
+
+                // Uploaded Files Section
                 let filesHTML = '';
                 if (request.uploaded_files && request.uploaded_files.length > 0) {
-                    filesHTML = `
-                        <div class="section-header-simple">Uploaded Documents</div>
-                        <div class="uploaded-files-grid">
-                    `;
-
+                    filesHTML = `<div class="section-header-simple">Uploaded Documents</div><div class="uploaded-files-grid">`;
                     request.uploaded_files.forEach(file => {
                         const fileExt = file.file_type.toLowerCase();
                         const isPDF = fileExt === 'pdf';
                         const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt);
-
-                        let fileIcon = 'fa-file';
-                        let iconColor = '#6c757d';
-
-                        if (isPDF) {
-                            fileIcon = 'fa-file-pdf';
-                            iconColor = '#dc3545';
-                        } else if (isImage) {
-                            fileIcon = 'fa-file-image';
-                            iconColor = '#28a745';
-                        }
-
+                        let fileIcon = 'fa-file', iconColor = '#6c757d';
+                        if (isPDF) { fileIcon = 'fa-file-pdf'; iconColor = '#dc3545'; }
+                        else if (isImage) { fileIcon = 'fa-file-image'; iconColor = '#28a745'; }
                         const uploadDate = new Date(file.uploaded_at).toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric'
+                            month: 'short', day: 'numeric', year: 'numeric'
                         });
-
                         filesHTML += `
                             <div class="file-item" onclick="handleFileClick('${file.file_path}', '${fileExt}', '${file.file_name}')">
-                                <div class="file-icon">
-                                    <i class="fas ${fileIcon}" style="color: ${iconColor};"></i>
-                                </div>
+                                <div class="file-icon"><i class="fas ${fileIcon}" style="color: ${iconColor};"></i></div>
                                 <div class="file-info">
                                     <div class="file-name">${file.file_name}</div>
                                     <div class="file-meta">${uploadDate} • ${fileExt.toUpperCase()}</div>
                                 </div>
-                                <div class="file-action">
-                                    <i class="fas ${isImage ? 'fa-eye' : 'fa-download'}"></i>
-                                </div>
+                                <div class="file-action"><i class="fas ${isImage ? 'fa-eye' : 'fa-download'}"></i></div>
                             </div>
                         `;
                     });
-
                     filesHTML += '</div>';
                 }
 
@@ -332,28 +358,23 @@ function viewRequestDetails(requestId) {
                     title: 'Document Request Details',
                     html: `
                     <div class="resident-details-container-simple">
-                        <!-- Requester Header with Profile Image -->
                         <div class="profile-header-simple">
                             <img src="${profileImage}" alt="Profile" class="resident-profile-image-simple">
                             <div class="profile-info-simple">
-                                <div class="resident-name-simple">
-                                    ${request.first_name} ${request.middle_name || ''} ${request.last_name}
-                                </div>
+                                <div class="resident-name-simple">${request.first_name} ${request.middle_name || ''} ${request.last_name}</div>
                                 <div class="resident-email-simple">${request.email || 'N/A'}</div>
-                                <div style="display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 8px; ${getStatusStyle(request.status)}">
-                                    ${request.status.toUpperCase().replace('_', ' ')}
+                                <div style="display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 8px; ${getStatusStyle(request.status, request.payment_status, request.fee)}">
+                                    ${getStatusText(request.status, request.payment_status, request.fee)}
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Request Information Section -->
                         <div class="section-header-simple">Request Information</div>
                         <div class="resident-info-grid-simple">
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Request ID</div>
                                 <div class="info-value-simple">${request.request_id}</div>
                             </div>
-                            
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Document Type</div>
                                 <div class="info-value-simple">
@@ -362,125 +383,97 @@ function viewRequestDetails(requestId) {
                                     </span>
                                 </div>
                             </div>
-                            
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Document Name</div>
-                                <div class="info-value-simple">
-                                    <i class="fas ${request.icon}"></i> ${request.document_name}
-                                </div>
+                                <div class="info-value-simple"><i class="fas ${request.icon}"></i> ${request.document_name}</div>
                             </div>
-                            
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Purpose</div>
                                 <div class="info-value-simple">${request.purpose || 'N/A'}</div>
                             </div>
-                            
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Fee</div>
                                 <div class="info-value-simple">
                                     ${request.fee == 0 ? '<span style="color: #28a745; font-weight: 600;">Free</span>' : '₱' + parseFloat(request.fee).toFixed(2)}
                                 </div>
                             </div>
-                            
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Processing Time</div>
                                 <div class="info-value-simple">${request.processing_days || 'N/A'}</div>
                             </div>
-                            
                             ${request.additional_info ? `
                             <div class="info-item-simple full-width">
                                 <div class="info-label-simple">Additional Information</div>
                                 <div class="info-value-simple">${request.additional_info}</div>
-                            </div>
-                            ` : ''}
+                            </div>` : ''}
                         </div>
                         
+                        ${paymentReceiptHTML}
                         ${filesHTML}
                         
-                        <!-- Requester Details Section -->
                         <div class="section-header-simple">Requester Information</div>
                         <div class="resident-info-grid-simple">
                             <div class="info-item-simple">
                                 <div class="info-label-simple">First Name</div>
                                 <div class="info-value-simple">${request.first_name || 'N/A'}</div>
                             </div>
-                            
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Middle Name</div>
                                 <div class="info-value-simple">${request.middle_name || 'N/A'}</div>
                             </div>
-                            
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Last Name</div>
                                 <div class="info-value-simple">${request.last_name || 'N/A'}</div>
                             </div>
-                            
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Email Address</div>
                                 <div class="info-value-simple">${request.email || 'N/A'}</div>
                             </div>
-                            
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Contact Number</div>
                                 <div class="info-value-simple">${request.contact_number || 'N/A'}</div>
                             </div>
-                            
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Address</div>
                                 <div class="info-value-simple">${request.address || 'N/A'}</div>
                             </div>
                         </div>
                         
-                        <!-- Timeline Section -->
                         <div class="section-header-simple">Request Timeline</div>
                         <div class="resident-info-grid-simple">
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Date Submitted</div>
                                 <div class="info-value-simple">${submittedDate}</div>
                             </div>
-                            
                             ${request.expected_date && ['pending', 'processing'].includes(request.status) ? `
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Expected Completion</div>
                                 <div class="info-value-simple">${expectedDate}</div>
-                            </div>
-                            ` : ''}
-                            
+                            </div>` : ''}
                             ${request.approved_date ? `
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Date Approved</div>
                                 <div class="info-value-simple">${approvedDate}</div>
-                            </div>
-                            ` : ''}
-                            
+                            </div>` : ''}
                             ${request.released_date ? `
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Date Released</div>
                                 <div class="info-value-simple">${releasedDate}</div>
-                            </div>
-                            ` : ''}
-                            
+                            </div>` : ''}
                             ${request.rejection_reason && request.status === 'rejected' ? `
                             <div class="info-item-simple full-width">
                                 <div class="info-label-simple">Rejection Reason</div>
-                                <div class="info-value-simple" style="color: #dc3545; font-weight: 500;">
-                                    ${request.rejection_reason}
-                                </div>
-                            </div>
-                            ` : ''}
-                            
+                                <div class="info-value-simple" style="color: #dc3545; font-weight: 500;">${request.rejection_reason}</div>
+                            </div>` : ''}
                             ${request.notes ? `
                             <div class="info-item-simple full-width">
                                 <div class="info-label-simple">Admin Notes</div>
                                 <div class="info-value-simple">${request.notes}</div>
-                            </div>
-                            ` : ''}
+                            </div>` : ''}
                         </div>
                     </div>
                 `,
-                    customClass: {
-                        popup: 'swal-view-simple'
-                    },
+                    customClass: { popup: 'swal-view-simple' },
                     confirmButtonText: 'Close',
                     confirmButtonColor: '#00247c',
                     width: '700px'
@@ -505,6 +498,44 @@ function viewRequestDetails(requestId) {
                 confirmButtonColor: '#00247c'
             });
         });
+}
+
+// Helper functions for receipt viewing
+function viewReceiptFullscreen(receiptPath) {
+    Swal.fire({
+        title: 'Payment Receipt',
+        html: `
+            <div style="max-width: 100%; max-height: 80vh; overflow: auto;">
+                <img src="${receiptPath}" 
+                     alt="Payment Receipt" 
+                     style="max-width: 100%; height: auto; border-radius: 8px;"
+                     onerror="this.onerror=null; this.src='../assets/images/placeholder.png'; this.alt='Receipt not found';">
+            </div>
+        `,
+        confirmButtonText: 'Close',
+        confirmButtonColor: '#00247c',
+        width: '900px',
+        showCloseButton: true
+    });
+}
+
+function downloadReceipt(receiptPath) {
+    const link = document.createElement('a');
+    link.href = receiptPath;
+    const filename = receiptPath.split('/').pop();
+    link.download = filename;
+    link.target = '_blank';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    Swal.fire({
+        icon: 'success',
+        title: 'Download Started',
+        text: 'Receipt is being downloaded',
+        timer: 2000,
+        showConfirmButton: false
+    });
 }
 
 // Handle file click - view image or download PDF

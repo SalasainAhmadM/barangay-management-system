@@ -116,6 +116,7 @@ CREATE TABLE `admin` (
   `password` varchar(255) NOT NULL,
   `image` varchar(255) NOT NULL,
   `logo` varchar(255) DEFAULT NULL,
+  `gcash_qr` varchar(255) DEFAULT NULL AFTER `logo`,
   `updated_at` timestamp NULL DEFAULT NULL ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 

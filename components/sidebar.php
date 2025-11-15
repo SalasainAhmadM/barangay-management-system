@@ -168,92 +168,119 @@
                     Swal.fire({
                         title: 'Edit Admin',
                         html: `
-                        <div class="swal-form" style="padding-top: 10px">
-                            <!-- Profile Image Section -->
-                            <div class="form-group profile-image-section">
-                                <div class="profile-image-container">
-                                    <img id="editProfilePreview" 
-                                         src="${admin.image ? '../assets/images/user/' + admin.image : '../assets/images/user.png'}"  
-                                         alt="Profile Preview" 
-                                         class="profile-preview"
-                                         onclick="document.getElementById('editImageInput').click();">
-                                    <div class="camera-overlay"
-                                         onclick="document.getElementById('editImageInput').click();">
-                                        <i class="fas fa-camera"></i>
-                                    </div>
+                    <div class="swal-form" style="padding-top: 10px">
+                        <!-- Profile Image Section -->
+                        <div class="form-group profile-image-section">
+                            <div class="profile-image-container">
+                                <img id="editProfilePreview" 
+                                     src="${admin.image ? '../assets/images/user/' + admin.image : '../assets/images/user.png'}"  
+                                     alt="Profile Preview" 
+                                     class="profile-preview"
+                                     onclick="document.getElementById('editImageInput').click();">
+                                <div class="camera-overlay"
+                                     onclick="document.getElementById('editImageInput').click();">
+                                    <i class="fas fa-camera"></i>
                                 </div>
-                                <input type="file" 
-                                       id="editImageInput" 
-                                       accept="image/*" 
-                                       class="image-input-hidden"
-                                       onchange="previewImage(this, 'editProfilePreview')">
-                                <div class="upload-instruction">Click to change profile image</div>
                             </div>
+                            <input type="file" 
+                                   id="editImageInput" 
+                                   accept="image/*" 
+                                   class="image-input-hidden"
+                                   onchange="previewImage(this, 'editProfilePreview')">
+                            <div class="upload-instruction">Click to change profile image</div>
+                        </div>
 
-                            <div class="form-group">
-                                <label for="first-name" class="form-label">First Name *</label>
-                                <input type="text" id="first-name" class="swal2-input" value="${admin.first_name}" placeholder="Enter First Name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="middle-name" class="form-label">Middle Name</label>
-                                <input type="text" id="middle-name" class="swal2-input" value="${admin.middle_name || ''}" placeholder="Enter Middle Name">
-                            </div>
-                            <div class="form-group">
-                                <label for="last-name" class="form-label">Last Name *</label>
-                                <input type="text" id="last-name" class="swal2-input" value="${admin.last_name}" placeholder="Enter Last Name" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="email" class="form-label">Email *</label>
-                                <input type="email" id="email" class="swal2-input" value="${admin.email}" placeholder="Enter Email" required>
-                            </div>
-                            
-                            <!-- Change Password Section -->
-                            <div class="form-group">
-                                <label class="form-label">
-                                    <input type="checkbox" id="changePasswordToggle" style="margin-right: 8px;">
-                                    Change Password
-                                </label>
-                            </div>
-                            
-                            <div id="passwordFields" style="display: none;">
-                                <div class="form-group">
-                                    <label for="new-password" class="form-label">New Password *</label>
-                                    <div style="position: relative;">
-                                        <input type="password" id="new-password" class="swal2-input" placeholder="Enter New Password" style="padding-right: 40px;">
-                                        <i class="fas fa-eye password-toggle" onclick="togglePassword('new-password', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
-                                    </div>
-                                    <div id="password-strength" style="margin-top: 5px; font-size: 12px;"></div>
+                        <!-- GCash QR Section -->
+                        <div class="form-group profile-image-section">
+                            <label class="form-label">GCash QR Code</label>
+                            <div class="profile-image-container">
+                                <img style="border-radius: 0%" id="editGcashQrPreview" 
+                                     src="${admin.gcash_qr ? '../assets/images/gcash/' + admin.gcash_qr : '../assets/images/gcash/qr-code.png'}"  
+                                     alt="GCash QR Preview" 
+                                     class="profile-preview"
+                                     onclick="document.getElementById('editGcashQrInput').click();">
+                                <div class="camera-overlay"
+                                     onclick="document.getElementById('editGcashQrInput').click();">
+                                    <i class="fas fa-camera"></i>
                                 </div>
-                                <div class="form-group">
-                                    <label for="confirm-password" class="form-label">Confirm Password *</label>
-                                    <div style="position: relative;">
-                                        <input type="password" id="confirm-password" class="swal2-input" placeholder="Confirm New Password" style="padding-right: 40px;">
-                                        <i class="fas fa-eye password-toggle" onclick="togglePassword('confirm-password', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
-                                    </div>
-                                    <div id="password-match" style="margin-top: 5px; font-size: 12px;"></div>
+                            </div>
+                            <input type="file" 
+                                   id="editGcashQrInput" 
+                                   accept="image/*" 
+                                   class="image-input-hidden"
+                                   onchange="previewImage(this, 'editGcashQrPreview')">
+                            <div class="upload-instruction">Click to change GCash QR code</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="first-name" class="form-label">First Name *</label>
+                            <input type="text" id="first-name" class="swal2-input" value="${admin.first_name}" placeholder="Enter First Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="middle-name" class="form-label">Middle Name</label>
+                            <input type="text" id="middle-name" class="swal2-input" value="${admin.middle_name || ''}" placeholder="Enter Middle Name">
+                        </div>
+                        <div class="form-group">
+                            <label for="last-name" class="form-label">Last Name *</label>
+                            <input type="text" id="last-name" class="swal2-input" value="${admin.last_name}" placeholder="Enter Last Name" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email" class="form-label">Email *</label>
+                            <input type="email" id="email" class="swal2-input" value="${admin.email}" placeholder="Enter Email" required>
+                        </div>
+                        
+                        <!-- Change Password Section -->
+                        <div class="form-group">
+                            <label class="form-label">
+                                <input type="checkbox" id="changePasswordToggle" style="margin-right: 8px;">
+                                Change Password
+                            </label>
+                        </div>
+                        
+                        <div id="passwordFields" style="display: none;">
+                            <div class="form-group">
+                                <label for="new-password" class="form-label">New Password *</label>
+                                <div style="position: relative;">
+                                    <input type="password" id="new-password" class="swal2-input" placeholder="Enter New Password" style="padding-right: 40px;">
+                                    <i class="fas fa-eye password-toggle" onclick="togglePassword('new-password', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
                                 </div>
-                                <div class="form-group">
-                                    <small style="color: #666; font-size: 12px;">
-                                        Password must contain at least 5 lowercase letters, 1 uppercase letter, 2 numbers, and be at least 8 characters long
-                                    </small>
+                                <div id="password-strength" style="margin-top: 5px; font-size: 12px;"></div>
+                            </div>
+                            <div class="form-group">
+                                <label for="confirm-password" class="form-label">Confirm Password *</label>
+                                <div style="position: relative;">
+                                    <input type="password" id="confirm-password" class="swal2-input" placeholder="Confirm New Password" style="padding-right: 40px;">
+                                    <i class="fas fa-eye password-toggle" onclick="togglePassword('confirm-password', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
                                 </div>
+                                <div id="password-match" style="margin-top: 5px; font-size: 12px;"></div>
+                            </div>
+                            <div class="form-group">
+                                <small style="color: #666; font-size: 12px;">
+                                    Password must contain at least 5 lowercase letters, 1 uppercase letter, 2 numbers, and be at least 8 characters long
+                                </small>
                             </div>
                         </div>
-                        `,
+                    </div>
+                    `,
                         focusConfirm: false,
                         showCancelButton: true,
                         confirmButtonText: 'Update Admin',
                         cancelButtonText: 'Cancel',
+                        width: '600px',
                         didOpen: () => {
-                            // Add hover effect to profile image
+                            // Add hover effect to profile image and GCash QR
                             const profileImg = document.getElementById('editProfilePreview');
-                            profileImg.addEventListener('mouseenter', function () {
-                                this.style.transform = 'scale(1.05)';
-                                this.style.borderColor = '#3b82f6';
-                            });
-                            profileImg.addEventListener('mouseleave', function () {
-                                this.style.transform = 'scale(1)';
-                                this.style.borderColor = '#e5e7eb';
+                            const gcashQrImg = document.getElementById('editGcashQrPreview');
+
+                            [profileImg, gcashQrImg].forEach(img => {
+                                img.addEventListener('mouseenter', function () {
+                                    this.style.transform = 'scale(1.05)';
+                                    this.style.borderColor = '#3b82f6';
+                                });
+                                img.addEventListener('mouseleave', function () {
+                                    this.style.transform = 'scale(1)';
+                                    this.style.borderColor = '#e5e7eb';
+                                });
                             });
 
                             // Handle password toggle checkbox
@@ -269,7 +296,6 @@
                                     passwordFields.style.display = 'block';
                                 } else {
                                     passwordFields.style.display = 'none';
-                                    // Clear password fields when hidden
                                     newPasswordField.value = '';
                                     confirmPasswordField.value = '';
                                     passwordStrengthDiv.innerHTML = '';
@@ -295,17 +321,17 @@
 
                                 switch (strength) {
                                     case 'Strong':
-                                        strengthColor = '#28a745'; // Green
+                                        strengthColor = '#28a745';
                                         strengthText = '✓ Strong password';
                                         this.setCustomValidity('');
                                         break;
                                     case 'Moderate':
-                                        strengthColor = '#ffc107'; // Yellow
+                                        strengthColor = '#ffc107';
                                         strengthText = '⚠ Moderate password - add more complexity';
                                         this.setCustomValidity('Password is not strong enough');
                                         break;
                                     case 'Weak':
-                                        strengthColor = '#dc3545'; // Red
+                                        strengthColor = '#dc3545';
                                         strengthText = '✗ Weak password - needs improvement';
                                         this.setCustomValidity('Password is too weak');
                                         break;
@@ -313,7 +339,6 @@
 
                                 passwordStrengthDiv.innerHTML = `<span style="color: ${strengthColor};">${strengthText}</span>`;
 
-                                // Re-check confirm password when new password changes
                                 if (confirmPasswordField.value) {
                                     confirmPasswordField.dispatchEvent(new Event('input'));
                                 }
@@ -345,6 +370,7 @@
                             const lastName = document.getElementById('last-name').value.trim();
                             const email = document.getElementById('email').value.trim();
                             const image = document.getElementById('editImageInput').files[0];
+                            const gcashQr = document.getElementById('editGcashQrInput').files[0];
                             const changePassword = document.getElementById('changePasswordToggle').checked;
                             const newPassword = document.getElementById('new-password').value;
                             const confirmPassword = document.getElementById('confirm-password').value;
@@ -354,14 +380,12 @@
                                 return false;
                             }
 
-                            // Validate email format
                             const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                             if (!emailPattern.test(email)) {
                                 Swal.showValidationMessage('Please enter a valid email address');
                                 return false;
                             }
 
-                            // Validate password if changing
                             if (changePassword) {
                                 if (!newPassword || !confirmPassword) {
                                     Swal.showValidationMessage('Both password fields are required when changing password');
@@ -387,6 +411,7 @@
                             formData.append('last_name', lastName);
                             formData.append('email', email);
                             if (image) formData.append('image', image);
+                            if (gcashQr) formData.append('gcash_qr', gcashQr);
                             if (changePassword) {
                                 formData.append('change_password', '1');
                                 formData.append('new_password', newPassword);
@@ -396,7 +421,6 @@
                         }
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            // Show loading state
                             Swal.fire({
                                 title: 'Updating Admin...',
                                 text: 'Please wait while we process your request.',
