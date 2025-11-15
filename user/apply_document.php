@@ -38,28 +38,31 @@ $stmt->close();
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $purpose = $_POST['purpose'];
-    $additional_info = isset($_POST['additional_info']) ? $_POST['additional_info'] : '';
+    // Validate file upload first
+    if (!isset($_FILES['attachments']) || empty($_FILES['attachments']['name'][0])) {
+        $error_message = "no_files_uploaded";
+    } else {
+        $purpose = $_POST['purpose'];
+        $additional_info = isset($_POST['additional_info']) ? $_POST['additional_info'] : '';
 
-    // Generate unique request ID
-    $request_id = 'BR-' . date('Y') . '-' . str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT);
+        // Generate unique request ID
+        $request_id = 'BR-' . date('Y') . '-' . str_pad(rand(1, 999999), 6, '0', STR_PAD_LEFT);
 
-    // Calculate expected date based on processing days
-    $processing_days = intval(filter_var($document['processing_days'], FILTER_SANITIZE_NUMBER_INT));
-    $expected_date = date('Y-m-d', strtotime("+$processing_days days"));
+        // Calculate expected date based on processing days
+        $processing_days = intval(filter_var($document['processing_days'], FILTER_SANITIZE_NUMBER_INT));
+        $expected_date = date('Y-m-d', strtotime("+$processing_days days"));
 
-    // Insert request
-    $insert_query = "INSERT INTO document_requests (request_id, user_id, document_type_id, purpose, additional_info, expected_date) 
-                   VALUES (?, ?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($insert_query);
-    $stmt->bind_param("siisss", $request_id, $user_id, $document_id, $purpose, $additional_info, $expected_date);
+        // Insert request
+        $insert_query = "INSERT INTO document_requests (request_id, user_id, document_type_id, purpose, additional_info, expected_date) 
+                       VALUES (?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($insert_query);
+        $stmt->bind_param("siisss", $request_id, $user_id, $document_id, $purpose, $additional_info, $expected_date);
 
-    if ($stmt->execute()) {
-        $new_request_id = $stmt->insert_id;
-        $stmt->close();
+        if ($stmt->execute()) {
+            $new_request_id = $stmt->insert_id;
+            $stmt->close();
 
-        // Handle file uploads if any
-        if (isset($_FILES['attachments']) && !empty($_FILES['attachments']['name'][0])) {
+            // Handle file uploads
             $upload_dir = "../uploads/document_requests/";
             if (!file_exists($upload_dir)) {
                 mkdir($upload_dir, 0777, true);
@@ -74,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     if (move_uploaded_file($file_tmp, $file_path)) {
                         $attach_query = "INSERT INTO request_attachments (request_id, file_name, file_path, file_type) 
-                            VALUES (?, ?, ?, ?)";
+                                VALUES (?, ?, ?, ?)";
                         $stmt = $conn->prepare($attach_query);
                         $stmt->bind_param("isss", $new_request_id, $filename, $file_path, $file_ext);
                         $stmt->execute();
@@ -82,20 +85,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
             }
-        }
 
-        $today = date('Y-m-d');
-        $limit_query = "INSERT INTO user_daily_request_limits (user_id, request_date, certificate_count) 
-                    VALUES (?, ?, 1) 
-                    ON DUPLICATE KEY UPDATE certificate_count = certificate_count + 1";
-        $limit_stmt = $conn->prepare($limit_query);
-        $limit_stmt->bind_param("is", $user_id, $today);
-        $limit_stmt->execute();
-        $limit_stmt->close();
-        header("Location: certificates.php?success=request_submitted");
-        exit();
-    } else {
-        $error_message = "Failed to submit request. Please try again.";
+            $today = date('Y-m-d');
+            $limit_query = "INSERT INTO user_daily_request_limits (user_id, request_date, certificate_count) 
+                        VALUES (?, ?, 1) 
+                        ON DUPLICATE KEY UPDATE certificate_count = certificate_count + 1";
+            $limit_stmt = $conn->prepare($limit_query);
+            $limit_stmt->bind_param("is", $user_id, $today);
+            $limit_stmt->execute();
+            $limit_stmt->close();
+
+            header("Location: certificates.php?success=request_submitted");
+            exit();
+        } else {
+            $error_message = "Failed to submit request. Please try again.";
+        }
     }
 }
 ?>
@@ -105,7 +109,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <?php include '../components/header_links.php'; ?>
     <?php include '../components/user_side_header.php'; ?>
-
 </head>
 
 <body>
@@ -129,12 +132,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             </div>
 
-            <?php if (isset($error_message)): ?>
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-circle"></i> <?php echo $error_message; ?>
-                </div>
-            <?php endif; ?>
-
             <?php if ($document['requirements']): ?>
                 <div class="info-box">
                     <h4><i class="fas fa-clipboard-list"></i> Requirements</h4>
@@ -142,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
             <?php endif; ?>
 
-            <form method="POST" enctype="multipart/form-data">
+            <form method="POST" enctype="multipart/form-data" id="requestForm">
                 <div class="form-group">
                     <label for="fullname">Full Name</label>
                     <input type="text" id="fullname"
@@ -163,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <div class="form-group">
-                    <label>Supporting Documents (Optional)</label>
+                    <label>Supporting Documents <span style="color: red;">*</span></label>
                     <div class="file-upload-area" onclick="document.getElementById('attachments').click()">
                         <i class="fas fa-cloud-upload-alt"></i>
                         <h4>Click to upload files</h4>
@@ -201,6 +198,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 fileNames.innerHTML = '';
             }
         }
+
+        // Form validation with SweetAlert
+        document.getElementById('requestForm').addEventListener('submit', function (e) {
+            const fileInput = document.getElementById('attachments');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                e.preventDefault();
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'No Files Uploaded',
+                    text: 'Please upload at least one supporting document before submitting your request.',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#3085d6'
+                });
+
+                return false;
+            }
+        });
+
+        // Show SweetAlert if there's an error from server-side validation
+        <?php if (isset($error_message) && $error_message === 'no_files_uploaded'): ?>
+            Swal.fire({
+                icon: 'error',
+                title: 'Upload Required',
+                text: 'Please upload at least one supporting document to proceed with your request.',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#3085d6'
+            });
+        <?php endif; ?>
     </script>
 </body>
 
