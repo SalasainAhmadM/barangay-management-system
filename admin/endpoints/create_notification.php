@@ -30,6 +30,7 @@ $userId = $data['userId'];
 $type = $data['type'];
 $title = trim($data['title']);
 $message = trim($data['message']);
+$streetFilter = isset($data['streetFilter']) ? $data['streetFilter'] : null;
 
 // Map type to icon
 $iconMap = [
@@ -56,27 +57,51 @@ try {
         // Get users who have the preference enabled for this notification type
         $preferenceColumn = $preferenceMap[$type] ?? null;
 
+        // Build the query with street filter
+        $whereConditions = [];
+        $params = [];
+        $types = "";
+
         if ($preferenceColumn) {
-            // Query users with preference enabled (or no preference set, default to enabled)
-            $userQuery = "
-                SELECT u.id 
-                FROM user u
-                LEFT JOIN notification_preferences np ON u.id = np.user_id
-                WHERE np.{$preferenceColumn} = 1 OR np.{$preferenceColumn} IS NULL
-            ";
-        } else {
-            // For types without preference mapping, send to all users
-            $userQuery = "SELECT id FROM user";
+            // Add preference condition
+            $whereConditions[] = "(np.{$preferenceColumn} = 1 OR np.{$preferenceColumn} IS NULL)";
         }
 
-        $userStmt = $conn->query($userQuery);
+        // Add street filter if provided and not "all"
+        if ($streetFilter && $streetFilter !== 'all') {
+            $whereConditions[] = "u.street_name = ?";
+            $params[] = $streetFilter;
+            $types .= "s";
+        }
+
+        $whereClause = !empty($whereConditions) ? "WHERE " . implode(" AND ", $whereConditions) : "";
+
+        $userQuery = "
+            SELECT u.id, u.first_name, u.middle_name, u.last_name, u.street_name
+            FROM user u
+            LEFT JOIN notification_preferences np ON u.id = np.user_id
+            {$whereClause}
+        ";
+
+        if (!empty($params)) {
+            $userStmt = $conn->prepare($userQuery);
+            $userStmt->bind_param($types, ...$params);
+            $userStmt->execute();
+            $userResult = $userStmt->get_result();
+        } else {
+            $userResult = $conn->query($userQuery);
+        }
+
         $userIds = [];
-        while ($row = $userStmt->fetch_assoc()) {
+        $userNames = [];
+        while ($row = $userResult->fetch_assoc()) {
             $userIds[] = $row['id'];
+            $userNames[] = $row['first_name'] . ' ' . $row['middle_name'] . ' ' . $row['last_name'];
         }
 
         if (empty($userIds)) {
-            throw new Exception("No users found with this notification preference enabled");
+            throw new Exception("No users found with this notification preference enabled" .
+                ($streetFilter && $streetFilter !== 'all' ? " in {$streetFilter}" : ""));
         }
 
         // Insert notification for each user
@@ -96,7 +121,8 @@ try {
 
         // Log to activity_logs
         $activity = "Bulk Notification Created";
-        $description = "Created '$type' notification for all users with preference enabled ($insertedCount users). Title: '$title'";
+        $streetInfo = ($streetFilter && $streetFilter !== 'all') ? " in {$streetFilter}" : " (all streets)";
+        $description = "Created '$type' notification for all users with preference enabled ($insertedCount users{$streetInfo}). Title: '$title'";
 
         $logStmt = $conn->prepare("
             INSERT INTO activity_logs 
@@ -108,9 +134,15 @@ try {
 
         $conn->commit();
 
+        $successMessage = "Notification sent to $insertedCount user(s) successfully";
+        if ($streetFilter && $streetFilter !== 'all') {
+            $successMessage .= " in {$streetFilter}";
+        }
+
         echo json_encode([
             'success' => true,
-            'message' => "Notification sent to $insertedCount users successfully"
+            'message' => $successMessage,
+            'count' => $insertedCount
         ]);
 
     } else {
@@ -123,7 +155,7 @@ try {
         if ($preferenceColumn) {
             // Check if user has this notification type enabled
             $userCheck = $conn->prepare("
-                SELECT u.first_name, u.middle_name, u.last_name, 
+                SELECT u.first_name, u.middle_name, u.last_name, u.street_name,
                        COALESCE(np.{$preferenceColumn}, 1) as preference_enabled
                 FROM user u
                 LEFT JOIN notification_preferences np ON u.id = np.user_id
@@ -132,7 +164,7 @@ try {
         } else {
             // For types without preference mapping, check user only
             $userCheck = $conn->prepare("
-                SELECT first_name, middle_name, last_name, 1 as preference_enabled 
+                SELECT first_name, middle_name, last_name, street_name, 1 as preference_enabled 
                 FROM user 
                 WHERE id = ?
             ");
@@ -157,7 +189,7 @@ try {
             exit();
         }
 
-        $userName = $user['first_name'] . ' ' . $user['middle_name'] . ' ' . $user['last_name'];
+        $userName = trim($user['first_name'] . ' ' . $user['middle_name'] . ' ' . $user['last_name']);
 
         // Insert notification
         $stmt = $conn->prepare("

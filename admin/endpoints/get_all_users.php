@@ -22,10 +22,11 @@ try {
             u.last_name,
             u.email,
             u.contact_number,
+            u.street_name,
             COALESCE(np.waste_reminders, 1) as waste_reminders,
             COALESCE(np.request_updates, 1) as request_updates,
             COALESCE(np.announcements, 1) as announcements,
-            COALESCE(np.sms_notifications, 1) as sms_notifications
+            COALESCE(np.sms_notifications, 0) as sms_notifications
         FROM user u
         LEFT JOIN notification_preferences np ON u.id = np.user_id
         ORDER BY u.first_name ASC, u.last_name ASC
@@ -43,6 +44,7 @@ try {
             'last_name' => $row['last_name'],
             'email' => $row['email'],
             'contact_number' => $row['contact_number'],
+            'street_name' => $row['street_name'] ?? '',
             'preferences' => [
                 'waste_reminders' => (bool) $row['waste_reminders'],
                 'request_updates' => (bool) $row['request_updates'],
@@ -61,7 +63,7 @@ try {
     error_log("Error in get_all_users.php: " . $e->getMessage());
     echo json_encode([
         'success' => false,
-        'message' => 'Database error: ' . $e->getMessage()
+        'message' => 'Failed to fetch users: ' . $e->getMessage()
     ]);
 }
 
