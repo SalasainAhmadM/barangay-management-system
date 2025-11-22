@@ -386,11 +386,13 @@ $totalItems = $activeTab === 'requests' ? $totalRequests : $totalTypes;
 
             <?php if ($activeTab === 'requests'): ?>
                 <!-- Document Requests Table -->
+                <!-- Update the Document Requests Table section -->
                 <div class="table-responsive">
                     <table class="residents-table" id="requestsTable">
                         <thead>
                             <tr>
                                 <th>Request ID</th>
+                                <th>Serial Number</th>
                                 <th>Requester</th>
                                 <th>Document</th>
                                 <th>Type</th>
@@ -398,6 +400,7 @@ $totalItems = $activeTab === 'requests' ? $totalRequests : $totalTypes;
                                 <th>Fee</th>
                                 <th>Status</th>
                                 <th>Date Submitted</th>
+                                <th>Date Issued</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -407,6 +410,15 @@ $totalItems = $activeTab === 'requests' ? $totalRequests : $totalTypes;
                                     <tr>
                                         <td>
                                             <div class="resident-name"><?= htmlspecialchars($request['request_id']); ?></div>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($request['serial_number'])): ?>
+                                                <span style="font-family: monospace; font-weight: 600; color: #00247c;">
+                                                    <?= htmlspecialchars($request['serial_number']); ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span style="color: #9ca3af;">—</span>
+                                            <?php endif; ?>
                                         </td>
                                         <td>
                                             <div class="resident-name">
@@ -456,6 +468,15 @@ $totalItems = $activeTab === 'requests' ? $totalRequests : $totalTypes;
                                         </td>
                                         <td><?= date("M d, Y", strtotime($request['submitted_date'])); ?></td>
                                         <td>
+                                            <?php if (!empty($request['date_issued'])): ?>
+                                                <span style="color: #059669; font-weight: 600;">
+                                                    <?= date("M d, Y", strtotime($request['date_issued'])); ?>
+                                                </span>
+                                            <?php else: ?>
+                                                <span style="color: #9ca3af;">—</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
                                             <div class="action-buttons">
                                                 <button class="btn btn-sm btn-view"
                                                     onclick="viewRequestDetails(<?= $request['id']; ?>)" title="View Details">
@@ -475,7 +496,7 @@ $totalItems = $activeTab === 'requests' ? $totalRequests : $totalTypes;
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <tr>
-                                    <td colspan="9" class="no-data">
+                                    <td colspan="11" class="no-data">
                                         <i class="fas fa-inbox"></i>
                                         <p>No requests found</p>
                                     </td>
@@ -485,7 +506,7 @@ $totalItems = $activeTab === 'requests' ? $totalRequests : $totalTypes;
                     </table>
                 </div>
 
-                <!-- Mobile Cards for Requests -->
+                <!-- Update Mobile Cards for Requests -->
                 <div class="mobile-cards">
                     <?php if (count($requests) > 0): ?>
                         <?php foreach ($requests as $request): ?>
@@ -496,6 +517,11 @@ $totalItems = $activeTab === 'requests' ? $totalRequests : $totalTypes;
                                             <?= htmlspecialchars($request['first_name'] . ' ' . $request['last_name']); ?>
                                         </div>
                                         <div class="resident-email"><?= htmlspecialchars($request['request_id']); ?></div>
+                                        <?php if (!empty($request['serial_number'])): ?>
+                                            <div style="font-family: monospace; font-size: 11px; color: #00247c; margin-top: 4px;">
+                                                <i class="fas fa-barcode"></i> <?= htmlspecialchars($request['serial_number']); ?>
+                                            </div>
+                                        <?php endif; ?>
                                     </div>
                                 </div>
                                 <div class="card-body">
@@ -527,6 +553,12 @@ $totalItems = $activeTab === 'requests' ? $totalRequests : $totalTypes;
                                     </div>
                                     <div class="card-field">Submitted:</div>
                                     <div class="card-value"><?= date("M d, Y", strtotime($request['submitted_date'])); ?></div>
+                                    <?php if (!empty($request['date_issued'])): ?>
+                                        <div class="card-field">Date Issued:</div>
+                                        <div class="card-value" style="color: #059669; font-weight: 600;">
+                                            <?= date("M d, Y", strtotime($request['date_issued'])); ?>
+                                        </div>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="card-actions">
                                     <button class="btn btn-sm btn-view" onclick="viewRequestDetails(<?= $request['id']; ?>)">

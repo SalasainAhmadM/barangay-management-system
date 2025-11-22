@@ -47,6 +47,7 @@ try {
             dr.request_id,
             dr.purpose,
             dr.submitted_date,
+            dr.serial_number,
             dt.name AS document_name,
             dt.type AS document_type,
             dt.fee,
@@ -80,6 +81,19 @@ try {
     $updateFields = "status = ?, updated_at = NOW()";
     $params = [$status];
     $types = "s";
+
+    // Generate serial number for approved, ready, or completed status (if not already generated)
+    if (in_array($status, ['approved', 'ready', 'completed']) && empty($requestInfo['serial_number'])) {
+        $serialNumber = generateSerialNumber($conn);
+        $updateFields .= ", serial_number = ?";
+        $params[] = $serialNumber;
+        $types .= "s";
+    }
+
+    // Add date_issued for ready or completed status
+    if (in_array($status, ['ready', 'completed'])) {
+        $updateFields .= ", date_issued = CURDATE()";
+    }
 
     // Add date fields based on status
     if ($status === 'approved') {
@@ -131,6 +145,10 @@ try {
             // Build readable description
             $description = "Updated the status of request ID {$requestId} for '{$docName}' to '{$status}'.";
 
+            if (isset($serialNumber)) {
+                $description .= " Serial Number: {$serialNumber}.";
+            }
+
             if ($pdfFilename) {
                 $description .= " Document file generated: {$pdfFilename}.";
             }
@@ -155,7 +173,8 @@ try {
             echo json_encode([
                 'success' => true,
                 'message' => 'Status updated successfully',
-                'pdf_generated' => ($pdfFilename !== null)
+                'pdf_generated' => ($pdfFilename !== null),
+                'serial_number' => $serialNumber ?? null
             ]);
         } else {
             $conn->rollback();
@@ -177,6 +196,43 @@ try {
 
 if (isset($conn)) {
     $conn->close();
+}
+
+/**
+ * Generate a unique serial number for the document
+ * Format: BRG-YYYY-XXXXX (e.g., BRG-2025-00001)
+ */
+function generateSerialNumber($conn)
+{
+    $year = date('Y');
+    $prefix = "BRG-{$year}-";
+
+    // Get the last serial number for this year
+    $stmt = $conn->prepare("
+        SELECT serial_number 
+        FROM document_requests 
+        WHERE serial_number LIKE ? 
+        ORDER BY serial_number DESC 
+        LIMIT 1
+    ");
+    $pattern = $prefix . '%';
+    $stmt->bind_param("s", $pattern);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($row = $result->fetch_assoc()) {
+        // Extract the number part and increment
+        $lastNumber = intval(substr($row['serial_number'], -5));
+        $newNumber = $lastNumber + 1;
+    } else {
+        // First serial number of the year
+        $newNumber = 1;
+    }
+
+    $stmt->close();
+
+    // Format: BRG-2025-00001
+    return $prefix . str_pad($newNumber, 5, '0', STR_PAD_LEFT);
 }
 
 /**
@@ -255,6 +311,7 @@ function generateDocumentPDF($requestInfo)
         return false;
     }
 }
+
 /**
  * Generate HTML content for the PDF document
  * @param array $requestInfo - Request information
@@ -272,8 +329,8 @@ function generateDocumentHTML($requestInfo)
     } else {
         return generateDefaultCertificateHTML($requestInfo);
     }
-
 }
+
 /** 
  * Generate HTML content specifically for Barangay Clearance 
  * @param array $requestInfo - Request information
@@ -287,6 +344,7 @@ function generateClearanceCertificateHTML($requestInfo)
     $day = date('j');
     $month = date('F');
     $year = date('Y');
+    $serialNumber = $requestInfo['serial_number'] ?? 'N/A';
 
     // Image paths (ensure these exist in tcpdf/images/)
     $headerLogo = K_PATH_IMAGES . 'barangaycouncil.png';
@@ -298,6 +356,12 @@ function generateClearanceCertificateHTML($requestInfo)
             font-family: "Times New Roman", Times, serif;
             font-size: 12pt;
             color: #000;
+        }
+        .serial-number {
+            text-align: right;
+            font-size: 10pt;
+            color: #666;
+            margin-bottom: 10px;
         }
         .title {
             font-size: 16pt;
@@ -328,12 +392,6 @@ function generateClearanceCertificateHTML($requestInfo)
         .signature .position {
             font-weight: bold;
         }
-        .seal {
-            position: absolute;
-            left: 100px;
-            margin-top: 100px;
-            font-style: italic;
-        }
     </style>
 
     <table cellspacing="0" cellpadding="0" style="width:100%;">
@@ -354,6 +412,8 @@ function generateClearanceCertificateHTML($requestInfo)
     <br>
     <hr style="border: 2px solid black; width: 100%; margin: 0 auto;">
     <br>
+    
+    <div class="serial-number">Serial No.: <b>' . $serialNumber . '</b></div>
 
     <div class="title">BARANGAY CLEARANCE</div>
 
@@ -399,7 +459,6 @@ function generateClearanceCertificateHTML($requestInfo)
     return $html;
 }
 
-
 /**
  * Generate HTML content specifically for Certificate of Residency
  * @param array $requestInfo - Request information
@@ -413,8 +472,9 @@ function generateResidencyCertificateHTML($requestInfo)
     $day = date('j');
     $month = date('F');
     $year = date('Y');
+    $serialNumber = $requestInfo['serial_number'] ?? 'N/A';
 
-    // Paths for images (ensure both exist in tcpdf/images/)
+    // Paths for images
     $headerLogo = K_PATH_IMAGES . 'barangaycouncil.png';
     $footerLogo = K_PATH_IMAGES . 'logocabatoadmin.png';
 
@@ -425,18 +485,11 @@ function generateResidencyCertificateHTML($requestInfo)
             font-size: 12pt;
             color: #000;
         }
-        .header-section {
-            text-align: center;
-            line-height: 1.3;
-            margin-bottom: 25px;
-            position: relative;
-        }
-        .header-section img {
-            width: 75px;
-            height: 75px;
-            position: absolute;
-            top: 15px;
-            left: 60px;
+        .serial-number {
+            text-align: right;
+            font-size: 10pt;
+            color: #666;
+            margin-bottom: 10px;
         }
         .title {
             font-size: 14pt;
@@ -497,6 +550,8 @@ function generateResidencyCertificateHTML($requestInfo)
     <br>
     <hr style="border: 2px solid black; width: 100%; margin: 0 auto;">
     <br>
+    
+    <div class="serial-number">Serial No.: <b>' . $serialNumber . '</b></div>
 
     <div class="title">CERTIFICATION OF RESIDENCY</div>
 
@@ -540,11 +595,11 @@ function generateResidencyCertificateHTML($requestInfo)
                 <img src="' . $footerLogo . '" width="70">
             </td>
         </tr>
-    </table>
-';
+    </table>';
 
     return $html;
 }
+
 /**
  * Generate HTML content specifically for Certificate of Indigency
  * @param array $requestInfo - Request information
@@ -558,9 +613,9 @@ function generateIndigencyCertificateHTML($requestInfo)
     $day = date('j');
     $month = date('F');
     $year = date('Y');
+    $serialNumber = $requestInfo['serial_number'] ?? 'N/A';
 
-    // ✅ Use absolute path for TCPDF image rendering
-    $imagePath = K_PATH_IMAGES . 'barangaycouncil.png'; // Make sure bms.png is inside tcpdf/images folder
+    $imagePath = K_PATH_IMAGES . 'barangaycouncil.png';
 
     $html = '
     <style>
@@ -569,27 +624,11 @@ function generateIndigencyCertificateHTML($requestInfo)
             font-size: 12pt;
             color: #000;
         }
-        .header-section {
-            text-align: center;
-            line-height: 1.3;
-            margin-bottom: 25px;
-            position: relative;
-        }
-        .header-section img {
-            width: 75px;
-            height: 75px;
-            position: absolute;
-            top: 15px;
-            left: 60px;
-        }
-        .barangay-name {
-            font-size: 14pt;
-            font-weight: bold;
-            margin-top: 10px;
-        }
-        .facebook-link {
-            font-size: 9pt;
-            margin-top: 2px;
+        .serial-number {
+            text-align: right;
+            font-size: 10pt;
+            color: #666;
+            margin-bottom: 10px;
         }
         .title {
             font-size: 14pt;
@@ -659,6 +698,8 @@ function generateIndigencyCertificateHTML($requestInfo)
     <br>
     <hr style="border: 2px solid black; width: 100%; margin: 0 auto;">
     <br>
+    
+    <div class="serial-number">Serial No.: <b>' . $serialNumber . '</b></div>
 
     <div class="title">CERTIFICATE OF INDIGENCY</div>
 
@@ -700,8 +741,6 @@ function generateIndigencyCertificateHTML($requestInfo)
     return $html;
 }
 
-
-
 /**
  * Generate HTML content for default certificates
  * @param array $requestInfo - Request information
@@ -711,6 +750,7 @@ function generateDefaultCertificateHTML($requestInfo)
 {
     $fullName = trim($requestInfo['first_name'] . ' ' . ($requestInfo['middle_name'] ?? '') . ' ' . $requestInfo['last_name']);
     $currentDate = date('F d, Y');
+    $serialNumber = $requestInfo['serial_number'] ?? 'N/A';
 
     // Handle fee display
     $fee = floatval($requestInfo['fee'] ?? 0);
@@ -719,6 +759,12 @@ function generateDefaultCertificateHTML($requestInfo)
     $html = '
     <style>
         body { font-family: helvetica, sans-serif; }
+        .serial-number {
+            text-align: right;
+            font-size: 9px;
+            color: #666;
+            margin-bottom: 10px;
+        }
         .header-text {
             text-align: center;
             line-height: 1.6;
@@ -755,6 +801,8 @@ function generateDefaultCertificateHTML($requestInfo)
             font-size: 9px;
         }
     </style>
+    
+    <div class="serial-number">Serial No.: <b>' . $serialNumber . '</b></div>
     
     <div class="header-text">
         <b>Republic of the Philippines</b><br>

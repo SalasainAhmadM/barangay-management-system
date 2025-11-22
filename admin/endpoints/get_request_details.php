@@ -21,11 +21,13 @@ try {
         SELECT 
             dr.id,
             dr.request_id,
+            dr.serial_number,
             dr.user_id,
             dr.document_type_id,
             dr.purpose,
             dr.additional_info,
             dr.status,
+            dr.date_issued,
             dr.payment_status,
             dr.payment_receipt,
             dr.payment_date,
@@ -76,6 +78,10 @@ try {
         $request['payment_status'] = $request['payment_status'] ?? 'unpaid';
         $request['payment_receipt'] = $request['payment_receipt'] ?? null;
         $request['payment_date'] = $request['payment_date'] ?? null;
+
+        // Ensure new fields are set even if null
+        $request['serial_number'] = $request['serial_number'] ?? null;
+        $request['date_issued'] = $request['date_issued'] ?? null;
 
         // Fetch uploaded documents/attachments for this request
         $filesStmt = $conn->prepare("

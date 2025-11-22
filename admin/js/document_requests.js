@@ -237,6 +237,10 @@ function viewRequestDetails(requestId) {
                     year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
                 }) : 'N/A';
 
+                const dateIssued = request.date_issued ? new Date(request.date_issued).toLocaleDateString('en-US', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                }) : null;
+
                 // Profile image
                 const profileImage = request.user_image ? `../assets/images/user/${request.user_image}` : '../assets/images/user.png';
 
@@ -269,6 +273,28 @@ function viewRequestDetails(requestId) {
                 const typeStyle = request.document_type === 'certificate'
                     ? 'background: #ddd6fe; color: #7c3aed;'
                     : 'background: #fef3c7; color: #d97706;';
+
+                // Serial Number HTML - Show if exists
+                const serialNumberHTML = request.serial_number ? `
+                    <div class="info-item-simple">
+                        <div class="info-label-simple">Serial Number</div>
+                        <div class="info-value-simple">
+                            <span style="font-family: monospace; font-weight: 700; color: #00247c; font-size: 14px; background: #f0f4ff; padding: 6px 12px; border-radius: 6px; border: 2px solid #00247c;">
+                                <i class="fas fa-barcode"></i> ${request.serial_number}
+                            </span>
+                        </div>
+                    </div>
+                ` : '';
+
+                // Date Issued HTML - Show if exists
+                const dateIssuedHTML = dateIssued ? `
+                    <div class="info-item-simple">
+                        <div class="info-label-simple">Date Issued</div>
+                        <div class="info-value-simple" style="color: #059669; font-weight: 600;">
+                            <i class="fas fa-calendar-check"></i> ${dateIssued}
+                        </div>
+                    </div>
+                ` : '';
 
                 // Payment Receipt Section - Show if there's a receipt OR if approved with fee
                 let paymentReceiptHTML = '';
@@ -375,6 +401,7 @@ function viewRequestDetails(requestId) {
                                 <div class="info-label-simple">Request ID</div>
                                 <div class="info-value-simple">${request.request_id}</div>
                             </div>
+                            ${serialNumberHTML}
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Document Type</div>
                                 <div class="info-value-simple">
@@ -401,6 +428,7 @@ function viewRequestDetails(requestId) {
                                 <div class="info-label-simple">Processing Time</div>
                                 <div class="info-value-simple">${request.processing_days || 'N/A'}</div>
                             </div>
+                            ${dateIssuedHTML}
                             ${request.additional_info ? `
                             <div class="info-item-simple full-width">
                                 <div class="info-label-simple">Additional Information</div>
@@ -454,6 +482,13 @@ function viewRequestDetails(requestId) {
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Date Approved</div>
                                 <div class="info-value-simple">${approvedDate}</div>
+                            </div>` : ''}
+                            ${dateIssued ? `
+                            <div class="info-item-simple">
+                                <div class="info-label-simple">Date Issued</div>
+                                <div class="info-value-simple" style="color: #059669; font-weight: 600;">
+                                    <i class="fas fa-calendar-check"></i> ${dateIssued}
+                                </div>
                             </div>` : ''}
                             ${request.released_date ? `
                             <div class="info-item-simple">
