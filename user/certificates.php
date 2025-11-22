@@ -408,11 +408,29 @@ $stmt->close();
                     </span>
                   </div>
 
+                  <?php if (in_array($request['status'], ['approved', 'ready', 'completed']) && !empty($request['serial_number'])): ?>
+                    <div class="detail-item">
+                      <span class="detail-label">Serial Number</span>
+                      <span class="detail-value" style="font-weight: 600; color: #667eea;">
+                        <?php echo htmlspecialchars($request['serial_number']); ?>
+                      </span>
+                    </div>
+                  <?php endif; ?>
+
                   <?php if ($request['approved_date']): ?>
                     <div class="detail-item">
                       <span class="detail-label">Approved Date</span>
                       <span class="detail-value">
                         <?php echo date('M d, Y', strtotime($request['approved_date'])); ?>
+                      </span>
+                    </div>
+                  <?php endif; ?>
+
+                  <?php if (in_array($request['status'], ['ready', 'completed']) && !empty($request['date_issued'])): ?>
+                    <div class="detail-item">
+                      <span class="detail-label">Date Issued</span>
+                      <span class="detail-value" style="font-weight: 600; color: #28a745;">
+                        <?php echo date('M d, Y', strtotime($request['date_issued'])); ?>
                       </span>
                     </div>
                   <?php endif; ?>
@@ -837,6 +855,12 @@ $stmt->close();
               day: 'numeric'
             }) : 'N/A';
 
+            const dateIssued = request.date_issued ? new Date(request.date_issued).toLocaleDateString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }) : 'N/A';
+
             // Get user profile image path
             const profileImage = request.user_image ?
               `../assets/images/user/${request.user_image}` :
@@ -869,149 +893,173 @@ $stmt->close();
               'background: #ddd6fe; color: #7c3aed;' :
               'background: #fef3c7; color: #d97706;';
 
+            // Check if serial number should be displayed
+            const showSerialNumber = ['approved', 'ready', 'completed'].includes(request.status) && request.serial_number;
+
+            // Check if date issued should be displayed
+            const showDateIssued = ['ready', 'completed'].includes(request.status) && request.date_issued;
+
             Swal.fire({
               title: 'Document Request Details',
               html: `
-                    <div class="resident-details-container-simple">
-                        <!-- Requester Header with Profile Image -->
-                        <div class="profile-header-simple">
-                            <img src="${profileImage}" alt="Profile" class="resident-profile-image-simple">
-                            <div class="profile-info-simple">
-                                <div class="resident-name-simple">
-                                    ${request.first_name} ${request.middle_name || ''} ${request.last_name}
-                                </div>
-                                <div class="resident-email-simple">${request.email || 'N/A'}</div>
-                                <div style="display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 8px; ${getStatusStyle(request.status)}">
-                                    ${request.status.toUpperCase().replace('_', ' ')}
-                                </div>
+                <div class="resident-details-container-simple">
+                    <!-- Requester Header with Profile Image -->
+                    <div class="profile-header-simple">
+                        <img src="${profileImage}" alt="Profile" class="resident-profile-image-simple">
+                        <div class="profile-info-simple">
+                            <div class="resident-name-simple">
+                                ${request.first_name} ${request.middle_name || ''} ${request.last_name}
                             </div>
-                        </div>
-                        
-                        <!-- Request Information Section -->
-                        <div class="section-header-simple">Request Information</div>
-                        <div class="resident-info-grid-simple">
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Request ID</div>
-                                <div class="info-value-simple">${request.request_id}</div>
+                            <div class="resident-email-simple">${request.email || 'N/A'}</div>
+                            <div style="display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; margin-top: 8px; ${getStatusStyle(request.status)}">
+                                ${request.status.toUpperCase().replace('_', ' ')}
                             </div>
-                            
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Document Type</div>
-                                <div class="info-value-simple">
-                                    <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; ${typeStyle}">
-                                        ${request.document_type.toUpperCase()}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <div class="info-item-simple full-width">
-                                <div class="info-label-simple">Document Name</div>
-                                <div class="info-value-simple">
-                                    <i class="fas ${request.icon}"></i> ${request.document_name}
-                                </div>
-                            </div>
-                            
-                            <div class="info-item-simple full-width">
-                                <div class="info-label-simple">Purpose</div>
-                                <div class="info-value-simple">${request.purpose || 'N/A'}</div>
-                            </div>
-                            
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Fee</div>
-                                <div class="info-value-simple">
-                                    ${request.fee == 0 ? '<span style="color: #059669; font-weight: 600;">Free</span>' : '₱' + parseFloat(request.fee).toFixed(2)}
-                                </div>
-                            </div>
-                            
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Processing Time</div>
-                                <div class="info-value-simple">${request.processing_days || 'N/A'}</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Requester Details Section -->
-                        <div class="section-header-simple">Requester Information</div>
-                        <div class="resident-info-grid-simple">
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">First Name</div>
-                                <div class="info-value-simple">${request.first_name || 'N/A'}</div>
-                            </div>
-                            
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Middle Name</div>
-                                <div class="info-value-simple">${request.middle_name || 'N/A'}</div>
-                            </div>
-                            
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Last Name</div>
-                                <div class="info-value-simple">${request.last_name || 'N/A'}</div>
-                            </div>
-                            
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Email Address</div>
-                                <div class="info-value-simple">${request.email || 'N/A'}</div>
-                            </div>
-                            
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Contact Number</div>
-                                <div class="info-value-simple">${request.contact_number || 'N/A'}</div>
-                            </div>
-                            
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Address</div>
-                                <div class="info-value-simple">${request.address || 'N/A'}</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Timeline Section -->
-                        <div class="section-header-simple">Request Timeline</div>
-                        <div class="resident-info-grid-simple">
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Date Submitted</div>
-                                <div class="info-value-simple">${submittedDate}</div>
-                            </div>
-                            
-                            ${request.expected_date && ['pending', 'processing'].includes(request.status) ? `
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Expected Completion</div>
-                                <div class="info-value-simple">${expectedDate}</div>
-                            </div>
-                            ` : ''}
-                            
-                            ${request.approved_date ? `
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Date Approved</div>
-                                <div class="info-value-simple">${approvedDate}</div>
-                            </div>
-                            ` : ''}
-                            
-                            ${request.released_date ? `
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Date Released</div>
-                                <div class="info-value-simple">${releasedDate}</div>
-                            </div>
-                            ` : ''}
-                            
-                            ${request.rejection_reason && request.status === 'rejected' ? `
-                            <div class="info-item-simple full-width">
-                                <div class="info-label-simple">Rejection Reason</div>
-                                <div class="info-value-simple" style="color: #dc2626; font-weight: 500;">
-                                    ${request.rejection_reason}
-                                </div>
-                            </div>
-                            ` : ''}
-                            
-                            ${request.cancellation_reason && request.status === 'cancelled' ? `
-                            <div class="info-item-simple full-width">
-                                <div class="info-label-simple">Cancellation Reason</div>
-                                <div class="info-value-simple" style="color: #6b7280;">
-                                    ${request.cancellation_reason}
-                                </div>
-                            </div>
-                            ` : ''}
                         </div>
                     </div>
-                `,
+                    
+                    <!-- Request Information Section -->
+                    <div class="section-header-simple">Request Information</div>
+                    <div class="resident-info-grid-simple">
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Request ID</div>
+                            <div class="info-value-simple">${request.request_id}</div>
+                        </div>
+                        
+                        ${showSerialNumber ? `
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Serial Number</div>
+                            <div class="info-value-simple" style="color: #667eea; font-weight: 600;">
+                                <i class="fas fa-hashtag"></i> ${request.serial_number}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Document Type</div>
+                            <div class="info-value-simple">
+                                <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: 600; ${typeStyle}">
+                                    ${request.document_type.toUpperCase()}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="info-item-simple full-width">
+                            <div class="info-label-simple">Document Name</div>
+                            <div class="info-value-simple">
+                                <i class="fas ${request.icon}"></i> ${request.document_name}
+                            </div>
+                        </div>
+                        
+                        <div class="info-item-simple full-width">
+                            <div class="info-label-simple">Purpose</div>
+                            <div class="info-value-simple">${request.purpose || 'N/A'}</div>
+                        </div>
+                        
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Fee</div>
+                            <div class="info-value-simple">
+                                ${request.fee == 0 ? '<span style="color: #059669; font-weight: 600;">Free</span>' : '₱' + parseFloat(request.fee).toFixed(2)}
+                            </div>
+                        </div>
+                        
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Processing Time</div>
+                            <div class="info-value-simple">${request.processing_days || 'N/A'}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Requester Details Section -->
+                    <div class="section-header-simple">Requester Information</div>
+                    <div class="resident-info-grid-simple">
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">First Name</div>
+                            <div class="info-value-simple">${request.first_name || 'N/A'}</div>
+                        </div>
+                        
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Middle Name</div>
+                            <div class="info-value-simple">${request.middle_name || 'N/A'}</div>
+                        </div>
+                        
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Last Name</div>
+                            <div class="info-value-simple">${request.last_name || 'N/A'}</div>
+                        </div>
+                        
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Email Address</div>
+                            <div class="info-value-simple">${request.email || 'N/A'}</div>
+                        </div>
+                        
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Contact Number</div>
+                            <div class="info-value-simple">${request.contact_number || 'N/A'}</div>
+                        </div>
+                        
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Address</div>
+                            <div class="info-value-simple">${request.address || 'N/A'}</div>
+                        </div>
+                    </div>
+                    
+                    <!-- Timeline Section -->
+                    <div class="section-header-simple">Request Timeline</div>
+                    <div class="resident-info-grid-simple">
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Date Submitted</div>
+                            <div class="info-value-simple">${submittedDate}</div>
+                        </div>
+                        
+                        ${request.expected_date && ['pending', 'processing'].includes(request.status) ? `
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Expected Completion</div>
+                            <div class="info-value-simple">${expectedDate}</div>
+                        </div>
+                        ` : ''}
+                        
+                        ${request.approved_date ? `
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Date Approved</div>
+                            <div class="info-value-simple">${approvedDate}</div>
+                        </div>
+                        ` : ''}
+                        
+                        ${showDateIssued ? `
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Date Issued</div>
+                            <div class="info-value-simple" style="color: #28a745; font-weight: 600;">
+                                <i class="fas fa-calendar-check"></i> ${dateIssued}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${request.released_date ? `
+                        <div class="info-item-simple">
+                            <div class="info-label-simple">Date Released</div>
+                            <div class="info-value-simple">${releasedDate}</div>
+                        </div>
+                        ` : ''}
+                        
+                        ${request.rejection_reason && request.status === 'rejected' ? `
+                        <div class="info-item-simple full-width">
+                            <div class="info-label-simple">Rejection Reason</div>
+                            <div class="info-value-simple" style="color: #dc2626; font-weight: 500;">
+                                ${request.rejection_reason}
+                            </div>
+                        </div>
+                        ` : ''}
+                        
+                        ${request.cancellation_reason && request.status === 'cancelled' ? `
+                        <div class="info-item-simple full-width">
+                            <div class="info-label-simple">Cancellation Reason</div>
+                            <div class="info-value-simple" style="color: #6b7280;">
+                                ${request.cancellation_reason}
+                            </div>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `,
               customClass: {
                 popup: 'swal-view-simple'
               },

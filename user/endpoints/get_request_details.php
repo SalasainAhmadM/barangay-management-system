@@ -17,9 +17,11 @@ if ($request_id <= 0) {
     exit();
 }
 
-// Fetch request details with user information
+// Fetch request details with user information including serial_number and date_issued
 $query = "SELECT 
             dr.*,
+            dr.serial_number,
+            dr.date_issued,
             dt.name as document_name,
             dt.icon,
             dt.type as document_type,
@@ -48,6 +50,11 @@ $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
     $request = $result->fetch_assoc();
+
+    // Ensure null values are properly handled for the new fields
+    $request['serial_number'] = $request['serial_number'] ?? null;
+    $request['date_issued'] = $request['date_issued'] ?? null;
+
     echo json_encode(['success' => true, 'request' => $request]);
 } else {
     echo json_encode(['success' => false, 'message' => 'Request not found or unauthorized']);
