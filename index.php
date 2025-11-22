@@ -13,6 +13,10 @@ $systemLoginLogo = !empty($systemSettings['system_logo'])
 $loginBg = !empty($systemSettings['login_bg'])
     ? "./assets/images/settings/" . $systemSettings['login_bg']
     : "./assets/images/settings/bg.jpg";
+
+// Get saved form values from session
+$savedValues = $_SESSION['form_values'] ?? [];
+$fieldErrors = $_SESSION['field_errors'] ?? [];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -61,6 +65,17 @@ $loginBg = !empty($systemSettings['login_bg'])
         border-radius: 5px;
         border: 1px solid #ddd;
     }
+
+    .error-input {
+        border: 2px solid #dc3545 !important;
+    }
+
+    .error-message {
+        color: #dc3545;
+        font-size: 12px;
+        margin-top: 5px;
+        display: block;
+    }
 </style>
 
 <head>
@@ -70,7 +85,8 @@ $loginBg = !empty($systemSettings['login_bg'])
 </head>
 
 <body>
-    <div class="container">
+    <div
+        class="container <?= (!empty($fieldErrors) || (isset($_GET['register']) && $_GET['register'] === 'error')) ? 'change' : '' ?>">
         <div class="forms-container">
             <!-- SignIn Form -->
             <div class="form-control signin-form">
@@ -95,27 +111,65 @@ $loginBg = !empty($systemSettings['login_bg'])
                 <form action="./conn/endpoint/register.php" method="POST">
                     <h2>Create an Account</h2>
                     <div class="input-wrapper flex-wrapper">
-                        <input type="text" name="student_firstname" placeholder="First Name" required />
-                        <input type="text" name="student_middle" placeholder="M.I." />
+                        <input type="text" name="student_firstname" placeholder="First Name"
+                            value="<?= htmlspecialchars($savedValues['student_firstname'] ?? '') ?>"
+                            class="<?= isset($fieldErrors['student_firstname']) ? 'error-input' : '' ?>" required />
+                        <input type="text" name="student_middle" placeholder="M.I."
+                            value="<?= htmlspecialchars($savedValues['student_middle'] ?? '') ?>"
+                            class="<?= isset($fieldErrors['student_middle']) ? 'error-input' : '' ?>" />
                     </div>
-                    <input type="text" name="student_lastname" placeholder="Last Name" required />
-                    <input type="email" id="signup-email" name="email" placeholder="Email" required />
-                    <input type="number" id="signup-contact" name="contact" placeholder="Contact Number" required />
+                    <?php if (isset($fieldErrors['student_firstname'])): ?>
+                        <span class="error-message"><?= htmlspecialchars($fieldErrors['student_firstname']) ?></span>
+                    <?php endif; ?>
+
+                    <input type="text" name="student_lastname" placeholder="Last Name"
+                        value="<?= htmlspecialchars($savedValues['student_lastname'] ?? '') ?>"
+                        class="<?= isset($fieldErrors['student_lastname']) ? 'error-input' : '' ?>" required />
+                    <?php if (isset($fieldErrors['student_lastname'])): ?>
+                        <span class="error-message"><?= htmlspecialchars($fieldErrors['student_lastname']) ?></span>
+                    <?php endif; ?>
+
+                    <input type="email" id="signup-email" name="email" placeholder="Email"
+                        value="<?= htmlspecialchars($savedValues['email'] ?? '') ?>"
+                        class="<?= isset($fieldErrors['email']) ? 'error-input' : '' ?>" required />
+                    <?php if (isset($fieldErrors['email'])): ?>
+                        <span class="error-message"><?= htmlspecialchars($fieldErrors['email']) ?></span>
+                    <?php endif; ?>
+
+                    <input type="number" id="signup-contact" name="contact" placeholder="Contact Number"
+                        value="<?= htmlspecialchars($savedValues['contact'] ?? '') ?>"
+                        class="<?= isset($fieldErrors['contact']) ? 'error-input' : '' ?>" required />
                     <div class="validation-text" id="signup_contact_validation"></div>
+                    <?php if (isset($fieldErrors['contact'])): ?>
+                        <span class="error-message"><?= htmlspecialchars($fieldErrors['contact']) ?></span>
+                    <?php endif; ?>
 
                     <!-- Address Fields -->
                     <div class="input-wrapper flex-wrapper-address">
-                        <input type="text" name="house_number" id="house-number" placeholder="House Number" required />
-                        <input type="text" name="street_name" id="street-name" placeholder="Street Name" required />
+                        <input type="text" name="house_number" id="house-number" placeholder="House Number"
+                            value="<?= htmlspecialchars($savedValues['house_number'] ?? '') ?>"
+                            class="<?= isset($fieldErrors['house_number']) ? 'error-input' : '' ?>" required />
+                        <input type="text" name="street_name" id="street-name" placeholder="Street Name"
+                            value="<?= htmlspecialchars($savedValues['street_name'] ?? '') ?>"
+                            class="<?= isset($fieldErrors['street_name']) ? 'error-input' : '' ?>" required />
                     </div>
+                    <?php if (isset($fieldErrors['address'])): ?>
+                        <span class="error-message"><?= htmlspecialchars($fieldErrors['address']) ?></span>
+                    <?php endif; ?>
+
                     <input style="display: none;" type="text" name="barangay" id="barangay" value="Baliwasan" />
 
                     <div class="input-wrapper">
-                        <input type="password" id="signup-password" name="password" placeholder="Password" required />
+                        <input type="password" id="signup-password" name="password" placeholder="Password"
+                            class="<?= isset($fieldErrors['password']) ? 'error-input' : '' ?>" required />
                         <span class="toggle-password">
                             <i style="margin-bottom: 15px;" class="fas fa-eye"></i>
                         </span>
                     </div>
+                    <?php if (isset($fieldErrors['password'])): ?>
+                        <span class="error-message"><?= htmlspecialchars($fieldErrors['password']) ?></span>
+                    <?php endif; ?>
+
                     <div class="input-wrapper">
                         <input type="password" id="signup-confirm-password" name="confirm-password"
                             placeholder="Confirm password" required />
@@ -151,6 +205,12 @@ $loginBg = !empty($systemSettings['login_bg'])
     <?php include './components/cdn_scripts.php'; ?>
 
     <script>
+        <?php
+        // Clear form values and errors after displaying
+        unset($_SESSION['form_values']);
+        unset($_SESSION['field_errors']);
+        ?>
+
         <?php if (isset($_GET['register']) && $_GET['register'] === 'verify'): ?>
             window.onload = function () {
                 showVerificationModal();
@@ -228,8 +288,6 @@ $loginBg = !empty($systemSettings['login_bg'])
                         document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
                         document.body.classList.remove("swal2-shown", "swal2-height-auto");
                     },
-                }).then(() => {
-                    document.querySelector('.container').classList.add('sign-up-mode');
                 });
                 window.history.replaceState({}, document.title, window.location.pathname);
             };
@@ -416,7 +474,7 @@ $loginBg = !empty($systemSettings['login_bg'])
             if (emailRegex.test(email)) {
                 signupEmailField.setCustomValidity('');
                 signupInstructionText.textContent = '';
-                signupButton.disabled = false;
+                checkFormValidity();
             } else {
                 signupEmailField.setCustomValidity('Email must be a valid Gmail address');
                 signupInstructionText.style.color = '#8B0000';
@@ -436,9 +494,7 @@ $loginBg = !empty($systemSettings['login_bg'])
             if (contactRegex.test(contact)) {
                 signupContactField.setCustomValidity('');
                 signupContactValidation.textContent = '';
-                if (signupConfirmPasswordField.value === signupPasswordField.value && signupEmailField.validity.valid) {
-                    signupButton.disabled = false;
-                }
+                checkFormValidity();
             } else {
                 signupContactField.setCustomValidity('Invalid contact number');
                 signupContactValidation.style.color = '#8B0000';
@@ -449,6 +505,10 @@ $loginBg = !empty($systemSettings['login_bg'])
 
         // Confirm password match
         signupConfirmPasswordField.addEventListener('input', function () {
+            checkFormValidity();
+        });
+
+        function checkFormValidity() {
             if (signupConfirmPasswordField.value !== signupPasswordField.value) {
                 signupConfirmPasswordField.setCustomValidity('Passwords do not match');
                 signupButton.disabled = true;
@@ -460,7 +520,7 @@ $loginBg = !empty($systemSettings['login_bg'])
                     signupButton.disabled = true;
                 }
             }
-        });
+        }
 
         function forgotPassword() {
             Swal.fire({

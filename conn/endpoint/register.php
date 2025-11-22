@@ -28,9 +28,24 @@ function handleInitialRegistration($conn)
     $street_name = trim($_POST["street_name"]);
     $barangay = isset($_POST["barangay"]) ? trim($_POST["barangay"]) : "Baliwasan";
 
-    // Validate
+    // Save form values to session
+    $_SESSION['form_values'] = [
+        'student_firstname' => $first_name,
+        'student_middle' => $middle_name,
+        'student_lastname' => $last_name,
+        'email' => $email,
+        'contact' => $contact,
+        'house_number' => $house_number,
+        'street_name' => $street_name
+    ];
+
+    // Initialize field errors array
+    $_SESSION['field_errors'] = [];
+
+    // Validate password match
     if ($password !== $confirm_pass) {
         $_SESSION["register_error"] = "Passwords do not match.";
+        $_SESSION['field_errors']['password'] = "Passwords do not match";
         header("Location: ../../index.php?register=error");
         exit();
     }
@@ -43,7 +58,9 @@ function handleInitialRegistration($conn)
 
     if ($stmt->num_rows > 0) {
         $_SESSION["register_error"] = "Email already registered.";
+        $_SESSION['field_errors']['email'] = "This email is already registered";
         header("Location: ../../index.php?register=error");
+        $stmt->close();
         exit();
     }
     $stmt->close();
@@ -56,7 +73,9 @@ function handleInitialRegistration($conn)
 
     if ($stmt->num_rows > 0) {
         $_SESSION["register_error"] = "Email already registered.";
+        $_SESSION['field_errors']['email'] = "This email is already registered";
         header("Location: ../../index.php?register=error");
+        $stmt->close();
         exit();
     }
     $stmt->close();
@@ -69,7 +88,9 @@ function handleInitialRegistration($conn)
 
     if ($stmt->num_rows > 0) {
         $_SESSION["register_error"] = "Contact number already registered.";
+        $_SESSION['field_errors']['contact'] = "This contact number is already registered";
         header("Location: ../../index.php?register=error");
+        $stmt->close();
         exit();
     }
     $stmt->close();
@@ -89,10 +110,15 @@ function handleInitialRegistration($conn)
         $existing_name .= " " . $existing_user['last_name'];
 
         $_SESSION["register_error"] = "This address (House #: {$house_number}, Street: {$street_name}) is already registered under {$existing_name}.";
+        $_SESSION['field_errors']['address'] = "This address is already registered";
         header("Location: ../../index.php?register=error");
+        $stmt->close();
         exit();
     }
     $stmt->close();
+
+    // If all validations pass, clear field errors and form values
+    unset($_SESSION['field_errors']);
 
     // Store registration data in session for verification step
     $_SESSION['pending_registration'] = [
@@ -106,6 +132,9 @@ function handleInitialRegistration($conn)
         'street_name' => $street_name,
         'barangay' => $barangay
     ];
+
+    // Clear form values since we're proceeding to verification
+    unset($_SESSION['form_values']);
 
     $_SESSION["show_verification"] = true;
     header("Location: ../../index.php?register=verify");
