@@ -133,10 +133,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
 
             <?php if ($document['requirements']): ?>
-                <div class="info-box">
+                <!-- <div class="info-box">
                     <h4><i class="fas fa-clipboard-list"></i> Requirements</h4>
                     <p><?php echo nl2br(htmlspecialchars($document['requirements'])); ?></p>
-                </div>
+                </div> -->
             <?php endif; ?>
 
             <form method="POST" enctype="multipart/form-data" id="requestForm">
