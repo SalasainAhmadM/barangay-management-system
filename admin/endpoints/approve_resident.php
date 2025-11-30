@@ -56,6 +56,23 @@ try {
     }
     $stmt->close();
 
+    // Create default notification preferences if user is approved and preferences don't exist
+    if ($action === 'approve') {
+        $checkPrefStmt = $conn->prepare("SELECT id FROM notification_preferences WHERE user_id = ? LIMIT 1");
+        $checkPrefStmt->bind_param("i", $id);
+        $checkPrefStmt->execute();
+        $prefResult = $checkPrefStmt->get_result();
+
+        if ($prefResult->num_rows === 0) {
+            // No preferences exist, create default ones
+            $insertPrefStmt = $conn->prepare("INSERT INTO notification_preferences (user_id, waste_reminders, request_updates, announcements, sms_notifications, created_at, updated_at) VALUES (?, 1, 1, 1, 1, NOW(), NOW())");
+            $insertPrefStmt->bind_param("i", $id);
+            $insertPrefStmt->execute();
+            $insertPrefStmt->close();
+        }
+        $checkPrefStmt->close();
+    }
+
     // Log activity
     $fullName = trim($resident['first_name'] . ' ' . $resident['middle_name'] . ' ' . $resident['last_name']);
     $activityType = ($action === 'approve') ? "Resident Approved" : "Resident Rejected";
