@@ -76,13 +76,45 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
         margin-top: 5px;
         display: block;
     }
+
+    .select2-dropdown.force-below {
+    position: fixed !important;
+    margin-top: 0 !important;
+    }
+
+    .select2-container--open .select2-dropdown.force-below {
+        top: auto !important;
+        bottom: auto !important;
+    }
 </style>
 
 <head>
     <?php include './components/header_links.php'; ?>
     <link rel="icon" href="<?= htmlspecialchars($systemLoginLogo) ?>" type="image/icon type">
     <link rel="stylesheet" href="./css/login.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 </head>
+<script>
+   
+    $(document).ready(function() {
+    $('#street-name').select2({
+        placeholder: 'Select or search street',
+        allowClear: true,
+        width: '100%',
+        dropdownParent: $('.signup-form'),
+        dropdownPosition: 'below' // Force below
+    }).on('select2:open', function() {
+        // Force dropdown positioning
+        setTimeout(function() {
+            $('.select2-dropdown').css({
+                'top': '100%',
+                'bottom': 'auto'
+            });
+        }, 0);
+    });
+});
+</script>
 
 <body>
     <div
@@ -149,12 +181,43 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
                         <input type="text" name="house_number" id="house-number" placeholder="House Number"
                             value="<?= htmlspecialchars($savedValues['house_number'] ?? '') ?>"
                             class="<?= isset($fieldErrors['house_number']) ? 'error-input' : '' ?>" required />
-                        <input type="text" name="street_name" id="street-name" placeholder="Street Name"
-                            value="<?= htmlspecialchars($savedValues['street_name'] ?? '') ?>"
-                            class="<?= isset($fieldErrors['street_name']) ? 'error-input' : '' ?>" required />
+                        
+                        <!-- Changed to Select Dropdown -->
+                        <select name="street_name" id="street-name" 
+                            class="<?= isset($fieldErrors['street_name']) ? 'error-input' : '' ?>" required>
+                            <option value="">Select Street</option>
+                            <option value="Acacia Drive" <?= ($savedValues['street_name'] ?? '') === 'Acacia Drive' ? 'selected' : '' ?>>Acacia Drive</option>
+                            <option value="Alvimor Drive" <?= ($savedValues['street_name'] ?? '') === 'Alvimor Drive' ? 'selected' : '' ?>>Alvimor Drive</option>
+                            <option value="Ambassador Drive" <?= ($savedValues['street_name'] ?? '') === 'Ambassador Drive' ? 'selected' : '' ?>>Ambassador Drive</option>
+                            <option value="Atis Drive" <?= ($savedValues['street_name'] ?? '') === 'Atis Drive' ? 'selected' : '' ?>>Atis Drive</option>
+                            <option value="Atilano Drive" <?= ($savedValues['street_name'] ?? '') === 'Atilano Drive' ? 'selected' : '' ?>>Atilano Drive</option>
+                            <option value="Bagong Lipunan" <?= ($savedValues['street_name'] ?? '') === 'Bagong Lipunan' ? 'selected' : '' ?>>Bagong Lipunan</option>
+                            <option value="Baliwasan Interior" <?= ($savedValues['street_name'] ?? '') === 'Baliwasan Interior' ? 'selected' : '' ?>>Baliwasan Interior</option>
+                            <option value="Baliwasan Seaside" <?= ($savedValues['street_name'] ?? '') === 'Baliwasan Seaside' ? 'selected' : '' ?>>Baliwasan Seaside</option>
+                            <option value="BCC" <?= ($savedValues['street_name'] ?? '') === 'BCC' ? 'selected' : '' ?>>BCC</option>
+                            <option value="Bulahan" <?= ($savedValues['street_name'] ?? '') === 'Bulahan' ? 'selected' : '' ?>>Bulahan</option>
+                            <option value="Clipper Heights" <?= ($savedValues['street_name'] ?? '') === 'Clipper Heights' ? 'selected' : '' ?>>Clipper Heights</option>
+                            <option value="Fernandez Drive" <?= ($savedValues['street_name'] ?? '') === 'Fernandez Drive' ? 'selected' : '' ?>>Fernandez Drive</option>
+                            <option value="Ilang-Ilang" <?= ($savedValues['street_name'] ?? '') === 'Ilang-Ilang' ? 'selected' : '' ?>>Ilang-Ilang</option>
+                            <option value="Ledesma Compound" <?= ($savedValues['street_name'] ?? '') === 'Ledesma Compound' ? 'selected' : '' ?>>Ledesma Compound</option>
+                            <option value="Maharlika Drive" <?= ($savedValues['street_name'] ?? '') === 'Maharlika Drive' ? 'selected' : '' ?>>Maharlika Drive</option>
+                            <option value="Mango Drive" <?= ($savedValues['street_name'] ?? '') === 'Mango Drive' ? 'selected' : '' ?>>Mango Drive</option>
+                            <option value="Mangal Drive" <?= ($savedValues['street_name'] ?? '') === 'Mangal Drive' ? 'selected' : '' ?>>Mangal Drive</option>
+                            <option value="Masambo" <?= ($savedValues['street_name'] ?? '') === 'Masambo' ? 'selected' : '' ?>>Masambo</option>
+                            <option value="Monserat" <?= ($savedValues['street_name'] ?? '') === 'Monserat' ? 'selected' : '' ?>>Monserat</option>
+                            <option value="Moret" <?= ($savedValues['street_name'] ?? '') === 'Moret' ? 'selected' : '' ?>>Moret</option>
+                            <option value="News Lane" <?= ($savedValues['street_name'] ?? '') === 'News Lane' ? 'selected' : '' ?>>News Lane</option>
+                            <option value="Ranchez Drive" <?= ($savedValues['street_name'] ?? '') === 'Ranchez Drive' ? 'selected' : '' ?>>Ranchez Drive</option>
+                            <option value="Sampaloc Drive" <?= ($savedValues['street_name'] ?? '') === 'Sampaloc Drive' ? 'selected' : '' ?>>Sampaloc Drive</option>
+                            <option value="Sapangpalay" <?= ($savedValues['street_name'] ?? '') === 'Sapangpalay' ? 'selected' : '' ?>>Sapangpalay</option>
+                            <option value="Skyline" <?= ($savedValues['street_name'] ?? '') === 'Skyline' ? 'selected' : '' ?>>Skyline</option>
+                            <option value="Star Apple" <?= ($savedValues['street_name'] ?? '') === 'Star Apple' ? 'selected' : '' ?>>Star Apple</option>
+                            <option value="Tambis Drive" <?= ($savedValues['street_name'] ?? '') === 'Tambis Drive' ? 'selected' : '' ?>>Tambis Drive</option>
+                            <option value="Timex Drive" <?= ($savedValues['street_name'] ?? '') === 'Timex Drive' ? 'selected' : '' ?>>Timex Drive</option>
+                        </select>
                     </div>
-                    <?php if (isset($fieldErrors['address'])): ?>
-                        <span class="error-message"><?= htmlspecialchars($fieldErrors['address']) ?></span>
+                    <?php if (isset($fieldErrors['street_name'])): ?>
+                        <span class="error-message"><?= htmlspecialchars($fieldErrors['street_name']) ?></span>
                     <?php endif; ?>
 
                     <input style="display: none;" type="text" name="barangay" id="barangay" value="Baliwasan" />
@@ -203,6 +266,8 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
 
     <script src="./js/script.js"></script>
     <?php include './components/cdn_scripts.php'; ?>
+    <!-- Select2 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
         <?php
@@ -644,6 +709,52 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
                 toggleIcon.classList.add('fa-eye');
             }
         }
+
+        // Initialize Select2 for searchable street dropdown
+        $(document).ready(function() {
+            $('#street-name').select2({
+                placeholder: 'Select or search street',
+                allowClear: true,
+                width: '100%'
+            });
+        });
+
+        $(document).ready(function() {
+    // Wait for page to fully load
+    setTimeout(function() {
+        // Destroy any existing Select2
+        if ($('#street-name').hasClass('select2-hidden-accessible')) {
+            $('#street-name').select2('destroy');
+        }
+        
+        // Initialize fresh
+        $('#street-name').select2({
+            placeholder: 'Select or search street',
+            allowClear: true,
+            width: '100%',
+            dropdownParent: $('body'), // Try attaching to body instead
+            dropdownCssClass: 'force-below'
+        });
+        
+        // Force positioning on every open
+        $('#street-name').on('select2:open', function(e) {
+            $('.select2-dropdown').addClass('select2-dropdown--below').removeClass('select2-dropdown--above');
+            
+            // Get select position
+            var $select = $(this).next('.select2-container');
+            var offset = $select.offset();
+            var height = $select.outerHeight();
+            
+            // Position dropdown
+            $('.select2-dropdown').css({
+                'top': (offset.top + height) + 'px',
+                'left': offset.left + 'px',
+                'width': $select.outerWidth() + 'px',
+                'position': 'fixed'
+            });
+        });
+    }, 100);
+});
     </script>
 </body>
 

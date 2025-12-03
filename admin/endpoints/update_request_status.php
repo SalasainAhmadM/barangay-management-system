@@ -3,9 +3,20 @@
 session_start();
 require_once("../../conn/conn.php");
 
+// Enable error logging
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Don't display errors in output
+ini_set('log_errors', 1);
+ini_set('error_log', dirname(__FILE__) . '/../../logs/php_errors.log');
+
 header('Content-Type: application/json');
 
+// Log request for debugging
+error_log("=== Update Request Status Called ===");
+error_log("POST data: " . file_get_contents('php://input'));
+
 if (!isset($_SESSION["admin_id"])) {
+    error_log("Unauthorized access attempt");
     echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
     exit();
 }
@@ -20,6 +31,10 @@ if (!isset($input['request_id']) || !isset($input['status'])) {
 
 $requestId = (int) $input['request_id'];
 $status = trim($input['status']);
+// Handle empty string as null for payment status
+$paymentStatus = isset($input['payment_status']) && trim($input['payment_status']) !== '' 
+    ? trim($input['payment_status']) 
+    : null;
 $rejectionReason = trim($input['rejection_reason'] ?? '');
 $notes = trim($input['notes'] ?? '');
 
@@ -27,6 +42,12 @@ $notes = trim($input['notes'] ?? '');
 $validStatuses = ['pending', 'processing', 'approved', 'ready', 'completed', 'rejected', 'cancelled'];
 if (!in_array($status, $validStatuses)) {
     echo json_encode(['success' => false, 'message' => 'Invalid status']);
+    exit();
+}
+
+// Validate payment status if provided
+if ($paymentStatus !== null && !in_array($paymentStatus, ['paid', 'unpaid'])) {
+    echo json_encode(['success' => false, 'message' => 'Invalid payment status']);
     exit();
 }
 
@@ -48,6 +69,7 @@ try {
             dr.purpose,
             dr.submitted_date,
             dr.serial_number,
+            dr.payment_status as current_payment_status,
             dt.name AS document_name,
             dt.type AS document_type,
             dt.fee,
@@ -77,10 +99,39 @@ try {
         exit();
     }
 
+    // Additional validation: Check payment status for ready/completed status
+    $hasFee = floatval($requestInfo['fee']) > 0;
+    if ($hasFee && in_array($status, ['ready', 'completed'])) {
+        // Determine effective payment status: use new status if provided, otherwise use current
+        $effectivePaymentStatus = ($paymentStatus !== null && $paymentStatus !== '') 
+            ? $paymentStatus 
+            : $requestInfo['current_payment_status'];
+        
+        if ($effectivePaymentStatus !== 'paid') {
+            echo json_encode([
+                'success' => false, 
+                'message' => "Cannot set status to '$status' when payment is unpaid. Please mark as paid first."
+            ]);
+            exit();
+        }
+    }
+
     // Prepare update query
     $updateFields = "status = ?, updated_at = NOW()";
     $params = [$status];
     $types = "s";
+
+    // Update payment status if provided and has fee
+    if ($hasFee && $paymentStatus !== null && $paymentStatus !== '') {
+        $updateFields .= ", payment_status = ?";
+        $params[] = $paymentStatus;
+        $types .= "s";
+
+        // Add payment date if marking as paid
+        if ($paymentStatus === 'paid') {
+            $updateFields .= ", payment_date = NOW()";
+        }
+    }
 
     // Generate serial number for approved, ready, or completed status (if not already generated)
     if (in_array($status, ['approved', 'ready', 'completed']) && empty($requestInfo['serial_number'])) {
@@ -88,6 +139,9 @@ try {
         $updateFields .= ", serial_number = ?";
         $params[] = $serialNumber;
         $types .= "s";
+        
+        // ✅ Update requestInfo with new serial number for PDF generation
+        $requestInfo['serial_number'] = $serialNumber;
     }
 
     // Add date_issued for ready or completed status
@@ -116,15 +170,31 @@ try {
         $types .= "s";
     }
 
-    // Generate PDF if status is 'ready' or 'completed'
+    // Generate PDF if status is 'ready' or 'completed' AND payment is paid (or no fee)
     $pdfFilename = null;
     if (in_array($status, ['ready', 'completed'])) {
-        $pdfFilename = generateDocumentPDF($requestInfo);
-
-        if ($pdfFilename) {
-            $updateFields .= ", document_file = ?";
-            $params[] = $pdfFilename;
-            $types .= "s";
+        $effectivePaymentStatus = ($paymentStatus !== null && $paymentStatus !== '') 
+            ? $paymentStatus 
+            : $requestInfo['current_payment_status'];
+            
+        error_log("Attempting PDF generation for status: {$status}, payment: {$effectivePaymentStatus}, hasFee: " . ($hasFee ? 'yes' : 'no'));
+            
+        if (!$hasFee || $effectivePaymentStatus === 'paid') {
+            try {
+                $pdfFilename = generateDocumentPDF($requestInfo);
+                
+                if ($pdfFilename) {
+                    error_log("PDF generated successfully: {$pdfFilename}");
+                    $updateFields .= ", document_file = ?";
+                    $params[] = $pdfFilename;
+                    $types .= "s";
+                } else {
+                    error_log("PDF generation returned false/null");
+                }
+            } catch (Exception $pdfError) {
+                error_log("PDF generation error: " . $pdfError->getMessage());
+                // Continue with update even if PDF fails
+            }
         }
     }
 
@@ -132,11 +202,26 @@ try {
     $params[] = $requestId;
     $types .= "i";
 
+    // Log the query for debugging
+    error_log("Update query: UPDATE document_requests SET {$updateFields} WHERE id = ?");
+    error_log("Param types: {$types}");
+    error_log("Params: " . print_r($params, true));
+
     // Execute update
     $stmt = $conn->prepare("UPDATE document_requests SET $updateFields WHERE id = ?");
+    
+    if (!$stmt) {
+        $conn->rollback();
+        error_log("Failed to prepare statement: " . $conn->error);
+        echo json_encode(['success' => false, 'message' => 'Database error: Failed to prepare statement']);
+        exit();
+    }
+    
     $stmt->bind_param($types, ...$params);
 
     if ($stmt->execute()) {
+        error_log("Statement executed. Affected rows: " . $stmt->affected_rows);
+        
         if ($stmt->affected_rows > 0) {
             // ✅ Log admin activity
             $activity = "Updated document request status";
@@ -147,6 +232,13 @@ try {
 
             if (isset($serialNumber)) {
                 $description .= " Serial Number: {$serialNumber}.";
+            }
+
+            if ($paymentStatus !== null && $paymentStatus !== '') {
+                $description .= " Payment Status: {$paymentStatus}.";
+                if ($paymentStatus === 'paid') {
+                    $description .= " Payment marked as paid on " . date('Y-m-d H:i:s') . ".";
+                }
             }
 
             if ($pdfFilename) {
@@ -170,19 +262,32 @@ try {
             $log_stmt->close();
 
             $conn->commit();
+            
+            // Prepare success message
+            $successMessage = 'Status updated successfully';
+            $warnings = [];
+            
+            if (in_array($status, ['ready', 'completed']) && $pdfFilename === null) {
+                $warnings[] = 'Note: PDF generation skipped. TCPDF library not installed.';
+                error_log("WARNING: Status updated but PDF not generated. Install TCPDF to enable PDF generation.");
+            }
+            
             echo json_encode([
                 'success' => true,
-                'message' => 'Status updated successfully',
+                'message' => $successMessage,
+                'warnings' => $warnings,
                 'pdf_generated' => ($pdfFilename !== null),
                 'serial_number' => $serialNumber ?? null
             ]);
         } else {
             $conn->rollback();
+            error_log("No rows affected by update");
             echo json_encode(['success' => false, 'message' => 'Request not found or no changes made']);
         }
     } else {
         $conn->rollback();
-        echo json_encode(['success' => false, 'message' => 'Failed to update status']);
+        error_log("Failed to execute statement: " . $stmt->error);
+        echo json_encode(['success' => false, 'message' => 'Failed to update status: ' . $stmt->error]);
     }
 
     $stmt->close();
@@ -190,7 +295,8 @@ try {
     if (isset($conn)) {
         $conn->rollback();
     }
-    error_log("Error in update_request_status: " . $e->getMessage());
+    error_log("Exception in update_request_status: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     echo json_encode(['success' => false, 'message' => 'Error: ' . $e->getMessage()]);
 }
 
@@ -243,8 +349,22 @@ function generateSerialNumber($conn)
 function generateDocumentPDF($requestInfo)
 {
     try {
+        // Check if TCPDF is available
+        $autoloadPath = '../../vendor/autoload.php';
+        if (!file_exists($autoloadPath)) {
+            error_log("TCPDF not found at: {$autoloadPath}. Skipping PDF generation.");
+            error_log("Please install TCPDF via Composer: composer require tecnickcom/tcpdf");
+            return false;
+        }
+        
         // Load TCPDF
-        require_once('../../vendor/autoload.php');
+        require_once($autoloadPath);
+        
+        // Verify TCPDF class is available
+        if (!class_exists('TCPDF')) {
+            error_log("TCPDF class not found after autoload. Check installation.");
+            return false;
+        }
 
         // Get absolute path to upload directory
         $uploadDir = dirname(dirname(__DIR__)) . '/uploads/document_requests/';
@@ -326,6 +446,8 @@ function generateDocumentHTML($requestInfo)
         return generateResidencyCertificateHTML($requestInfo);
     } elseif (strpos($docName, 'clearance') !== false) {
         return generateClearanceCertificateHTML($requestInfo);
+    } elseif (strpos($docName, 'good moral') !== false || strpos($docName, 'moral character') !== false) {
+        return generateGoodMoralCertificateHTML($requestInfo);
     } else {
         return generateDefaultCertificateHTML($requestInfo);
     }
@@ -345,6 +467,12 @@ function generateClearanceCertificateHTML($requestInfo)
     $month = date('F');
     $year = date('Y');
     $serialNumber = $requestInfo['serial_number'] ?? 'N/A';
+    
+    // Calculate validity period (6 months from issue date)
+    $issueDate = new DateTime();
+    $validUntil = clone $issueDate;
+    $validUntil->modify('+6 months');
+    $validUntilFormatted = $validUntil->format('F d, Y');
 
     // Image paths (ensure these exist in tcpdf/images/)
     $headerLogo = K_PATH_IMAGES . 'barangaycouncil.png';
@@ -368,8 +496,8 @@ function generateClearanceCertificateHTML($requestInfo)
             font-weight: bold;
             text-align: center;
             text-decoration: underline;
-            margin-top: 25px;
-            margin-bottom: 25px;
+            margin-top: 20px;
+            margin-bottom: 20px;
         }
         .content {
             margin: 0 40px;
@@ -380,7 +508,7 @@ function generateClearanceCertificateHTML($requestInfo)
             text-indent: 50px;
         }
         .signature {
-            margin-top: 70px;
+            margin-top: 50px;
             text-align: right;
             padding-right: 70px;
         }
@@ -432,7 +560,7 @@ function generateClearanceCertificateHTML($requestInfo)
             This certification is being issued upon request for <b><u>' . strtoupper(htmlspecialchars($purpose)) . '</u></b> requirements.
         </p>
 
-        <p class="indent" style="margin-top: 25px;">
+        <p class="indent" style="margin-top: 20px;">
             Issued this <b><u>' . $day . ' day of ' . $month . ' ' . $year . '</u></b>
             at Barangay Baliwasan, Zamboanga City.
         </p>
@@ -442,8 +570,170 @@ function generateClearanceCertificateHTML($requestInfo)
         <b class="name">HON. MA. JAMIELY CZARINA N. CABATO</b><br>
         <b class="position">Punong Barangay</b>
     </div>
-    <br><br><br><br><br>
-    <table cellspacing="0" cellpadding="0" style="width:100%; position:absolute; bottom:25px; left:25px; right:25px;">
+    
+    <br><br>
+    
+    <table cellspacing="0" cellpadding="0" style="width:100%; margin-top: 20px;">
+        <tr>
+            <td style="width:50%; text-align:left; vertical-align:middle; font-size:8pt; color:#666;">
+                <i>Not valid without official seal</i>
+            </td>
+            <td style="width:50%; text-align:right; vertical-align:middle; font-size:8pt; color:#666;">
+                <b>Valid until: ' . $validUntilFormatted . '</b>
+            </td>
+        </tr>
+    </table>
+    
+    <br>
+    <table cellspacing="0" cellpadding="0" style="width:100%; position:absolute; bottom:20px; left:25px; right:25px;">
+        <tr>
+            <td style="width:80%; text-align:center; vertical-align:middle; font-size:8pt; line-height:1.3;">
+                <b>Baliwasan Barangay Hall San Jose Road corner Baliwasan Chico Barangay Hall</b><br>
+                Zamboanga City, Philippines | facebook.com/barangaybaliwasanofficeofthepunongbarangay<br>
+                992-6211 | 926-2639
+            </td>
+            <td style="width:20%; text-align:right; vertical-align:middle;">
+                <img src="' . $footerLogo . '" width="70">
+            </td>
+        </tr>
+    </table>';
+
+    return $html;
+}
+
+/**
+ * Generate HTML content specifically for Good Moral Character Certificate
+ * @param array $requestInfo - Request information
+ * @return string - HTML content
+ */
+function generateGoodMoralCertificateHTML($requestInfo)
+{
+    $fullName = trim($requestInfo['first_name'] . ' ' . ($requestInfo['middle_name'] ?? '') . ' ' . $requestInfo['last_name']);
+    $address = $requestInfo['address'];
+    $purpose = $requestInfo['purpose'];
+    $day = date('j');
+    $month = date('F');
+    $year = date('Y');
+    $serialNumber = $requestInfo['serial_number'] ?? 'N/A';
+    
+    // Calculate validity period (6 months from issue date)
+    $issueDate = new DateTime();
+    $validUntil = clone $issueDate;
+    $validUntil->modify('+6 months');
+    $validUntilFormatted = $validUntil->format('F d, Y');
+
+    // Image paths
+    $headerLogo = K_PATH_IMAGES . 'barangaycouncil.png';
+    $footerLogo = K_PATH_IMAGES . 'logocabatoadmin.png';
+
+    $html = '
+    <style>
+        body {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 12pt;
+            color: #000;
+        }
+        .serial-number {
+            text-align: right;
+            font-size: 10pt;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-size: 16pt;
+            font-weight: bold;
+            text-align: center;
+            text-decoration: underline;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        .content {
+            margin: 0 40px;
+            text-align: justify;
+            line-height: 1.8;
+        }
+        .indent {
+            text-indent: 50px;
+        }
+        .signature {
+            margin-top: 50px;
+            text-align: right;
+            padding-right: 70px;
+        }
+        .signature .name {
+            font-weight: bold;
+            text-transform: uppercase;
+            text-decoration: underline;
+        }
+        .signature .position {
+            font-weight: bold;
+        }
+    </style>
+
+    <table cellspacing="0" cellpadding="0" style="width:100%;">
+        <tr>
+            <td style="width:20%; text-align:right; vertical-align:middle;">
+                <img src="' . $headerLogo . '" width="70">
+            </td>
+            <td style="width:60%; text-align:center; line-height:1.5;">
+                <span>Republic of the Philippines</span><br>
+                <b>OFFICE OF THE BARANGAY COUNCIL</b><br>
+                Baliwasan, Zamboanga City<br>
+                <a href="https://www.facebook.com/barangaybaliwasan" style="text-decoration:none; color:black;">
+                    www.facebook.com/barangaybaliwasan
+                </a>
+            </td>
+        </tr>
+    </table>
+    <br>
+    <hr style="border: 2px solid black; width: 100%; margin: 0 auto;">
+    <br>
+    
+    <div class="serial-number">Serial No.: <b>' . $serialNumber . '</b></div>
+
+    <div class="title">CERTIFICATE OF GOOD MORAL CHARACTER</div>
+
+    <div class="content">
+        <p class="indent">
+            This is to certify that <b><u>' . strtoupper(htmlspecialchars($fullName)) . '</u></b>
+            is a bonafide resident of <b><u>' . htmlspecialchars($address) . '</u></b>.
+        </p>
+
+        <p class="indent">
+            This further certifies that the above-mentioned person is of good moral character 
+            and has no derogatory record in the barangay as far as this office is concerned.
+        </p>
+
+        <p class="indent">
+            This certification is being issued upon request for <b><u>' . strtoupper(htmlspecialchars($purpose)) . '</u></b> requirements.
+        </p>
+
+        <p class="indent" style="margin-top: 20px;">
+            Issued this <b><u>' . $day . ' day of ' . $month . ' ' . $year . '</u></b>
+            at Barangay Baliwasan, Zamboanga City.
+        </p>
+    </div>
+
+    <div class="signature">
+        <b class="name">HON. MA. JAMIELY CZARINA N. CABATO</b><br>
+        <b class="position">Punong Barangay</b>
+    </div>
+    
+    <br><br>
+    
+    <table cellspacing="0" cellpadding="0" style="width:100%; margin-top: 20px;">
+        <tr>
+            <td style="width:50%; text-align:left; vertical-align:middle; font-size:8pt; color:#666;">
+                <i>Not valid without official seal</i>
+            </td>
+            <td style="width:50%; text-align:right; vertical-align:middle; font-size:8pt; color:#666;">
+                <b>Valid until: ' . $validUntilFormatted . '</b>
+            </td>
+        </tr>
+    </table>
+    
+    <br>
+    <table cellspacing="0" cellpadding="0" style="width:100%; position:absolute; bottom:20px; left:25px; right:25px;">
         <tr>
             <td style="width:80%; text-align:center; vertical-align:middle; font-size:8pt; line-height:1.3;">
                 <b>Baliwasan Barangay Hall San Jose Road corner Baliwasan Chico Barangay Hall</b><br>
@@ -473,6 +763,12 @@ function generateResidencyCertificateHTML($requestInfo)
     $month = date('F');
     $year = date('Y');
     $serialNumber = $requestInfo['serial_number'] ?? 'N/A';
+    
+    // Calculate validity period (6 months from issue date)
+    $issueDate = new DateTime();
+    $validUntil = clone $issueDate;
+    $validUntil->modify('+6 months');
+    $validUntilFormatted = $validUntil->format('F d, Y');
 
     // Paths for images
     $headerLogo = K_PATH_IMAGES . 'barangaycouncil.png';
@@ -495,23 +791,23 @@ function generateResidencyCertificateHTML($requestInfo)
             font-size: 14pt;
             font-weight: bold;
             text-align: center;
-            margin: 35px 0 20px 0;
+            margin: 30px 0 15px 0;
             text-decoration: underline;
         }
         .content {
             margin: 0 30px;
             text-align: justify;
-            line-height: 1.9;
+            line-height: 1.8;
         }
         .to-whom {
             font-weight: bold;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .indent {
             text-indent: 50px;
         }
         .signature {
-            margin-top: 60px;
+            margin-top: 45px;
             text-align: right;
             padding-right: 60px;
         }
@@ -521,12 +817,6 @@ function generateResidencyCertificateHTML($requestInfo)
         }
         .signature .position {
             font-weight: bold;
-        }
-        .seal {
-            position: absolute;
-            left: 80px;
-            margin-top: 100px;
-            font-style: italic;
         }
     </style>
 
@@ -571,7 +861,7 @@ function generateResidencyCertificateHTML($requestInfo)
             This certification is being issued upon request for <b><u>' . strtoupper(htmlspecialchars($purpose)) . '</u></b>.
         </p>
 
-        <p class="indent" style="margin-top: 25px;">
+        <p class="indent" style="margin-top: 20px;">
             Issued this <b><u>' . $day . ' day of ' . $month . ' ' . $year . '</u></b> 
             at Barangay Baliwasan, Zamboanga City.
         </p>
@@ -581,8 +871,19 @@ function generateResidencyCertificateHTML($requestInfo)
         <b class="name" style="text-decoration: underline;">HON. MA. JEMIELY CZARINA L. CABATO</b><br>
         <b class="position">Punong Barangay</b>
     </div>
-    <br><br><br><br><br>
-    <div class="seal">- SEAL -</div>
+    
+    <br><br>
+    
+    <table cellspacing="0" cellpadding="0" style="width:100%; margin-top: 20px;">
+        <tr>
+            <td style="width:50%; text-align:left; vertical-align:middle; font-size:8pt; color:#666;">
+                <i>Not valid without official seal</i>
+            </td>
+            <td style="width:50%; text-align:right; vertical-align:middle; font-size:8pt; color:#666;">
+                <b>Valid until: ' . $validUntilFormatted . '</b>
+            </td>
+        </tr>
+    </table>
 
     <table cellspacing="0" cellpadding="0" style="width:100%; position:absolute; bottom:20px; left:25px; right:25px;">
         <tr>
@@ -614,6 +915,12 @@ function generateIndigencyCertificateHTML($requestInfo)
     $month = date('F');
     $year = date('Y');
     $serialNumber = $requestInfo['serial_number'] ?? 'N/A';
+    
+    // Calculate validity period (6 months from issue date)
+    $issueDate = new DateTime();
+    $validUntil = clone $issueDate;
+    $validUntil->modify('+6 months');
+    $validUntilFormatted = $validUntil->format('F d, Y');
 
     $imagePath = K_PATH_IMAGES . 'barangaycouncil.png';
 
@@ -634,23 +941,23 @@ function generateIndigencyCertificateHTML($requestInfo)
             font-size: 14pt;
             font-weight: bold;
             text-align: center;
-            margin: 35px 0 20px 0;
+            margin: 30px 0 15px 0;
             text-decoration: underline;
         }
         .content {
             margin: 0 30px;
             text-align: justify;
-            line-height: 1.9;
+            line-height: 1.8;
         }
         .to-whom {
             font-weight: bold;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .indent {
             text-indent: 50px;
         }
         .signature {
-            margin-top: 60px;
+            margin-top: 45px;
             text-align: right;
             padding-right: 60px;
         }
@@ -660,21 +967,6 @@ function generateIndigencyCertificateHTML($requestInfo)
         }
         .signature .position {
             font-weight: bold;
-        }
-        .seal {
-            position: absolute;
-            left: 80px;
-            margin-top: 100px;
-            font-style: italic;
-        }
-        .footer-section {
-            position: absolute;
-            bottom: 20px;
-            left: 0;
-            right: 0;
-            text-align: center;
-            font-size: 8pt;
-            line-height: 1.3;
         }
     </style>
 
@@ -719,7 +1011,7 @@ function generateIndigencyCertificateHTML($requestInfo)
             This certification is being issued upon request for <b><u>' . strtoupper(htmlspecialchars($purpose)) . '</u></b>.
         </p>
 
-        <p class="indent" style="margin-top: 25px;">
+        <p class="indent" style="margin-top: 20px;">
             Issued this <b><u>' . $day . ' day of ' . $month . ' ' . $year . '</u></b> 
             at Barangay Baliwasan, Zamboanga City.
         </p>
@@ -729,10 +1021,21 @@ function generateIndigencyCertificateHTML($requestInfo)
         <b class="name" style="text-decoration: underline;">HON. MA. JEMIELY CZARINA L. CABATO</b><br>
         <b class="position">Punong Barangay</b>
     </div>
-    <br><br><br><br><br>
-    <div class="seal">- SEAL -</div>
+    
+    <br><br>
+    
+    <table cellspacing="0" cellpadding="0" style="width:100%; margin-top: 20px;">
+        <tr>
+            <td style="width:50%; text-align:left; vertical-align:middle; font-size:8pt; color:#666;">
+                <i>Not valid without official seal</i>
+            </td>
+            <td style="width:50%; text-align:right; vertical-align:middle; font-size:8pt; color:#666;">
+                <b>Valid until: ' . $validUntilFormatted . '</b>
+            </td>
+        </tr>
+    </table>
 
-    <div class="footer-section">
+    <div style="position:absolute; bottom:20px; left:0; right:0; text-align:center; font-size:8pt; line-height:1.3;">
         <b>Baliwasan Barangay Hall San Jose Road corner Baliwasan Chico Barangay Hall</b><br>
         Zamboanga City, Philippines | facebook.com/barangaybaliwasanofficeofthepunongbarangay<br>
         992-6211 | 926-2639
@@ -751,6 +1054,12 @@ function generateDefaultCertificateHTML($requestInfo)
     $fullName = trim($requestInfo['first_name'] . ' ' . ($requestInfo['middle_name'] ?? '') . ' ' . $requestInfo['last_name']);
     $currentDate = date('F d, Y');
     $serialNumber = $requestInfo['serial_number'] ?? 'N/A';
+    
+    // Calculate validity period (6 months from issue date)
+    $issueDate = new DateTime();
+    $validUntil = clone $issueDate;
+    $validUntil->modify('+6 months');
+    $validUntilFormatted = $validUntil->format('F d, Y');
 
     // Handle fee display
     $fee = floatval($requestInfo['fee'] ?? 0);
@@ -855,9 +1164,16 @@ function generateDefaultCertificateHTML($requestInfo)
         <b>Date Paid:</b> ' . ($fee == 0 ? 'N/A' : $currentDate) . '
     </div>
     
-    <div style="margin-top: 20px; font-size: 8px; text-align: center; color: #666;">
-        <i>Not valid without official seal</i>
-    </div>';
+    <table cellspacing="0" cellpadding="0" style="width:100%; margin-top: 20px;">
+        <tr>
+            <td style="width:50%; text-align:left; vertical-align:middle; font-size:8px; color:#666;">
+                <i>Not valid without official seal</i>
+            </td>
+            <td style="width:50%; text-align:right; vertical-align:middle; font-size:8px; color:#666;">
+                <b>Valid until: ' . $validUntilFormatted . '</b>
+            </td>
+        </tr>
+    </table>';
 
     return $html;
 }

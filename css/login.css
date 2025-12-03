@@ -81,7 +81,8 @@ body {
   margin: 0px 30px;
 }
 
-.container .forms-container .form-control form input {
+.container .forms-container .form-control form input,
+.container .forms-container .form-control form select {
   margin: 5px 0px;
   border: none;
   padding: 15px;
@@ -288,6 +289,7 @@ body {
   flex: 3;
 }
 
+.flex-wrapper-address select:last-child,
 .flex-wrapper-address input:last-child {
   flex: 3;
 }
@@ -381,7 +383,137 @@ body {
   }
 }
 
+/* ========================================
+   SELECT2 STYLING TO MATCH INPUT FIELDS
+   ======================================== */
 
+/* Container */
+.select2-container {
+  width: 100% !important;
+  z-index: 9999;
+}
+
+/* Selection box to match input styling */
+.select2-container .select2-selection--single {
+  height: 50px !important;
+  border: none !important;
+  background-color: #efefef !important;
+  border-radius: 5px !important;
+  display: flex !important;
+  align-items: center !important;
+  padding: 0 !important;
+}
+
+/* Text inside selection */
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  line-height: 50px !important;
+  padding-left: 15px !important;
+  padding-right: 40px !important;
+  color: #333 !important;
+  font-size: 14px !important;
+}
+
+/* Placeholder text */
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+  color: #999 !important;
+}
+
+/* Arrow */
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 50px !important;
+  right: 10px !important;
+  top: 0 !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+  border-color: #666 transparent transparent transparent !important;
+  border-width: 6px 5px 0 5px !important;
+  margin-left: -5px !important;
+  margin-top: -3px !important;
+}
+
+/* Dropdown container */
+.select2-dropdown {
+  border: 1px solid #ddd !important;
+  border-radius: 5px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+  z-index: 9999 !important;
+  background-color: #fff !important;
+}
+
+/* Search box inside dropdown */
+.select2-container--default .select2-search--dropdown {
+  padding: 8px !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field {
+  border: 1px solid #ddd !important;
+  border-radius: 5px !important;
+  padding: 8px 12px !important;
+  background-color: #efefef !important;
+}
+
+.select2-container--default .select2-search--dropdown .select2-search__field:focus {
+  outline: none !important;
+  border-color: #00247c !important;
+}
+
+/* Results/options */
+.select2-container--default .select2-results__option {
+  padding: 10px 15px !important;
+  font-size: 14px !important;
+}
+
+/* Highlighted option */
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+  background-color: #00247c !important;
+  color: #fff !important;
+}
+
+/* Selected option */
+.select2-container--default .select2-results__option[aria-selected="true"] {
+  background-color: #e6e6e6 !important;
+  color: #333 !important;
+}
+
+/* When option is both highlighted and selected */
+.select2-container--default .select2-results__option--highlighted[aria-selected="true"] {
+  background-color: #00247c !important;
+  color: #fff !important;
+}
+
+/* Error state for select2 */
+.select2-container--default.error-input .select2-selection--single {
+  border: 2px solid #dc3545 !important;
+  background-color: #fff5f5 !important;
+}
+
+/* Clear button */
+.select2-container--default .select2-selection--single .select2-selection__clear {
+  margin-right: 10px !important;
+  font-size: 18px !important;
+  color: #999 !important;
+}
+
+/* Force dropdown to always appear below */
+.select2-container--open .select2-dropdown--below {
+  border-top: 1px solid #ddd !important;
+}
+
+.select2-container--open .select2-dropdown--above {
+  border-bottom: 1px solid #ddd !important;
+}
+
+/* Loading state */
+.select2-container--default .select2-results__option--loading {
+  color: #999 !important;
+}
+
+/* No results message */
+.select2-container--default .select2-results__message {
+  color: #999 !important;
+  padding: 10px 15px !important;
+}
 
 @media screen and (max-width: 580px) {
   .container {

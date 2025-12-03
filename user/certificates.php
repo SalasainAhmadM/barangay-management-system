@@ -479,7 +479,11 @@ $stmt->close();
                   <button class="action-btn-small secondary" onclick="viewRequestDetails(<?php echo $request['id']; ?>)">
                     <i class="fas fa-eye"></i> View Details
                   </button>
-
+                  <?php if ($request['status'] == 'rejected'): ?>
+                    <button class="action-btn-small primary" onclick="editCredentials(<?php echo $request['id']; ?>)">
+                      <i class="fas fa-edit"></i> Edit Credentials
+                    </button>
+                  <?php endif; ?>
                   <?php if ($request['status'] == 'approved' && $request['fee'] > 0 && $request['payment_status'] == 'unpaid'): ?>
                     <button class="action-btn-small primary"
                       onclick="showPaymentModal(<?php echo $request['id']; ?>, '<?php echo htmlspecialchars($request['document_name']); ?>', <?php echo $request['fee']; ?>)">
@@ -1357,6 +1361,1031 @@ $stmt->close();
           });
         });
     }
+
+    function editCredentials(requestId) {
+  // Show loading
+  Swal.fire({
+    title: 'Loading...',
+    text: 'Fetching request details',
+    allowOutsideClick: false,
+    didOpen: () => {
+      Swal.showLoading();
+    }
+  });
+
+  // Fetch current request details AND attachments
+  Promise.all([
+    fetch(`./endpoints/get_request_details.php?id=${requestId}`).then(res => res.json()),
+    fetch(`./endpoints/get_request_attachments.php?id=${requestId}`).then(res => res.json())
+  ])
+    .then(([requestData, attachmentsData]) => {
+      if (requestData.success) {
+        const request = requestData.request;
+        const attachments = attachmentsData.success ? attachmentsData.attachments : [];
+        
+        // Generate attachments HTML
+        let attachmentsHTML = '';
+        if (attachments.length > 0) {
+          attachmentsHTML = `
+            <div class="edit-section">
+              <div class="section-title-edit">
+                <i class="fas fa-paperclip"></i> Current Attachments
+              </div>
+              <div class="attachments-grid">
+                ${attachments.map(att => `
+                  <div class="attachment-item-edit" id="attachment-${att.id}">
+                    <div class="attachment-icon">
+                      <i class="fas fa-file-${getFileIcon(att.file_type)}"></i>
+                    </div>
+                    <div class="attachment-info">
+                      <div class="attachment-name">${att.file_name}</div>
+                      <div class="attachment-meta">${att.file_type.toUpperCase()} • ${new Date(att.uploaded_at).toLocaleDateString()}</div>
+                    </div>
+                    <div class="attachment-actions">
+                      <button type="button" class="btn-icon-edit btn-view" onclick="viewAttachment('${att.file_path}', '${att.file_type}')" title="View">
+                        <i class="fas fa-eye"></i>
+                      </button>
+                      <button type="button" class="btn-icon-edit btn-delete" onclick="markAttachmentForDeletion(${att.id})" title="Delete">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          `;
+        }
+        
+        Swal.fire({
+          title: 'Edit Request Credentials',
+          html: `
+            <style>
+              /* Edit Modal Custom Styles */
+              .swal-edit-form {
+                padding: 5px 0;
+                max-height: 70vh;
+                overflow-y: auto;
+              }
+              
+              .swal-edit-form::-webkit-scrollbar {
+                width: 8px;
+              }
+              
+              .swal-edit-form::-webkit-scrollbar-track {
+                background: #f1f5f9;
+                border-radius: 10px;
+              }
+              
+              .swal-edit-form::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 10px;
+              }
+              
+              .rejection-alert-edit {
+                background: linear-gradient(135deg, #fff3cd 0%, #fff8e1 100%);
+                border: 2px solid #ffc107;
+                padding: 20px;
+                border-radius: 12px;
+                margin-bottom: 25px;
+                box-shadow: 0 4px 12px rgba(255, 193, 7, 0.15);
+              }
+              
+              .rejection-alert-edit .alert-header {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                margin-bottom: 10px;
+              }
+              
+              .rejection-alert-edit .alert-icon {
+                width: 40px;
+                height: 40px;
+                background: #ffc107;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 18px;
+                flex-shrink: 0;
+              }
+              
+              .rejection-alert-edit .alert-title {
+                color: #856404;
+                font-weight: 700;
+                font-size: 16px;
+                margin: 0;
+              }
+              
+              .rejection-alert-edit .alert-message {
+                color: #856404;
+                margin: 0;
+                padding-left: 52px;
+                font-size: 14px;
+                line-height: 1.6;
+              }
+              
+              .edit-section {
+                margin-bottom: 28px;
+                text-align: left;
+              }
+              
+              .section-title-edit {
+                font-size: 15px;
+                font-weight: 700;
+                color: #1f2937;
+                padding: 12px 0;
+                margin-bottom: 16px;
+                border-bottom: 2px solid #e5e7eb;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+              }
+              
+              .section-title-edit i {
+                color: #667eea;
+                font-size: 16px;
+              }
+              
+              .doc-info-box {
+                background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                padding: 18px;
+                border-radius: 10px;
+                border: 1px solid #e2e8f0;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+              }
+              
+              .doc-icon-edit {
+                width: 48px;
+                height: 48px;
+                background: white;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: #667eea;
+                font-size: 20px;
+                box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+                flex-shrink: 0;
+              }
+              
+              .doc-info-text {
+                flex: 1;
+              }
+              
+              .doc-name-edit {
+                font-weight: 700;
+                color: #1f2937;
+                font-size: 16px;
+                margin-bottom: 4px;
+              }
+              
+              .doc-meta-edit {
+                color: #6b7280;
+                font-size: 13px;
+              }
+              
+              .form-group-edit {
+                margin-bottom: 18px;
+              }
+              
+              .form-row-edit {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 15px;
+                margin-bottom: 18px;
+              }
+              
+              .form-label-edit {
+                display: block;
+                font-weight: 600;
+                color: #374151;
+                margin-bottom: 8px;
+                font-size: 13px;
+                text-align: left;
+              }
+              
+              .form-label-edit .required {
+                color: #dc2626;
+                margin-left: 3px;
+              }
+              
+              .swal2-input, .swal2-textarea {
+                width: 100% !important;
+                padding: 12px 16px !important;
+                border: 2px solid #e5e7eb !important;
+                border-radius: 8px !important;
+                font-size: 14px !important;
+                transition: all 0.3s ease !important;
+                margin: 0 !important;
+                box-sizing: border-box !important;
+              }
+              
+              .swal2-input:focus, .swal2-textarea:focus {
+                border-color: #667eea !important;
+                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+                outline: none !important;
+              }
+              
+              .swal2-textarea {
+                min-height: 100px !important;
+                resize: vertical !important;
+              }
+              
+              .char-counter {
+                text-align: right;
+                font-size: 12px;
+                color: #6b7280;
+                margin-top: 4px;
+              }
+              
+              .attachments-grid {
+                display: grid;
+                gap: 12px;
+              }
+              
+              .attachment-item-edit {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 14px;
+                background: white;
+                border: 2px solid #e5e7eb;
+                border-radius: 10px;
+                transition: all 0.3s ease;
+              }
+              
+              .attachment-item-edit.marked-delete {
+                opacity: 0.5;
+                border-color: #fca5a5;
+                background: #fef2f2;
+              }
+              
+              .attachment-item-edit.marked-delete .attachment-name {
+                text-decoration: line-through;
+              }
+              
+              .attachment-icon {
+                width: 42px;
+                height: 42px;
+                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 18px;
+                flex-shrink: 0;
+              }
+              
+              .attachment-info {
+                flex: 1;
+                min-width: 0;
+              }
+              
+              .attachment-name {
+                font-weight: 600;
+                color: #1f2937;
+                font-size: 14px;
+                margin-bottom: 3px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              }
+              
+              .attachment-meta {
+                font-size: 12px;
+                color: #6b7280;
+              }
+              
+              .attachment-actions {
+                display: flex;
+                gap: 6px;
+              }
+              
+              .btn-icon-edit {
+                width: 36px;
+                height: 36px;
+                border: none;
+                border-radius: 8px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 14px;
+                transition: all 0.3s ease;
+                flex-shrink: 0;
+              }
+              
+              .btn-icon-edit.btn-view {
+                background: #eff6ff;
+                color: #667eea;
+              }
+              
+              .btn-icon-edit.btn-view:hover {
+                background: #667eea;
+                color: white;
+                transform: translateY(-2px);
+              }
+              
+              .btn-icon-edit.btn-delete {
+                background: #fef2f2;
+                color: #dc2626;
+              }
+              
+              .btn-icon-edit.btn-delete:hover {
+                background: #dc2626;
+                color: white;
+                transform: translateY(-2px);
+              }
+              
+              .file-upload-box {
+              position: relative;
+              padding: 24px;
+              border: 3px dashed #cbd5e1;
+              border-radius: 12px;
+              background: #f8fafc;
+              transition: all 0.3s ease;
+              cursor: pointer;
+              display: block;
+              text-align: center;
+            }
+
+            .file-upload-box:hover {
+              border-color: #667eea;
+              background: #eff6ff;
+            }
+
+            .file-upload-box.has-files {
+              border-color: #28a745;
+              background: #f0fdf4;
+            }
+
+            .upload-icon {
+              width: 56px;
+              height: 56px;
+              margin: 0 auto 12px;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+              border-radius: 50%;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-size: 24px;
+            }
+
+            .upload-text {
+              font-weight: 600;
+              color: #1f2937;
+              margin-bottom: 6px;
+            }
+
+            .upload-hint {
+              font-size: 12px;
+              color: #6b7280;
+            }
+
+/* Remove the old #edit-new-attachments positioning styles */
+              
+              .new-files-preview {
+                margin-top: 15px;
+                padding: 16px;
+                background: #f0fdf4;
+                border: 2px solid #86efac;
+                border-radius: 10px;
+              }
+              
+              .preview-header {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+                font-weight: 600;
+                color: #166534;
+                margin-bottom: 12px;
+                font-size: 14px;
+              }
+              
+              .preview-header i {
+                color: #22c55e;
+              }
+              
+              .new-file-item {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 12px;
+                background: white;
+                border: 1px solid #dcfce7;
+                border-radius: 8px;
+                margin-bottom: 8px;
+              }
+              
+              .new-file-item:last-child {
+                margin-bottom: 0;
+              }
+              
+              .new-file-icon {
+                width: 40px;
+                height: 40px;
+                background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-size: 16px;
+                flex-shrink: 0;
+              }
+              
+              .new-file-info {
+                flex: 1;
+                min-width: 0;
+              }
+              
+              .new-file-name {
+                font-weight: 600;
+                color: #1f2937;
+                font-size: 13px;
+                margin-bottom: 3px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+              }
+              
+              .new-file-size {
+                font-size: 11px;
+                color: #6b7280;
+              }
+              
+              .new-badge {
+                background: #22c55e;
+                color: white;
+                padding: 4px 10px;
+                border-radius: 12px;
+                font-size: 10px;
+                font-weight: 700;
+                letter-spacing: 0.5px;
+                flex-shrink: 0;
+              }
+              
+              .info-box-edit {
+                background: linear-gradient(135deg, #dbeafe 0%, #eff6ff 100%);
+                border: 2px solid #3b82f6;
+                padding: 16px;
+                border-radius: 10px;
+                margin-top: 20px;
+                display: flex;
+                align-items: start;
+                gap: 12px;
+              }
+              
+              .info-box-edit i {
+                color: #1e40af;
+                font-size: 18px;
+                margin-top: 2px;
+                flex-shrink: 0;
+              }
+              
+              .info-box-edit p {
+                color: #1e3a8a;
+                margin: 0;
+                font-size: 13px;
+                line-height: 1.6;
+                text-align: left;
+              }
+              
+              @media (max-width: 768px) {
+                .form-row-edit {
+                  grid-template-columns: 1fr;
+                }
+                
+                .attachment-item-edit {
+                  flex-wrap: wrap;
+                }
+                
+                .attachment-actions {
+                  width: 100%;
+                  justify-content: flex-end;
+                }
+              }
+            </style>
+            
+            <div class="swal-edit-form">
+              <!-- Rejection Reason Alert -->
+              <div class="rejection-alert-edit">
+                <div class="alert-header">
+                  <div class="alert-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                  </div>
+                  <div class="alert-title">Rejection Reason</div>
+                </div>
+                <p class="alert-message">${request.rejection_reason || 'Not specified'}</p>
+              </div>
+
+              <!-- Document Information -->
+              <div class="edit-section">
+                <div class="section-title-edit">
+                  <i class="fas fa-file-alt"></i> Document Information
+                </div>
+                
+                <div class="doc-info-box">
+                  <div class="doc-icon-edit">
+                    <i class="fas ${request.icon}"></i>
+                  </div>
+                  <div class="doc-info-text">
+                    <div class="doc-name-edit">${request.document_name}</div>
+                    <div class="doc-meta-edit">Request ID: ${request.request_id}</div>
+                  </div>
+                </div>
+
+                <div class="form-group-edit" style="margin-top: 16px;">
+                  <label class="form-label-edit">Purpose <span class="required">*</span></label>
+                  <textarea class="swal2-textarea" id="edit-purpose" required 
+                            placeholder="Enter purpose of request" maxlength="500"
+                            oninput="updateCharCount(this, 'purpose-count')">${request.purpose || ''}</textarea>
+                  <div class="char-counter">
+                    <span id="purpose-count">${(request.purpose || '').length}</span>/500 characters
+                  </div>
+                </div>
+              </div>
+
+              <!-- Personal Information -->
+              <div class="edit-section">
+                <div class="section-title-edit">
+                  <i class="fas fa-user"></i> Personal Information
+                </div>
+                
+                <div class="form-row-edit">
+                  <div class="form-group-edit">
+                    <label class="form-label-edit">First Name <span class="required">*</span></label>
+                    <input type="text" class="swal2-input" id="edit-firstname" 
+                           value="${request.first_name || ''}" 
+                           placeholder="Enter first name" required>
+                  </div>
+
+                  <div class="form-group-edit">
+                    <label class="form-label-edit">Middle Name</label>
+                    <input type="text" class="swal2-input" id="edit-middlename" 
+                           value="${request.middle_name || ''}" 
+                           placeholder="Enter middle name (optional)">
+                  </div>
+
+                  <div class="form-group-edit">
+                    <label class="form-label-edit">Last Name <span class="required">*</span></label>
+                    <input type="text" class="swal2-input" id="edit-lastname" 
+                           value="${request.last_name || ''}" 
+                           placeholder="Enter last name" required>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Contact Information -->
+              <div class="edit-section">
+                <div class="section-title-edit">
+                  <i class="fas fa-phone"></i> Contact Information
+                </div>
+                
+                <div class="form-row-edit">
+                  <div class="form-group-edit">
+                    <label class="form-label-edit">Email Address <span class="required">*</span></label>
+                    <input type="email" class="swal2-input" id="edit-email" 
+                           value="${request.email || ''}" 
+                           placeholder="your.email@example.com" required>
+                  </div>
+
+                  <div class="form-group-edit">
+                    <label class="form-label-edit">Contact Number <span class="required">*</span></label>
+                    <input type="tel" class="swal2-input" id="edit-contact" 
+                           value="${request.contact_number || ''}" 
+                           placeholder="09XXXXXXXXX" required
+                           pattern="09[0-9]{9}" maxlength="11">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Address Information -->
+              <div class="edit-section">
+                <div class="section-title-edit">
+                  <i class="fas fa-map-marker-alt"></i> Address Information
+                </div>
+                
+                <div class="form-group-edit">
+                  <label class="form-label-edit">Complete Address <span class="required">*</span></label>
+                  <textarea class="swal2-textarea" id="edit-address" required
+                            placeholder="House No., Street, Barangay, City">${request.address || ''}</textarea>
+                </div>
+              </div>
+
+              <!-- Current Attachments -->
+              ${attachmentsHTML}
+
+              <!-- New Attachments -->
+              <div class="edit-section">
+                <div class="section-title-edit">
+                  <i class="fas fa-cloud-upload-alt"></i> Add New Attachments (Optional)
+                </div>
+                
+                <label for="edit-new-attachments" class="file-upload-box" id="upload-box">
+                  <div class="upload-icon">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                  </div>
+                  <div class="upload-text">Click to upload or drag and drop</div>
+                  <div class="upload-hint">JPG, PNG, PDF, DOC, DOCX (Max 5MB each)</div>
+                  <input type="file" 
+                        id="edit-new-attachments" 
+                        accept="image/*,.pdf,.doc,.docx"
+                        multiple
+                        style="display: none;"
+                        onchange="previewNewAttachments(this)">
+                </label>
+
+                <div id="new-attachments-preview" style="display: none;"></div>
+              </div>
+
+              <!-- Info Box -->
+              <div class="info-box-edit">
+                <i class="fas fa-info-circle"></i>
+                <p>
+                  After updating, your request will be resubmitted for approval with status <strong>"Pending"</strong>. 
+                  The admin will review your updated information and attachments.
+                </p>
+              </div>
+
+              <!-- Hidden input to track attachments marked for deletion -->
+              <input type="hidden" id="attachments-to-delete" value="">
+            </div>
+          `,
+          customClass: {
+            popup: 'swal-wide',
+            htmlContainer: 'swal2-html-no-padding'
+          },
+          width: '900px',
+          showCancelButton: true,
+          confirmButtonText: '<i class="fas fa-paper-plane"></i> Update & Resubmit',
+          cancelButtonText: '<i class="fas fa-times"></i> Cancel',
+          confirmButtonColor: '#28a745',
+          cancelButtonColor: '#6c757d',
+          didOpen: () => {
+            document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+            document.body.classList.remove("swal2-shown", "swal2-height-auto");
+
+            // Add input validation for contact number
+            const contactInput = document.getElementById('edit-contact');
+            contactInput.addEventListener('input', function () {
+              this.value = this.value.replace(/[^0-9]/g, '');
+              if (this.value.length > 11) {
+                this.value = this.value.slice(0, 11);
+              }
+            });
+          },
+          preConfirm: () => {
+            const firstName = document.getElementById('edit-firstname').value.trim();
+            const middleName = document.getElementById('edit-middlename').value.trim();
+            const lastName = document.getElementById('edit-lastname').value.trim();
+            const email = document.getElementById('edit-email').value.trim();
+            const contactNumber = document.getElementById('edit-contact').value.trim();
+            const address = document.getElementById('edit-address').value.trim();
+            const purpose = document.getElementById('edit-purpose').value.trim();
+            const newAttachments = document.getElementById('edit-new-attachments').files;
+            const attachmentsToDelete = document.getElementById('attachments-to-delete').value;
+
+            // Validate required fields
+            if (!firstName || !lastName || !email || !contactNumber || !address || !purpose) {
+              Swal.showValidationMessage('Please fill in all required fields');
+              return false;
+            }
+
+            // Validate email format
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailPattern.test(email)) {
+              Swal.showValidationMessage('Please enter a valid email address');
+              return false;
+            }
+
+            // Validate contact number format
+            const contactPattern = /^09\d{9}$/;
+            if (!contactPattern.test(contactNumber)) {
+              Swal.showValidationMessage('Contact number must start with 09 and be 11 digits long');
+              return false;
+            }
+
+            // Validate minimum length for purpose
+            if (purpose.length < 10) {
+              Swal.showValidationMessage('Purpose must be at least 10 characters long');
+              return false;
+            }
+
+            // Validate file sizes
+            if (newAttachments && newAttachments.length > 0) {
+              for (let i = 0; i < newAttachments.length; i++) {
+                if (newAttachments[i].size > 5 * 1024 * 1024) {
+                  Swal.showValidationMessage('Each file must be less than 5MB');
+                  return false;
+                }
+              }
+            }
+
+            const formData = new FormData();
+            formData.append("request_id", requestId);
+            formData.append("first_name", firstName);
+            formData.append("middle_name", middleName);
+            formData.append("last_name", lastName);
+            formData.append("email", email);
+            formData.append("contact_number", contactNumber);
+            formData.append("address", address);
+            formData.append("purpose", purpose);
+            formData.append("attachments_to_delete", attachmentsToDelete);
+
+            // Add new attachments
+            if (newAttachments && newAttachments.length > 0) {
+              for (let i = 0; i < newAttachments.length; i++) {
+                formData.append("new_attachments[]", newAttachments[i]);
+              }
+            }
+
+            return formData;
+          }
+        }).then((result) => {
+          if (result.isConfirmed) {
+            // Show loading state
+            Swal.fire({
+              title: 'Updating Credentials...',
+              text: 'Please wait while we process your request.',
+              allowOutsideClick: false,
+              didOpen: () => {
+                Swal.showLoading();
+                document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                document.body.classList.remove("swal2-shown", "swal2-height-auto");
+              }
+            });
+
+            fetch('./endpoints/update_request_credentials.php', {
+              method: 'POST',
+              body: result.value
+            })
+              .then(res => res.json())
+              .then(data => {
+                if (data.success) {
+                  Swal.fire({
+                    icon: 'success',
+                    title: 'Success!',
+                    html: `
+                      <p style="font-size: 16px; margin-bottom: 15px;">${data.message}</p>
+                      <div style="background: #d1ecf1; padding: 15px; border-radius: 8px;">
+                        <p style="color: #0c5460; margin: 0; font-size: 14px;">
+                          <i class="fas fa-clock"></i> 
+                          Your request has been resubmitted and is now pending approval.
+                        </p>
+                      </div>
+                    `,
+                    confirmButtonColor: '#28a745',
+                    confirmButtonText: 'OK',
+                    didOpen: () => {
+                      document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                      document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                    }
+                  }).then(() => {
+                    location.reload();
+                  });
+                } else {
+                  Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: data.message || 'Unable to update credentials.',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#667eea',
+                    didOpen: () => {
+                      document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                      document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                    }
+                  });
+                }
+              })
+              .catch(error => {
+                console.error('Error:', error);
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Connection Error!',
+                  text: 'Unable to connect to server. Please try again.',
+                  confirmButtonText: 'OK',
+                  confirmButtonColor: '#667eea',
+                  didOpen: () => {
+                    document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                    document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                  }
+                });
+              });
+          }
+        });
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error!',
+          text: requestData.message || 'Unable to fetch request details.',
+          confirmButtonText: 'OK',
+          confirmButtonColor: '#667eea',
+          didOpen: () => {
+            document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+            document.body.classList.remove("swal2-shown", "swal2-height-auto");
+          }
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Connection Error!',
+        text: 'Unable to connect to server.',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#667eea',
+        didOpen: () => {
+          document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+          document.body.classList.remove("swal2-shown", "swal2-height-auto");
+        }
+      });
+    });
+}
+
+// Helper function to update character count
+function updateCharCount(textarea, counterId) {
+  const counter = document.getElementById(counterId);
+  if (counter) {
+    counter.textContent = textarea.value.length;
+  }
+}
+
+// Helper function to get file icon based on type
+function getFileIcon(fileType) {
+  const type = fileType.toLowerCase();
+  if (['jpg', 'jpeg', 'png', 'gif'].includes(type)) return 'image';
+  if (type === 'pdf') return 'pdf';
+  if (['doc', 'docx'].includes(type)) return 'word';
+  return 'file';
+}
+
+// Function to mark attachment for deletion
+function markAttachmentForDeletion(attachmentId) {
+  const attachmentElement = document.getElementById(`attachment-${attachmentId}`);
+  if (attachmentElement) {
+    const deleteInput = document.getElementById('attachments-to-delete');
+    const currentValue = deleteInput.value;
+    const idsArray = currentValue ? currentValue.split(',') : [];
+    
+    if (idsArray.includes(attachmentId.toString())) {
+      // Remove from delete list (undo)
+      const index = idsArray.indexOf(attachmentId.toString());
+      idsArray.splice(index, 1);
+      attachmentElement.classList.remove('marked-delete');
+    } else {
+      // Add to delete list
+      idsArray.push(attachmentId.toString());
+      attachmentElement.classList.add('marked-delete');
+    }
+    
+    deleteInput.value = idsArray.join(',');
+  }
+}
+
+// Function to view attachment
+// Function to view attachment without closing the edit modal
+function viewAttachment(filePath, fileType) {
+  const type = fileType.toLowerCase();
+  
+  // Check if we're inside the edit credentials modal
+  const isInEditModal = document.getElementById('edit-firstname') !== null;
+  
+  // If in edit modal, save the current state
+  let savedFormData = null;
+  if (isInEditModal) {
+    savedFormData = {
+      requestId: document.querySelector('[id^="attachment-"]')?.id.match(/\d+/)?.[0] || null,
+      firstName: document.getElementById('edit-firstname')?.value || '',
+      middleName: document.getElementById('edit-middlename')?.value || '',
+      lastName: document.getElementById('edit-lastname')?.value || '',
+      email: document.getElementById('edit-email')?.value || '',
+      contactNumber: document.getElementById('edit-contact')?.value || '',
+      address: document.getElementById('edit-address')?.value || '',
+      purpose: document.getElementById('edit-purpose')?.value || '',
+      attachmentsToDelete: document.getElementById('attachments-to-delete')?.value || ''
+    };
+  }
+  
+  if (['jpg', 'jpeg', 'png', 'gif'].includes(type)) {
+    // View image
+    Swal.fire({
+      title: 'Attachment Preview',
+      imageUrl: filePath,
+      imageAlt: 'Attachment',
+      confirmButtonText: 'Close',
+      confirmButtonColor: '#667eea',
+      width: '800px',
+      imageWidth: '100%',
+      imageHeight: 'auto',
+      didClose: () => {
+        // Reopen edit modal if it was open before
+        if (isInEditModal && savedFormData && savedFormData.requestId) {
+          setTimeout(() => {
+            reopenEditCredentialsModal(savedFormData);
+          }, 100);
+        }
+      }
+    });
+  } else if (type === 'pdf') {
+    // Open PDF in new tab (doesn't close modal)
+    window.open(filePath, '_blank');
+  } else {
+    // For other files, download them (doesn't close modal)
+    const link = document.createElement('a');
+    link.href = filePath;
+    link.download = filePath.split('/').pop();
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+}
+
+// Helper function to reopen the edit credentials modal with saved data
+function reopenEditCredentialsModal(savedData) {
+  // Find the request ID from the saved data or current context
+  const requestId = savedData.requestId || parseInt(document.querySelector('.swal2-container')?.getAttribute('data-request-id'));
+  
+  if (!requestId) {
+    console.error('Cannot reopen modal: Request ID not found');
+    return;
+  }
+  
+  // Re-fetch the request details and reopen the modal
+  Promise.all([
+    fetch(`./endpoints/get_request_details.php?id=${requestId}`).then(res => res.json()),
+    fetch(`./endpoints/get_request_attachments.php?id=${requestId}`).then(res => res.json())
+  ])
+  .then(([requestData, attachmentsData]) => {
+    if (requestData.success) {
+      const request = requestData.request;
+      const attachments = attachmentsData.success ? attachmentsData.attachments : [];
+      
+      // Restore the form with saved data
+      request.first_name = savedData.firstName || request.first_name;
+      request.middle_name = savedData.middleName || request.middle_name;
+      request.last_name = savedData.lastName || request.last_name;
+      request.email = savedData.email || request.email;
+      request.contact_number = savedData.contactNumber || request.contact_number;
+      request.address = savedData.address || request.address;
+      request.purpose = savedData.purpose || request.purpose;
+      
+      // Call the original edit credentials function logic
+      // (You'll need to extract the modal creation logic into a reusable function)
+      showEditCredentialsModal(requestId, request, attachments, savedData.attachmentsToDelete);
+    }
+  })
+  .catch(error => {
+    console.error('Error reopening modal:', error);
+  });
+}
+
+// Function to preview new attachments
+function previewNewAttachments(input) {
+  const previewContainer = document.getElementById('new-attachments-preview');
+  const uploadBox = document.getElementById('upload-box');
+  
+  if (input.files && input.files.length > 0) {
+    uploadBox.classList.add('has-files');
+    
+    let previewHTML = '<div class="new-files-preview">';
+    previewHTML += '<div class="preview-header"><i class="fas fa-check-circle"></i> Files ready to upload</div>';
+    
+    for (let i = 0; i < input.files.length; i++) {
+      const file = input.files[i];
+      const fileSize = (file.size / 1024).toFixed(2);
+      const fileExt = file.name.split('.').pop().toLowerCase();
+      
+      previewHTML += `
+        <div class="new-file-item">
+          <div class="new-file-icon">
+            <i class="fas fa-file-${getFileIcon(fileExt)}"></i>
+          </div>
+          <div class="new-file-info">
+            <div class="new-file-name">${file.name}</div>
+            <div class="new-file-size">${fileExt.toUpperCase()} • ${fileSize} KB</div>
+          </div>
+          <span class="new-badge">NEW</span>
+        </div>
+      `;
+    }
+    
+    previewHTML += '</div>';
+    previewContainer.innerHTML = previewHTML;
+    previewContainer.style.display = 'block';
+  } else {
+    uploadBox.classList.remove('has-files');
+    previewContainer.style.display = 'none';
+  }
+}
   </script>
 
 </body>
