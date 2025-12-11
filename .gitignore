@@ -6,3 +6,4 @@ phpdotenv/
 send_sms.php
 
 /vendor/
+/conn/PHPMailer/

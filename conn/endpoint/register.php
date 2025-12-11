@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once("../conn.php");
+require_once("../email_helper.php");
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     // Check if this is the initial registration or verification step
@@ -145,7 +146,7 @@ function handleVerificationUpload($conn)
 
     // Generate filename components
     $full_name = $reg_data['first_name'] . '-' . $reg_data['middle_name'] . '-' . $reg_data['last_name'];
-    $full_name = preg_replace('/[^A-Za-z0-9\-]/', '', $full_name); // Remove special characters
+    $full_name = preg_replace('/[^A-Za-z0-9\-]/', '', $full_name);
     $date_stamp = date('Y-m-d-His');
 
     // Handle selfie upload
@@ -183,7 +184,6 @@ function handleVerificationUpload($conn)
     }
 
     if (!move_uploaded_file($gov_id_file['tmp_name'], $gov_id_path)) {
-        // Clean up selfie if gov ID upload fails
         unlink($selfie_path);
         $_SESSION["register_error"] = "Failed to upload government ID. Please try again.";
         header("Location: ../../index.php?register=verify");
@@ -219,11 +219,44 @@ function handleVerificationUpload($conn)
         $log_stmt->execute();
         $log_stmt->close();
 
+        // ✅ Send email notifications (with error handling - won't block registration)
+    try {
+        $user_full_name = trim($reg_data['first_name'] . ' ' . $reg_data['middle_name'] . ' ' . $reg_data['last_name']);
+        $user_address = $reg_data['house_number'] . ' ' . $reg_data['street_name'] . ', ' . $reg_data['barangay'];
+        
+        $emailDetails = [
+            'full_name' => $user_full_name,
+            'email' => $reg_data['email'],
+            'contact' => $reg_data['contact'],
+            'address' => $user_address,
+            'gov_id_type' => $gov_id_type,
+            'registration_date' => date('F j, Y g:i A')
+        ];
+        
+        // Try to send notification to user
+        try {
+            sendRegistrationNotification($reg_data['email'], $user_full_name, $emailDetails);
+        } catch (Exception $e) {
+            error_log("Failed to send user notification email: " . $e->getMessage());
+        }
+        
+        // Try to send notification to admin
+        try {
+            sendAdminNewRegistrationNotification($emailDetails);
+        } catch (Exception $e) {
+            error_log("Failed to send admin notification email: " . $e->getMessage());
+        }
+    } catch (Exception $e) {
+        // Log the error but don't fail the registration
+        error_log("Email notification error: " . $e->getMessage());
+    }
+
+
         // Clear session data
         unset($_SESSION['pending_registration']);
         unset($_SESSION['show_verification']);
 
-        $_SESSION["register_success"] = "Registration complete! Please wait for admin approval.";
+        $_SESSION["register_success"] = "Registration complete! Please check your email and wait for admin approval.";
         header("Location: ../../index.php?register=success");
         exit();
     } else {

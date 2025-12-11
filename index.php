@@ -363,7 +363,7 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
                 Swal.fire({
                     icon: 'success',
                     title: 'Registration Complete',
-                    text: 'Please wait for admin approval to access your account.',
+                    html: '<p>Please check your email for confirmation.</p><p>Wait for admin approval to access your account.</p>',
                     confirmButtonText: 'OK',
                     didOpen: () => {
                         document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
@@ -511,6 +511,8 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
                         allowOutsideClick: false,
                         didOpen: () => {
                             Swal.showLoading();
+                            document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                            document.body.classList.remove("swal2-shown", "swal2-height-auto");
                         }
                     });
 
@@ -534,7 +536,11 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
                                 icon: 'error',
                                 title: 'Upload Failed',
                                 text: 'Something went wrong. Please try again.',
-                                confirmButtonText: 'OK'
+                                confirmButtonText: 'OK',
+                                didOpen: () => {
+                                    document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                                    document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                                }
                             });
                         });
                 }
@@ -622,31 +628,31 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
             Swal.fire({
                 title: 'Reset Password',
                 html: `
-            <div class="swal-form">
-                <div class="form-group">
-                    <label for="fp-email" class="form-label">Email Address *</label>
-                    <input type="email" id="fp-email" class="swal2-input" placeholder="Enter your email address" required>
-                </div>
-                
-                <div class="form-group">
-                    <label for="fp-newpass" class="form-label">New Password *</label>
-                    <div style="position: relative;">
-                        <input type="password" id="fp-newpass" class="swal2-input" placeholder="Enter new password" required style="padding-right: 40px;">
-                        <i class="fas fa-eye password-toggle" onclick="togglePasswordForgot('fp-newpass', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+                <div class="swal-form">
+                    <div class="form-group">
+                        <label for="fp-email" class="form-label">Email Address *</label>
+                        <input type="email" id="fp-email" class="swal2-input" placeholder="Enter your email address" required>
                     </div>
-                    <div id="fp-password-strength" style="margin-top: 5px; font-size: 12px;"></div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="fp-confirmpass" class="form-label">Confirm New Password *</label>
-                    <div style="position: relative;">
-                        <input type="password" id="fp-confirmpass" class="swal2-input" placeholder="Confirm new password" required style="padding-right: 40px;">
-                        <i class="fas fa-eye password-toggle" onclick="togglePasswordForgot('fp-confirmpass', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+                    
+                    <div class="form-group">
+                        <label for="fp-newpass" class="form-label">New Password *</label>
+                        <div style="position: relative;">
+                            <input type="password" id="fp-newpass" class="swal2-input" placeholder="Enter new password" required style="padding-right: 40px;">
+                            <i class="fas fa-eye password-toggle" onclick="togglePasswordForgot('fp-newpass', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+                        </div>
+                        <div id="fp-password-strength" style="margin-top: 5px; font-size: 12px;"></div>
                     </div>
-                    <div id="fp-password-match" style="margin-top: 5px; font-size: 12px;"></div>
+                    
+                    <div class="form-group">
+                        <label for="fp-confirmpass" class="form-label">Confirm New Password *</label>
+                        <div style="position: relative;">
+                            <input type="password" id="fp-confirmpass" class="swal2-input" placeholder="Confirm new password" required style="padding-right: 40px;">
+                            <i class="fas fa-eye password-toggle" onclick="togglePasswordForgot('fp-confirmpass', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+                        </div>
+                        <div id="fp-password-match" style="margin-top: 5px; font-size: 12px;"></div>
+                    </div>
                 </div>
-            </div>
-        `,
+            `,
                 focusConfirm: false,
                 showCancelButton: true,
                 confirmButtonText: 'Reset Password',
@@ -686,6 +692,8 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
                         allowOutsideClick: false,
                         didOpen: () => {
                             Swal.showLoading();
+                            document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                            document.body.classList.remove("swal2-shown", "swal2-height-auto");
                         }
                     });
 
@@ -712,7 +720,11 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
                                     title: 'Error',
                                     text: data.message || 'Something went wrong. Please try again.',
                                     icon: 'error',
-                                    confirmButtonText: 'OK'
+                                    confirmButtonText: 'OK',
+                                    didOpen: () => {
+                                        document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                                        document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                                    }
                                 });
                             }
                         })
@@ -721,7 +733,11 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
                                 title: 'Error',
                                 text: 'Unable to reset password. Please check your connection and try again.',
                                 icon: 'error',
-                                confirmButtonText: 'OK'
+                                confirmButtonText: 'OK',
+                                didOpen: () => {
+                                    document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                                    document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                                }
                             });
                         });
                 }
@@ -796,6 +812,8 @@ function showAppealModal(email) {
         allowOutsideClick: false,
         didOpen: () => {
             Swal.showLoading();
+            document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+            document.body.classList.remove("swal2-shown", "swal2-height-auto");
         }
     });
     
@@ -1055,6 +1073,8 @@ function showAppealModal(email) {
                     allowOutsideClick: false,
                     didOpen: () => {
                         Swal.showLoading();
+                        document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                        document.body.classList.remove("swal2-shown", "swal2-height-auto");
                     }
                 });
                 
