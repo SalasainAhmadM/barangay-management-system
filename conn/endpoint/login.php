@@ -59,6 +59,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if ($user["is_approved"] === "rejected") {
             $_SESSION["login_error_type"] = "rejected";
+            $_SESSION["rejected_email"] = $user["email"]; 
             $_SESSION["login_error"] = "Your account registration has been rejected. Please contact the administrator for more information.";
             header("Location: ../../index.php?login=rejected");
             exit();

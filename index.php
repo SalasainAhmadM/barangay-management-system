@@ -86,6 +86,48 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
         top: auto !important;
         bottom: auto !important;
     }
+    /* Force Select2 dropdown to always open below */
+.select2-container--open .select2-dropdown {
+    position: absolute !important;
+}
+
+.select2-dropdown--below {
+    top: 100% !important;
+}
+
+.select2-container--default.select2-container--open.select2-container--below .select2-selection--single {
+    border-bottom-left-radius: 5px !important;
+    border-bottom-right-radius: 5px !important;
+}
+
+/* Prevent dropdown from being positioned above */
+.select2-container--open .select2-dropdown--above {
+    display: none !important;
+}
+.appeal-modal-popup {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.swal2-input {
+    width: 100% !important;
+    box-sizing: border-box;
+    margin: 5px 0 !important;
+    padding: 10px !important;
+}
+
+.swal-verification-form .form-group {
+    text-align: left;
+    margin-bottom: 15px;
+}
+
+.swal-verification-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #333;
+    font-size: 14px;
+}
 </style>
 
 <head>
@@ -95,26 +137,6 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
     <!-- Select2 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 </head>
-<script>
-   
-    $(document).ready(function() {
-    $('#street-name').select2({
-        placeholder: 'Select or search street',
-        allowClear: true,
-        width: '100%',
-        dropdownParent: $('.signup-form'),
-        dropdownPosition: 'below' // Force below
-    }).on('select2:open', function() {
-        // Force dropdown positioning
-        setTimeout(function() {
-            $('.select2-dropdown').css({
-                'top': '100%',
-                'bottom': 'auto'
-            });
-        }, 0);
-    });
-});
-</script>
 
 <body>
     <div
@@ -296,19 +318,28 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
             };
             <?php unset($_SESSION['login_error']);
             unset($_SESSION['login_error_type']); ?>
-        <?php elseif (isset($_GET['login']) && $_GET['login'] === 'rejected'): ?>
+       <?php elseif (isset($_GET['login']) && $_GET['login'] === 'rejected'): ?>
             window.onload = function () {
+                // ✅ Define rejectedEmail from session
+                const rejectedEmail = '<?php echo isset($_SESSION['rejected_email']) ? $_SESSION['rejected_email'] : ''; ?>';
+                
                 Swal.fire({
                     icon: 'error',
                     title: 'Account Rejected',
                     text: '<?php echo isset($_SESSION['login_error']) ? $_SESSION['login_error'] : "Your account registration has been rejected. Please contact the administrator for more information."; ?>',
-                    confirmButtonText: 'OK',
+                    confirmButtonText: 'Appeal',
+                    showCancelButton: true,
+                    cancelButtonText: 'Close',
                     didOpen: () => {
                         document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
                         document.body.classList.remove("swal2-shown", "swal2-height-auto");
                     },
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        showAppealModal(rejectedEmail); // ✅ Now it's defined!
+                    }
+                    window.history.replaceState({}, document.title, window.location.pathname);
                 });
-                window.history.replaceState({}, document.title, window.location.pathname);
             };
             <?php unset($_SESSION['login_error']);
             unset($_SESSION['login_error_type']); ?>
@@ -709,52 +740,387 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
                 toggleIcon.classList.add('fa-eye');
             }
         }
-
-        // Initialize Select2 for searchable street dropdown
-        $(document).ready(function() {
-            $('#street-name').select2({
-                placeholder: 'Select or search street',
-                allowClear: true,
-                width: '100%'
+$(document).ready(function() {
+    // Destroy any existing Select2 instance first
+    if ($('#street-name').hasClass('select2-hidden-accessible')) {
+        $('#street-name').select2('destroy');
+    }
+    
+    // Initialize Select2 with proper configuration
+    $('#street-name').select2({
+        placeholder: 'Select or search street',
+        allowClear: true,
+        width: '100%',
+        dropdownParent: $('.signup-form'),
+        dropdownAutoWidth: false,
+        minimumResultsForSearch: 0
+    });
+    
+    // Force dropdown to open below
+    $('#street-name').on('select2:open', function(e) {
+        setTimeout(function() {
+            var $dropdown = $('.select2-dropdown');
+            var $select = $('#street-name').next('.select2-container');
+            
+            $dropdown.addClass('select2-dropdown--below').removeClass('select2-dropdown--above');
+            
+            var selectOffset = $select.offset();
+            var selectHeight = $select.outerHeight();
+            
+            $dropdown.css({
+                'top': (selectOffset.top + selectHeight) + 'px',
+                'left': selectOffset.left + 'px',
+                'width': $select.outerWidth() + 'px',
+                'position': 'absolute',
+                'z-index': 9999
             });
-        });
+        }, 10);
+    });
+});
 
-        $(document).ready(function() {
-    // Wait for page to fully load
-    setTimeout(function() {
-        // Destroy any existing Select2
-        if ($('#street-name').hasClass('select2-hidden-accessible')) {
-            $('#street-name').select2('destroy');
+function showAppealModal(email) {
+    if (!email) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Unable to load your information. Please try logging in again.',
+            confirmButtonText: 'OK'
+        });
+        return;
+    }
+    
+    // Show loading while fetching data
+    Swal.fire({
+        title: 'Loading Your Information...',
+        text: 'Please wait',
+        allowOutsideClick: false,
+        didOpen: () => {
+            Swal.showLoading();
+        }
+    });
+    
+    // Fetch user data
+    fetch('./conn/endpoint/get_user_data.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'email=' + encodeURIComponent(email)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            throw new Error(data.message || 'Failed to load user data');
         }
         
-        // Initialize fresh
-        $('#street-name').select2({
-            placeholder: 'Select or search street',
-            allowClear: true,
-            width: '100%',
-            dropdownParent: $('body'), // Try attaching to body instead
-            dropdownCssClass: 'force-below'
-        });
+        const userData = data.data;
+        const selfieImagePath = userData.selfie_image 
+            ? `./uploads/selfies/${userData.selfie_image}` 
+            : '';
+        const govIdImagePath = userData.gov_id_image 
+            ? `./uploads/gov_id/${userData.gov_id_image}` 
+            : '';
         
-        // Force positioning on every open
-        $('#street-name').on('select2:open', function(e) {
-            $('.select2-dropdown').addClass('select2-dropdown--below').removeClass('select2-dropdown--above');
-            
-            // Get select position
-            var $select = $(this).next('.select2-container');
-            var offset = $select.offset();
-            var height = $select.outerHeight();
-            
-            // Position dropdown
-            $('.select2-dropdown').css({
-                'top': (offset.top + height) + 'px',
-                'left': offset.left + 'px',
-                'width': $select.outerWidth() + 'px',
-                'position': 'fixed'
-            });
+        Swal.fire({
+            title: 'Appeal Registration',
+            html: `
+                <form id="appeal-form" class="swal-verification-form">
+                    <p style="margin-bottom: 20px; color: #666; font-size: 14px;">
+                        Review and update your credentials below to resubmit your registration.
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>Email Address <span class="required">*</span></label>
+                        <input type="email" id="appeal-email" class="swal2-input" 
+                               value="${userData.email || email}" readonly 
+                               style="background-color: #f5f5f5; cursor: not-allowed;">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>First Name <span class="required">*</span></label>
+                        <input type="text" id="appeal-firstname" class="swal2-input" 
+                               value="${userData.first_name || ''}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Middle Initial</label>
+                        <input type="text" id="appeal-middle" class="swal2-input" 
+                               value="${userData.middle_name || ''}" maxlength="2">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Last Name <span class="required">*</span></label>
+                        <input type="text" id="appeal-lastname" class="swal2-input" 
+                               value="${userData.last_name || ''}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Contact Number <span class="required">*</span></label>
+                        <input type="tel" id="appeal-contact" class="swal2-input" 
+                               value="${userData.contact_number || ''}"
+                               placeholder="09XXXXXXXXX" pattern="09[0-9]{9}" required>
+                        <span id="appeal-contact-error" class="error-message"></span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>House Number <span class="required">*</span></label>
+                        <input type="text" id="appeal-house" class="swal2-input" 
+                               value="${userData.house_number || ''}" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Street Name <span class="required">*</span></label>
+                        <select id="appeal-street" class="swal2-input" required>
+                            <option value="">Select Street</option>
+                            <option value="Acacia Drive" ${userData.street_name === 'Acacia Drive' ? 'selected' : ''}>Acacia Drive</option>
+                            <option value="Alvimor Drive" ${userData.street_name === 'Alvimor Drive' ? 'selected' : ''}>Alvimor Drive</option>
+                            <option value="Ambassador Drive" ${userData.street_name === 'Ambassador Drive' ? 'selected' : ''}>Ambassador Drive</option>
+                            <option value="Atis Drive" ${userData.street_name === 'Atis Drive' ? 'selected' : ''}>Atis Drive</option>
+                            <option value="Atilano Drive" ${userData.street_name === 'Atilano Drive' ? 'selected' : ''}>Atilano Drive</option>
+                            <option value="Bagong Lipunan" ${userData.street_name === 'Bagong Lipunan' ? 'selected' : ''}>Bagong Lipunan</option>
+                            <option value="Baliwasan Interior" ${userData.street_name === 'Baliwasan Interior' ? 'selected' : ''}>Baliwasan Interior</option>
+                            <option value="Baliwasan Seaside" ${userData.street_name === 'Baliwasan Seaside' ? 'selected' : ''}>Baliwasan Seaside</option>
+                            <option value="BCC" ${userData.street_name === 'BCC' ? 'selected' : ''}>BCC</option>
+                            <option value="Bulahan" ${userData.street_name === 'Bulahan' ? 'selected' : ''}>Bulahan</option>
+                            <option value="Clipper Heights" ${userData.street_name === 'Clipper Heights' ? 'selected' : ''}>Clipper Heights</option>
+                            <option value="Fernandez Drive" ${userData.street_name === 'Fernandez Drive' ? 'selected' : ''}>Fernandez Drive</option>
+                            <option value="Ilang-Ilang" ${userData.street_name === 'Ilang-Ilang' ? 'selected' : ''}>Ilang-Ilang</option>
+                            <option value="Ledesma Compound" ${userData.street_name === 'Ledesma Compound' ? 'selected' : ''}>Ledesma Compound</option>
+                            <option value="Maharlika Drive" ${userData.street_name === 'Maharlika Drive' ? 'selected' : ''}>Maharlika Drive</option>
+                            <option value="Mango Drive" ${userData.street_name === 'Mango Drive' ? 'selected' : ''}>Mango Drive</option>
+                            <option value="Mangal Drive" ${userData.street_name === 'Mangal Drive' ? 'selected' : ''}>Mangal Drive</option>
+                            <option value="Masambo" ${userData.street_name === 'Masambo' ? 'selected' : ''}>Masambo</option>
+                            <option value="Monserat" ${userData.street_name === 'Monserat' ? 'selected' : ''}>Monserat</option>
+                            <option value="Moret" ${userData.street_name === 'Moret' ? 'selected' : ''}>Moret</option>
+                            <option value="News Lane" ${userData.street_name === 'News Lane' ? 'selected' : ''}>News Lane</option>
+                            <option value="Ranchez Drive" ${userData.street_name === 'Ranchez Drive' ? 'selected' : ''}>Ranchez Drive</option>
+                            <option value="Sampaloc Drive" ${userData.street_name === 'Sampaloc Drive' ? 'selected' : ''}>Sampaloc Drive</option>
+                            <option value="Sapangpalay" ${userData.street_name === 'Sapangpalay' ? 'selected' : ''}>Sapangpalay</option>
+                            <option value="Skyline" ${userData.street_name === 'Skyline' ? 'selected' : ''}>Skyline</option>
+                            <option value="Star Apple" ${userData.street_name === 'Star Apple' ? 'selected' : ''}>Star Apple</option>
+                            <option value="Tambis Drive" ${userData.street_name === 'Tambis Drive' ? 'selected' : ''}>Tambis Drive</option>
+                            <option value="Timex Drive" ${userData.street_name === 'Timex Drive' ? 'selected' : ''}>Timex Drive</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Current Selfie</label>
+                        <div class="file-preview">
+                            ${selfieImagePath ? `<img src="${selfieImagePath}" alt="Current Selfie" style="max-width: 200px; max-height: 200px; border-radius: 5px; border: 1px solid #ddd;">` : '<p>No selfie uploaded</p>'}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Upload New Selfie <span class="required">*</span></label>
+                        <input type="file" id="appeal-selfie" accept="image/*" capture="user" required>
+                        <div id="appeal-selfie-preview" class="file-preview"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Government ID Type <span class="required">*</span></label>
+                        <select id="appeal-govid-type" class="swal2-input" required>
+                            <option value="">Select ID Type</option>
+                            <option value="Philippine Passport" ${userData.gov_id_type === 'Philippine Passport' ? 'selected' : ''}>Philippine Passport</option>
+                            <option value="National ID (PhilSys ID)" ${userData.gov_id_type === 'National ID (PhilSys ID)' ? 'selected' : ''}>National ID (PhilSys ID)</option>
+                            <option value="Driver's License" ${userData.gov_id_type === "Driver's License" ? 'selected' : ''}>Driver's License</option>
+                            <option value="SSS ID / UMID Card" ${userData.gov_id_type === 'SSS ID / UMID Card' ? 'selected' : ''}>SSS ID / UMID Card</option>
+                            <option value="GSIS eCard" ${userData.gov_id_type === 'GSIS eCard' ? 'selected' : ''}>GSIS eCard</option>
+                            <option value="PRC ID" ${userData.gov_id_type === 'PRC ID' ? 'selected' : ''}>PRC ID</option>
+                            <option value="Postal ID" ${userData.gov_id_type === 'Postal ID' ? 'selected' : ''}>Postal ID</option>
+                            <option value="Voter's ID / Voter's Certification" ${userData.gov_id_type === "Voter's ID / Voter's Certification" ? 'selected' : ''}>Voter's ID / Voter's Certification</option>
+                            <option value="Senior Citizen ID" ${userData.gov_id_type === 'Senior Citizen ID' ? 'selected' : ''}>Senior Citizen ID</option>
+                            <option value="PWD ID" ${userData.gov_id_type === 'PWD ID' ? 'selected' : ''}>PWD ID</option>
+                            <option value="OFW / OWWA ID" ${userData.gov_id_type === 'OFW / OWWA ID' ? 'selected' : ''}>OFW / OWWA ID</option>
+                            <option value="PhilHealth ID" ${userData.gov_id_type === 'PhilHealth ID' ? 'selected' : ''}>PhilHealth ID</option>
+                            <option value="Barangay ID" ${userData.gov_id_type === 'Barangay ID' ? 'selected' : ''}>Barangay ID</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Current Government ID</label>
+                        <div class="file-preview">
+                            ${govIdImagePath ? `<img src="${govIdImagePath}" alt="Current Gov ID" style="max-width: 200px; max-height: 200px; border-radius: 5px; border: 1px solid #ddd;">` : '<p>No government ID uploaded</p>'}
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Upload New Government ID <span class="required">*</span></label>
+                        <input type="file" id="appeal-govid" accept="image/*" required>
+                        <div id="appeal-govid-preview" class="file-preview"></div>
+                    </div>
+                </form>
+            `,
+            width: '650px',
+            showCancelButton: true,
+            confirmButtonText: 'Submit Appeal',
+            cancelButtonText: 'Cancel',
+            allowOutsideClick: false,
+            customClass: {
+                container: 'appeal-modal-container',
+                popup: 'appeal-modal-popup'
+            },
+            didOpen: () => {
+                document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                
+                // Preview new selfie
+                document.getElementById('appeal-selfie').addEventListener('change', function(e) {
+                    const preview = document.getElementById('appeal-selfie-preview');
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            preview.innerHTML = `<img src="${e.target.result}" alt="New Selfie Preview" style="max-width: 200px; max-height: 200px; border-radius: 5px; border: 1px solid #ddd;">`;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                
+                // Preview new government ID
+                document.getElementById('appeal-govid').addEventListener('change', function(e) {
+                    const preview = document.getElementById('appeal-govid-preview');
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            preview.innerHTML = `<img src="${e.target.result}" alt="New ID Preview" style="max-width: 200px; max-height: 200px; border-radius: 5px; border: 1px solid #ddd;">`;
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                
+                // Contact number validation
+                document.getElementById('appeal-contact').addEventListener('input', function(e) {
+                    const value = e.target.value;
+                    const errorSpan = document.getElementById('appeal-contact-error');
+                    
+                    if (value && !value.match(/^09[0-9]{9}$/)) {
+                        e.target.classList.add('error-input');
+                        errorSpan.textContent = 'Contact must start with 09 and be exactly 11 digits';
+                        e.target.setCustomValidity('Invalid contact number');
+                    } else {
+                        e.target.classList.remove('error-input');
+                        errorSpan.textContent = '';
+                        e.target.setCustomValidity('');
+                    }
+                });
+            },
+            preConfirm: () => {
+                const email = document.getElementById('appeal-email').value.trim();
+                const firstname = document.getElementById('appeal-firstname').value.trim();
+                const middle = document.getElementById('appeal-middle').value.trim();
+                const lastname = document.getElementById('appeal-lastname').value.trim();
+                const contact = document.getElementById('appeal-contact').value.trim();
+                const house = document.getElementById('appeal-house').value.trim();
+                const street = document.getElementById('appeal-street').value;
+                const selfie = document.getElementById('appeal-selfie').files[0];
+                const govidType = document.getElementById('appeal-govid-type').value;
+                const govid = document.getElementById('appeal-govid').files[0];
+                
+                // Validations
+                if (!firstname || !lastname || !contact || !house || !street) {
+                    Swal.showValidationMessage('Please fill in all required fields');
+                    return false;
+                }
+                
+                if (!contact.match(/^09[0-9]{9}$/)) {
+                    Swal.showValidationMessage('Contact must start with 09 and be exactly 11 digits');
+                    return false;
+                }
+                
+                if (!selfie) {
+                    Swal.showValidationMessage('Please upload a new selfie');
+                    return false;
+                }
+                
+                if (!govidType) {
+                    Swal.showValidationMessage('Please select a government ID type');
+                    return false;
+                }
+                
+                if (!govid) {
+                    Swal.showValidationMessage('Please upload a new government ID');
+                    return false;
+                }
+                
+                return {
+                    email, firstname, middle, lastname, contact, 
+                    house, street, selfie, govidType, govid
+                };
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Show loading
+                Swal.fire({
+                    title: 'Submitting Appeal...',
+                    text: 'Please wait while we process your updated information.',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                
+                // Create FormData
+                const formData = new FormData();
+                formData.append('email', result.value.email);
+                formData.append('firstname', result.value.firstname);
+                formData.append('middle', result.value.middle);
+                formData.append('lastname', result.value.lastname);
+                formData.append('contact', result.value.contact);
+                formData.append('house_number', result.value.house);
+                formData.append('street_name', result.value.street);
+                formData.append('selfie_image', result.value.selfie);
+                formData.append('gov_id_type', result.value.govidType);
+                formData.append('gov_id_image', result.value.govid);
+                
+                // Submit appeal
+                fetch('./conn/endpoint/appeal_registration.php', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Appeal Submitted',
+                            text: 'Your updated credentials have been submitted for review. Please wait for admin approval.',
+                            confirmButtonText: 'OK',
+                            didOpen: () => {
+                                document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                                document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                            }
+                        }).then(() => {
+                            // Clear the rejected email from session
+                            <?php unset($_SESSION['rejected_email']); ?>
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Appeal Failed',
+                            text: data.message || 'Something went wrong. Please try again.',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                })
+                .catch(error => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: 'Unable to submit appeal. Please try again.',
+                        confirmButtonText: 'OK'
+                    });
+                });
+            }
         });
-    }, 100);
-});
+    })
+    .catch(error => {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: error.message || 'Unable to load your information. Please try again.',
+            confirmButtonText: 'OK'
+        });
+    });
+}
     </script>
 </body>
 
