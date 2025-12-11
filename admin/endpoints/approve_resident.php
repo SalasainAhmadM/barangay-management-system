@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once("../../conn/conn.php");
+require_once("../../conn/email_helper.php");
 header("Content-Type: application/json");
 
 // Check if admin is logged in
@@ -83,6 +84,20 @@ try {
     $logStmt->bind_param("ss", $activityType, $description);
     $logStmt->execute();
     $logStmt->close();
+
+    // ✅ Send email notification (non-blocking - won't fail approval if email fails)
+    try {
+        if ($action === 'approve') {
+            // Send approval email
+            @sendApprovalNotification($resident['email'], $fullName);
+        } else {
+            // Send rejection email
+            @sendRejectionNotification($resident['email'], $fullName);
+        }
+    } catch (Exception $e) {
+        // Log error but don't fail the approval/rejection process
+        error_log("Email notification error for user ID {$id}: " . $e->getMessage());
+    }
 
     echo json_encode([
         "success" => true,
