@@ -68,6 +68,14 @@
         </li>
 
         <li>
+            <a href="safety_reports.php" class="<?= ($current_page == 'safety_reports.php') ? 'active' : '' ?>">
+                <i class="fa-solid fa-shield-halved"></i>
+                <span class="links_name">Safety Reports</span>
+            </a>
+            <span class="tooltip">Safety Reports</span>
+        </li>
+
+        <li>
             <a href="reports.php" class="<?= ($current_page == 'reports.php') ? 'active' : '' ?>">
                 <i class="fa-solid fa-chart-line"></i>
                 <span class="links_name">Reports</span>

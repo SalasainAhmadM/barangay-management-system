@@ -4,35 +4,40 @@ require_once("../../conn/conn.php");
 
 header('Content-Type: application/json');
 
-// Check authentication
+// Check if admin is logged in
 if (!isset($_SESSION["admin_id"])) {
-    echo json_encode(['success' => false, 'message' => 'Unauthorized access']);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Unauthorized access'
+    ]);
     exit();
 }
 
 try {
-    // Fetch all missed collection reports with user information
+    // Fetch all safety reports with user information
     $stmt = $conn->prepare("
         SELECT 
-            mc.report_id,
-            mc.user_id,
-            mc.waste_type,
-            mc.location,
-            mc.collection_date,
-            mc.description,
-            mc.photo_path,
-            mc.status,
-            mc.resolution_notes,
-            mc.resolved_date,
-            mc.created_at,
+            sr.id,
+            sr.user_id,
+            sr.title,
+            sr.description,
+            sr.incident_type,
+            sr.location,
+            sr.urgency_level,
+            sr.status,
+            sr.is_anonymous,
+            sr.witness_info,
+            sr.response_notes,
+            sr.created_at,
+            sr.resolved_at,
             u.first_name,
             u.middle_name,
             u.last_name,
             u.email,
             u.contact_number
-        FROM missed_collections mc
-        LEFT JOIN user u ON mc.user_id = u.id
-        ORDER BY mc.created_at DESC
+        FROM safety_reports sr
+        LEFT JOIN user u ON sr.user_id = u.id
+        ORDER BY sr.created_at DESC
     ");
     
     $stmt->execute();
@@ -52,7 +57,7 @@ try {
 } catch (Exception $e) {
     echo json_encode([
         'success' => false,
-        'message' => 'Error fetching reports: ' . $e->getMessage()
+        'message' => 'Error fetching safety reports: ' . $e->getMessage()
     ]);
 }
 ?>
