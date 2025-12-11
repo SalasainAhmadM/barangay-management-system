@@ -1,5 +1,5 @@
 
-// Create notification with SMS confirmation
+// Create notification with multi-user selection
 function createNotification() {
     // Fetch all users for the dropdown
     fetch('./endpoints/get_all_users.php')
@@ -38,13 +38,57 @@ function createNotification() {
                             <div class="form-section">
                                 <div class="section-title">
                                     <i class="fas fa-user"></i>
-                                    Select User <span style="color: #ef4444;">*</span>
+                                    Select Recipients <span style="color: #ef4444;">*</span>
                                 </div>
+                                
+                                <!-- Recipient Type Selection -->
+                                <div style="margin-top: 10px; display: flex; gap: 10px;">
+                                    <label style="flex: 1; cursor: pointer;">
+                                        <input type="radio" name="recipientType" value="single" checked 
+                                               style="margin-right: 5px;">
+                                        Single User
+                                    </label>
+                                    <label style="flex: 1; cursor: pointer;">
+                                        <input type="radio" name="recipientType" value="multiple" 
+                                               style="margin-right: 5px;">
+                                        Multiple Users
+                                    </label>
+                                    <label style="flex: 1; cursor: pointer;">
+                                        <input type="radio" name="recipientType" value="all" 
+                                               style="margin-right: 5px;">
+                                        All Users
+                                    </label>
+                                </div>
+                                
+                                <!-- Single User Select (default) -->
                                 <select class="enhanced-input" id="userId" style="margin-top: 8px;">
                                     <option value="">Choose a user...</option>
-                                    <option value="all">All Users</option>
                                     ${userOptions}
                                 </select>
+                                
+                                <!-- Multiple Users Select (hidden by default) -->
+                                <div id="multipleUsersSection" style="display: none; margin-top: 8px;">
+                                    <select class="enhanced-input" id="userIds" multiple size="8" 
+                                            style="height: 200px;">
+                                        ${userOptions}
+                                    </select>
+                                    <div style="font-size: 12px; color: #6b7280; margin-top: 6px;">
+                                        <i class="fas fa-info-circle"></i> 
+                                        Hold Ctrl to select multiple users. 
+                                        <span id="selectedCount" style="font-weight: 600; color: #6366f1;">0 selected</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Selected Users Display -->
+                                <div id="selectedUsersDisplay" style="display: none; margin-top: 10px;">
+                                    <div style="font-size: 12px; color: #374151; font-weight: 600; margin-bottom: 6px;">
+                                        Selected Users:
+                                    </div>
+                                    <div id="selectedUsersList" style="max-height: 120px; overflow-y: auto; 
+                                         border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; 
+                                         background: #f9fafb;">
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Street Filter (hidden by default) -->
@@ -95,18 +139,86 @@ function createNotification() {
                             </div>
                         </div>
                     `,
-                    width: '650px',
+                    width: '700px',
                     showCancelButton: true,
                     confirmButtonText: '<i class="fas fa-paper-plane"></i> Send Notification',
                     cancelButtonText: '<i class="fas fa-times"></i> Cancel',
                     confirmButtonColor: '#6366f1',
                     cancelButtonColor: '#6b7280',
                     didOpen: () => {
-                        const userSelect = document.getElementById('userId');
+                        const recipientTypeRadios = document.querySelectorAll('input[name="recipientType"]');
+                        const singleUserSelect = document.getElementById('userId');
+                        const multipleUsersSection = document.getElementById('multipleUsersSection');
+                        const multipleUsersSelect = document.getElementById('userIds');
+                        const selectedUsersDisplay = document.getElementById('selectedUsersDisplay');
+                        const selectedUsersList = document.getElementById('selectedUsersList');
+                        const selectedCount = document.getElementById('selectedCount');
                         const typeSelect = document.getElementById('notifType');
                         const streetFilterSection = document.getElementById('streetFilterSection');
                         const streetFilter = document.getElementById('streetFilter');
                         const streetUserCount = document.getElementById('streetUserCount');
+
+                        // Function to update selected users display
+                        function updateSelectedUsersDisplay() {
+                            const selectedOptions = Array.from(multipleUsersSelect.selectedOptions);
+                            selectedCount.textContent = `${selectedOptions.length} selected`;
+                            
+                            if (selectedOptions.length > 0) {
+                                selectedUsersDisplay.style.display = 'block';
+                                selectedUsersList.innerHTML = selectedOptions.map(option => {
+                                    const userName = option.dataset.name;
+                                    return `
+                                        <div style="display: flex; align-items: center; gap: 8px; padding: 4px 8px; 
+                                                    background: white; border-radius: 4px; margin-bottom: 4px;">
+                                            <i class="fas fa-user" style="color: #6366f1; font-size: 12px;"></i>
+                                            <span style="font-size: 13px; color: #374151;">${userName}</span>
+                                        </div>
+                                    `;
+                                }).join('');
+                            } else {
+                                selectedUsersDisplay.style.display = 'none';
+                            }
+                        }
+
+                        // Function to filter notification types based on preferences
+                        function filterNotificationTypes(selectedUsers) {
+                            if (selectedUsers.length === 0) {
+                                // Enable all types if no users selected
+                                Array.from(typeSelect.options).forEach(option => {
+                                    if (option.value) option.disabled = false;
+                                });
+                                return;
+                            }
+
+                            // Check which notification types ALL selected users support
+                            const allSupportWaste = selectedUsers.every(user => 
+                                user.dataset.waste === 'true'
+                            );
+                            const allSupportRequest = selectedUsers.every(user => 
+                                user.dataset.request === 'true'
+                            );
+                            const allSupportAnnouncement = selectedUsers.every(user => 
+                                user.dataset.announcement === 'true'
+                            );
+
+                            Array.from(typeSelect.options).forEach(option => {
+                                const prefType = option.dataset.pref;
+                                if (prefType === 'waste_reminders' && !allSupportWaste) {
+                                    option.disabled = true;
+                                } else if (prefType === 'request_updates' && !allSupportRequest) {
+                                    option.disabled = true;
+                                } else if (prefType === 'announcements' && !allSupportAnnouncement) {
+                                    option.disabled = true;
+                                } else if (option.value) {
+                                    option.disabled = false;
+                                }
+                            });
+
+                            // Reset selection if currently selected type is now disabled
+                            if (typeSelect.value && typeSelect.options[typeSelect.selectedIndex].disabled) {
+                                typeSelect.value = '';
+                            }
+                        }
 
                         // Function to count users by street and preferences
                         function updateStreetUserCount() {
@@ -152,27 +264,46 @@ function createNotification() {
                             }
                         }
 
-                        // Show/hide street filter based on user selection
-                        userSelect.addEventListener('change', function () {
+                        // Handle recipient type change
+                        recipientTypeRadios.forEach(radio => {
+                            radio.addEventListener('change', function() {
+                                const recipientType = this.value;
+                                
+                                // Hide all sections first
+                                singleUserSelect.style.display = 'none';
+                                multipleUsersSection.style.display = 'none';
+                                streetFilterSection.style.display = 'none';
+                                selectedUsersDisplay.style.display = 'none';
+                                
+                                if (recipientType === 'single') {
+                                    singleUserSelect.style.display = 'block';
+                                    singleUserSelect.value = '';
+                                    
+                                    // Enable all types for single user selection
+                                    Array.from(typeSelect.options).forEach(option => {
+                                        if (option.value) option.disabled = false;
+                                    });
+                                } else if (recipientType === 'multiple') {
+                                    multipleUsersSection.style.display = 'block';
+                                    multipleUsersSelect.selectedIndex = -1;
+                                    updateSelectedUsersDisplay();
+                                } else if (recipientType === 'all') {
+                                    streetFilterSection.style.display = 'block';
+                                    updateStreetUserCount();
+                                    
+                                    // Enable all types for "All Users"
+                                    Array.from(typeSelect.options).forEach(option => {
+                                        if (option.value) option.disabled = false;
+                                    });
+                                }
+                            });
+                        });
+
+                        // Handle single user selection
+                        singleUserSelect.addEventListener('change', function() {
                             const selectedOption = this.options[this.selectedIndex];
-
-                            if (this.value === 'all') {
-                                // Show street filter for "All Users"
-                                streetFilterSection.style.display = 'block';
-                                updateStreetUserCount();
-
-                                // Show all notification types for "All Users"
-                                Array.from(typeSelect.options).forEach(option => {
-                                    if (option.value) option.disabled = false;
-                                });
-                            } else if (this.value === '') {
-                                // Hide street filter when no user selected
-                                streetFilterSection.style.display = 'none';
-                            } else {
-                                // Hide street filter for individual user
-                                streetFilterSection.style.display = 'none';
-
-                                // Filter notification types based on user preferences
+                            
+                            if (this.value) {
                                 const wasteEnabled = selectedOption.dataset.waste === 'true';
                                 const requestEnabled = selectedOption.dataset.request === 'true';
                                 const announcementEnabled = selectedOption.dataset.announcement === 'true';
@@ -190,34 +321,56 @@ function createNotification() {
                                     }
                                 });
 
-                                // Reset selection if currently selected type is now disabled
                                 if (typeSelect.value && typeSelect.options[typeSelect.selectedIndex].disabled) {
                                     typeSelect.value = '';
                                 }
                             }
                         });
 
-                        // Update count when street filter changes
-                        streetFilter.addEventListener('change', updateStreetUserCount);
+                        // Handle multiple users selection
+                        multipleUsersSelect.addEventListener('change', function() {
+                            updateSelectedUsersDisplay();
+                            const selectedOptions = Array.from(this.selectedOptions);
+                            filterNotificationTypes(selectedOptions);
+                        });
 
-                        // Update count when notification type changes
+                        // Update count when street filter or type changes (for "All Users")
+                        streetFilter.addEventListener('change', updateStreetUserCount);
                         typeSelect.addEventListener('change', () => {
-                            if (userSelect.value === 'all') {
+                            const recipientType = document.querySelector('input[name="recipientType"]:checked').value;
+                            if (recipientType === 'all') {
                                 updateStreetUserCount();
                             }
                         });
                     },
                     preConfirm: () => {
-                        const userId = document.getElementById('userId').value;
+                        const recipientType = document.querySelector('input[name="recipientType"]:checked').value;
                         const type = document.getElementById('notifType').value;
                         const title = document.getElementById('notifTitle').value.trim();
                         const message = document.getElementById('notifMessage').value.trim();
-                        const streetFilter = document.getElementById('streetFilter')?.value || 'all';
-
-                        if (!userId) {
-                            Swal.showValidationMessage('Please select a user');
-                            return false;
+                        
+                        let userIds = [];
+                        let streetFilter = null;
+                        
+                        if (recipientType === 'single') {
+                            const userId = document.getElementById('userId').value;
+                            if (!userId) {
+                                Swal.showValidationMessage('Please select a user');
+                                return false;
+                            }
+                            userIds = [userId];
+                        } else if (recipientType === 'multiple') {
+                            const selectedOptions = Array.from(document.getElementById('userIds').selectedOptions);
+                            if (selectedOptions.length === 0) {
+                                Swal.showValidationMessage('Please select at least one user');
+                                return false;
+                            }
+                            userIds = selectedOptions.map(option => option.value);
+                        } else if (recipientType === 'all') {
+                            userIds = ['all'];
+                            streetFilter = document.getElementById('streetFilter').value;
                         }
+                        
                         if (!type) {
                             Swal.showValidationMessage('Please select notification type');
                             return false;
@@ -231,28 +384,18 @@ function createNotification() {
                             return false;
                         }
 
-                        // Get user data for SMS
-                        const userSelect = document.getElementById('userId');
-                        const selectedOption = userSelect.options[userSelect.selectedIndex];
-                        const userName = selectedOption.dataset.name || '';
-                        const userContact = selectedOption.dataset.contact || '';
-                        const smsEnabled = selectedOption.dataset.sms === 'true';
-
                         return {
-                            userId,
+                            userIds,
+                            recipientType,
                             type,
                             title,
                             message,
-                            userName,
-                            userContact,
-                            smsEnabled,
-                            streetFilter: userId === 'all' ? streetFilter : null,
-                            allUsers: data.users // Store all users for bulk SMS
+                            streetFilter,
+                            allUsers: data.users
                         };
                     }
                 }).then((result) => {
                     if (result.isConfirmed) {
-                        // Show SMS confirmation dialog
                         showSMSConfirmation(result.value);
                     }
                 });
@@ -274,46 +417,58 @@ function createNotification() {
         });
 }
 
-// Show SMS confirmation dialog (updated to handle street filter)
+// Show SMS confirmation dialog (updated for multi-user support)
 function showSMSConfirmation(notificationData) {
-    const { userId, type, title, message, userName, userContact, smsEnabled, streetFilter, allUsers } = notificationData;
+    const { userIds, recipientType, type, title, message, streetFilter, allUsers } = notificationData;
     const defaultSMSMessage = `Hello! You have a new ${type} notification:\n${title}\n${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`;
 
-    const isAllUsers = userId === 'all';
-
-    // For bulk notifications, count eligible SMS recipients
     let eligibleSMSCount = 0;
     let recipientDescription = '';
+    let eligibleUsers = [];
 
-    if (isAllUsers) {
-        let filteredUsers = allUsers.filter(user =>
+    if (recipientType === 'all') {
+        eligibleUsers = allUsers.filter(user =>
             user.preferences.sms_notifications &&
             user.contact_number &&
             user.contact_number.trim() !== ''
         );
 
-        // Apply street filter if selected
         if (streetFilter && streetFilter !== 'all') {
-            filteredUsers = filteredUsers.filter(user => user.street_name === streetFilter);
+            eligibleUsers = eligibleUsers.filter(user => user.street_name === streetFilter);
             recipientDescription = `in ${streetFilter}`;
         } else {
             recipientDescription = 'from all streets';
         }
-
-        eligibleSMSCount = filteredUsers.length;
+        eligibleSMSCount = eligibleUsers.length;
+    } else if (recipientType === 'multiple') {
+        eligibleUsers = allUsers.filter(user => 
+            userIds.includes(user.id.toString()) &&
+            user.preferences.sms_notifications &&
+            user.contact_number &&
+            user.contact_number.trim() !== ''
+        );
+        eligibleSMSCount = eligibleUsers.length;
+        recipientDescription = `${userIds.length} selected user(s)`;
+    } else {
+        // Single user
+        const user = allUsers.find(u => u.id.toString() === userIds[0]);
+        if (user && user.preferences.sms_notifications && user.contact_number) {
+            eligibleUsers = [user];
+            eligibleSMSCount = 1;
+            recipientDescription = `${user.first_name} ${user.last_name}`;
+        }
     }
 
-    // Determine if SMS can be sent
-    const canSendSMS = isAllUsers ? eligibleSMSCount > 0 : (smsEnabled && userContact && userContact.trim() !== '');
+    const canSendSMS = eligibleSMSCount > 0;
 
     let smsWarningMessage = '';
     if (!canSendSMS) {
-        if (isAllUsers && eligibleSMSCount === 0) {
+        if (recipientType === 'all' && eligibleSMSCount === 0) {
             smsWarningMessage = `<i class="fas fa-exclamation-triangle"></i> No users ${recipientDescription} have SMS notifications enabled with valid contact numbers`;
-        } else if (!smsEnabled) {
-            smsWarningMessage = '<i class="fas fa-exclamation-triangle"></i> User has disabled SMS notifications';
-        } else if (!userContact) {
-            smsWarningMessage = '<i class="fas fa-exclamation-triangle"></i> Contact number not available for this user';
+        } else if (recipientType === 'multiple') {
+            smsWarningMessage = `<i class="fas fa-exclamation-triangle"></i> None of the selected users have SMS notifications enabled with valid contact numbers`;
+        } else {
+            smsWarningMessage = '<i class="fas fa-exclamation-triangle"></i> User has disabled SMS notifications or has no valid contact number';
         }
     }
 
@@ -327,10 +482,10 @@ function showSMSConfirmation(notificationData) {
                         <strong style="color: #059669;">Notification Ready to Send</strong>
                     </div>
                     <p style="margin: 0; color: #047857; font-size: 14px;">
-                        ${isAllUsers
-                ? `This notification will be sent to users ${recipientDescription} with enabled preferences`
-                : `This notification will be sent to ${userName}`
-            }
+                        ${recipientType === 'all' 
+                            ? `This notification will be sent to users ${recipientDescription} with enabled preferences`
+                            : `This notification will be sent to ${recipientDescription}`
+                        }
                     </p>
                 </div>
                 
@@ -338,36 +493,39 @@ function showSMSConfirmation(notificationData) {
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px;">
                         <input type="checkbox" id="sendSMSCheckbox" style="width: 18px; height: 18px; cursor: pointer;" ${!canSendSMS ? 'disabled' : ''}>
                         <label for="sendSMSCheckbox" style="cursor: pointer; font-weight: 600; color: #374151; margin: 0;">
-                            <i class="fas fa-sms"></i> Send SMS notification ${isAllUsers ? `(${eligibleSMSCount} recipients ${recipientDescription})` : ''}
+                            <i class="fas fa-sms"></i> Send SMS notification ${eligibleSMSCount > 0 ? `(${eligibleSMSCount} recipients)` : ''}
                         </label>
                     </div>
                     
                     ${!canSendSMS ?
-                `<div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; padding: 10px; margin-top: 10px;">
+                        `<div style="background: #fef3c7; border: 1px solid #fbbf24; border-radius: 6px; padding: 10px; margin-top: 10px;">
                             <small style="color: #92400e;">
                                 ${smsWarningMessage}
                             </small>
                         </div>`
-                : ''
-            }
+                        : ''
+                    }
                     
                     <div id="smsMessageSection" style="display: none; margin-top: 15px;">
-                        ${!isAllUsers ?
-                `<div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
-                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 4px;">
-                                    <i class="fas fa-user"></i> Recipient: <strong>${userName}</strong>
+                        ${eligibleUsers.length > 0 && eligibleUsers.length <= 5 ?
+                            `<div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                                <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">
+                                    <i class="fas fa-users"></i> Recipients:
                                 </div>
+                                ${eligibleUsers.map(user => `
+                                    <div style="font-size: 12px; color: #374151; padding: 4px 0;">
+                                        <i class="fas fa-user" style="color: #6366f1; margin-right: 6px;"></i>
+                                        <strong>${user.first_name} ${user.last_name}</strong> - ${user.contact_number}
+                                    </div>
+                                `).join('')}
+                            </div>`
+                            :
+                            `<div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
                                 <div style="font-size: 12px; color: #6b7280;">
-                                    <i class="fas fa-phone"></i> Contact: <strong>${userContact}</strong>
+                                    <i class="fas fa-users"></i> Recipients: <strong>${eligibleSMSCount} users</strong> will receive SMS
                                 </div>
                             </div>`
-                :
-                `<div style="background: #f9fafb; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
-                                <div style="font-size: 12px; color: #6b7280;">
-                                    <i class="fas fa-users"></i> Recipients: <strong>${eligibleSMSCount} users</strong> ${recipientDescription} with SMS enabled
-                                </div>
-                            </div>`
-            }
+                        }
                         
                         <label style="display: block; font-weight: 600; color: #374151; margin-bottom: 8px;">
                             <i class="fas fa-comment-alt"></i> SMS Message:
@@ -394,7 +552,6 @@ function showSMSConfirmation(notificationData) {
             const charCount = document.getElementById('charCount');
             const confirmButton = Swal.getConfirmButton();
 
-            // Toggle message section visibility
             if (checkbox) {
                 checkbox.addEventListener('change', function () {
                     if (this.checked) {
@@ -407,7 +564,6 @@ function showSMSConfirmation(notificationData) {
                 });
             }
 
-            // Update character count
             if (messageTextarea) {
                 messageTextarea.addEventListener('input', function () {
                     charCount.textContent = this.value.length;
@@ -431,7 +587,8 @@ function showSMSConfirmation(notificationData) {
             return {
                 ...notificationData,
                 send_sms: sendSMS,
-                sms_message: smsMessage
+                sms_message: smsMessage,
+                eligibleUsers
             };
         }
     }).then((result) => {
@@ -441,7 +598,7 @@ function showSMSConfirmation(notificationData) {
     });
 }
 
-// Process the notification send and SMS if needed
+// Process the notification send
 function processNotificationSend(notificationData) {
     Swal.fire({
         title: 'Sending Notification...',
@@ -449,12 +606,13 @@ function processNotificationSend(notificationData) {
         didOpen: () => Swal.showLoading()
     });
 
-    // Send notification first
+    // Send notification
     fetch('./endpoints/create_notification.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            userId: notificationData.userId,
+            userIds: notificationData.userIds,
+            recipientType: notificationData.recipientType,
             type: notificationData.type,
             title: notificationData.title,
             message: notificationData.message,
@@ -465,14 +623,13 @@ function processNotificationSend(notificationData) {
         .then(data => {
             if (data.success) {
                 // If SMS should be sent
-                if (notificationData.send_sms) {
-                    if (notificationData.userId === 'all') {
-                        // Send bulk SMS
-                        sendBulkSMS(notificationData.allUsers, notificationData.sms_message, data.message, notificationData.streetFilter);
-                    } else {
+                if (notificationData.send_sms && notificationData.eligibleUsers.length > 0) {
+                    const phoneNumbers = notificationData.eligibleUsers.map(user => user.contact_number);
+                    
+                    if (phoneNumbers.length === 1) {
                         // Send single SMS
-                        sendSMS(notificationData.userContact, notificationData.sms_message)
-                            .then(smsResult => {
+                        sendSMS(phoneNumbers[0], notificationData.sms_message)
+                            .then(() => {
                                 Swal.fire({
                                     icon: 'success',
                                     title: 'Success!',
@@ -485,8 +642,7 @@ function processNotificationSend(notificationData) {
                                     confirmButtonColor: '#6366f1'
                                 }).then(() => location.reload());
                             })
-                            .catch(error => {
-                                // Notification sent but SMS failed
+                            .catch(() => {
                                 Swal.fire({
                                     icon: 'warning',
                                     title: 'Partial Success',
@@ -499,9 +655,11 @@ function processNotificationSend(notificationData) {
                                     confirmButtonColor: '#6366f1'
                                 }).then(() => location.reload());
                             });
+                    } else {
+                        // Send bulk SMS
+                        sendBulkSMS(phoneNumbers, notificationData.sms_message, data.message);
                     }
                 } else {
-                    // No SMS, just show success
                     Swal.fire({
                         icon: 'success',
                         title: 'Success!',
@@ -527,13 +685,11 @@ function processNotificationSend(notificationData) {
         });
 }
 
-// Send SMS to single user
+// Send SMS functions
 function sendSMS(phoneNumber, message) {
     return fetch('./endpoints/send.php', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             number: phoneNumber,
             message: message
@@ -548,43 +704,10 @@ function sendSMS(phoneNumber, message) {
         });
 }
 
-// Send bulk SMS to multiple users
-function sendBulkSMS(allUsers, message, notificationMessage, streetFilter = null) {  // ✅ Add parameter
-    // Filter users with SMS enabled and valid contact numbers
-    let eligibleUsers = allUsers.filter(user =>  // ✅ Change const to let
-        user.preferences.sms_notifications &&
-        user.contact_number &&
-        user.contact_number.trim() !== ''
-    );
-
-    // Apply street filter if provided
-    if (streetFilter && streetFilter !== 'all') {
-        eligibleUsers = eligibleUsers.filter(user => user.street_name === streetFilter);
-    }
-
-    if (eligibleUsers.length === 0) {
-        const streetInfo = streetFilter && streetFilter !== 'all' ? ` in ${streetFilter}` : '';  // ✅ Add street info
-        Swal.fire({
-            icon: 'success',
-            title: 'Success!',
-            html: `
-                <p>${notificationMessage || 'Notification sent successfully!'}</p>
-                ${streetInfo ? `<p style="color: #f59e0b; font-size: 14px;">
-                    <i class="fas fa-info-circle"></i> No SMS recipients found${streetInfo}
-                </p>` : ''}
-            `,
-            confirmButtonColor: '#6366f1'
-        }).then(() => location.reload());
-        return;
-    }
-    // Extract phone numbers
-    const phoneNumbers = eligibleUsers.map(user => user.contact_number);
-
+function sendBulkSMS(phoneNumbers, message, notificationMessage) {
     fetch('./endpoints/send_bulk.php', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             numbers: phoneNumbers,
             message: message
@@ -593,14 +716,13 @@ function sendBulkSMS(allUsers, message, notificationMessage, streetFilter = null
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                const streetInfo = streetFilter && streetFilter !== 'all' ? ` in ${streetFilter}` : '';
                 Swal.fire({
                     icon: 'success',
                     title: 'Success!',
                     html: `
                         <p>${notificationMessage || 'Notification sent successfully!'}</p>
                         <p style="color: #10b981; font-weight: 600;">
-                            <i class="fas fa-check-circle"></i> Bulk SMS sent to ${data.sent_count} recipient(s)${streetInfo}!
+                            <i class="fas fa-check-circle"></i> Bulk SMS sent to ${data.sent_count} recipient(s)!
                         </p>
                         ${data.invalid_count > 0 ?
                             `<p style="color: #f59e0b; font-size: 14px;">
@@ -612,7 +734,6 @@ function sendBulkSMS(allUsers, message, notificationMessage, streetFilter = null
                     confirmButtonColor: '#6366f1'
                 }).then(() => location.reload());
             } else {
-                // Notification sent but bulk SMS failed
                 Swal.fire({
                     icon: 'warning',
                     title: 'Partial Success',

@@ -18,7 +18,7 @@ $input = file_get_contents('php://input');
 $data = json_decode($input, true);
 
 // Validate required fields
-if (!isset($data['userId']) || !isset($data['type']) || !isset($data['title']) || !isset($data['message'])) {
+if (!isset($data['userIds']) || !isset($data['type']) || !isset($data['title']) || !isset($data['message'])) {
     echo json_encode([
         'success' => false,
         'message' => 'Missing required fields'
@@ -26,11 +26,21 @@ if (!isset($data['userId']) || !isset($data['type']) || !isset($data['title']) |
     exit();
 }
 
-$userId = $data['userId'];
+$userIds = $data['userIds'];
+$recipientType = $data['recipientType'] ?? 'single';
 $type = $data['type'];
 $title = trim($data['title']);
 $message = trim($data['message']);
 $streetFilter = isset($data['streetFilter']) ? $data['streetFilter'] : null;
+
+// Validate userIds is an array
+if (!is_array($userIds) || empty($userIds)) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'No recipients selected'
+    ]);
+    exit();
+}
 
 // Map type to icon
 $iconMap = [
@@ -52,9 +62,12 @@ $preferenceMap = [
 try {
     $conn->begin_transaction();
 
-    // If "all" users selected, get all user IDs
-    if ($userId === 'all') {
-        // Get users who have the preference enabled for this notification type
+    $targetUserIds = [];
+    $userNames = [];
+
+    // Determine which users to send notifications to
+    if ($recipientType === 'all' || (count($userIds) === 1 && $userIds[0] === 'all')) {
+        // "All Users" mode - get users based on preferences and street filter
         $preferenceColumn = $preferenceMap[$type] ?? null;
 
         // Build the query with street filter
@@ -63,7 +76,7 @@ try {
         $types = "";
 
         if ($preferenceColumn) {
-            // Add preference condition
+            // Add preference condition (enabled or NULL means enabled by default)
             $whereConditions[] = "(np.{$preferenceColumn} = 1 OR np.{$preferenceColumn} IS NULL)";
         }
 
@@ -92,64 +105,63 @@ try {
             $userResult = $conn->query($userQuery);
         }
 
-        $userIds = [];
-        $userNames = [];
         while ($row = $userResult->fetch_assoc()) {
-            $userIds[] = $row['id'];
-            $userNames[] = $row['first_name'] . ' ' . $row['middle_name'] . ' ' . $row['last_name'];
+            $targetUserIds[] = $row['id'];
+            $userNames[] = trim($row['first_name'] . ' ' . $row['middle_name'] . ' ' . $row['last_name']);
         }
 
-        if (empty($userIds)) {
+        if (empty($targetUserIds)) {
             throw new Exception("No users found with this notification preference enabled" .
                 ($streetFilter && $streetFilter !== 'all' ? " in {$streetFilter}" : ""));
         }
 
-        // Insert notification for each user
-        $stmt = $conn->prepare("
-            INSERT INTO notifications 
-            (user_id, type, icon, title, message, is_read, created_at) 
-            VALUES (?, ?, ?, ?, ?, 0, NOW())
-        ");
+    } elseif ($recipientType === 'multiple' || count($userIds) > 1) {
+        // Multiple specific users selected
+        $preferenceColumn = $preferenceMap[$type] ?? null;
 
-        $insertedCount = 0;
-        foreach ($userIds as $uid) {
-            $stmt->bind_param("issss", $uid, $type, $icon, $title, $message);
-            if ($stmt->execute()) {
-                $insertedCount++;
+        // Build query to get users and check their preferences
+        $placeholders = str_repeat('?,', count($userIds) - 1) . '?';
+        
+        if ($preferenceColumn) {
+            $userQuery = "
+                SELECT u.id, u.first_name, u.middle_name, u.last_name,
+                       COALESCE(np.{$preferenceColumn}, 1) as preference_enabled
+                FROM user u
+                LEFT JOIN notification_preferences np ON u.id = np.user_id
+                WHERE u.id IN ($placeholders)
+            ";
+        } else {
+            $userQuery = "
+                SELECT id, first_name, middle_name, last_name, 1 as preference_enabled 
+                FROM user 
+                WHERE id IN ($placeholders)
+            ";
+        }
+
+        $userStmt = $conn->prepare($userQuery);
+        
+        // Convert userIds to integers
+        $intUserIds = array_map('intval', $userIds);
+        $types = str_repeat('i', count($intUserIds));
+        $userStmt->bind_param($types, ...$intUserIds);
+        $userStmt->execute();
+        $userResult = $userStmt->get_result();
+
+        while ($row = $userResult->fetch_assoc()) {
+            // Only add users who have the preference enabled
+            if ($row['preference_enabled']) {
+                $targetUserIds[] = $row['id'];
+                $userNames[] = trim($row['first_name'] . ' ' . $row['middle_name'] . ' ' . $row['last_name']);
             }
         }
 
-        // Log to activity_logs
-        $activity = "Bulk Notification Created";
-        $streetInfo = ($streetFilter && $streetFilter !== 'all') ? " in {$streetFilter}" : " (all streets)";
-        $description = "Created '$type' notification for all users with preference enabled ($insertedCount users{$streetInfo}). Title: '$title'";
-
-        $logStmt = $conn->prepare("
-            INSERT INTO activity_logs 
-            (activity, description, created_at) 
-            VALUES (?, ?, NOW())
-        ");
-        $logStmt->bind_param("ss", $activity, $description);
-        $logStmt->execute();
-
-        $conn->commit();
-
-        $successMessage = "Notification sent to $insertedCount user(s) successfully";
-        if ($streetFilter && $streetFilter !== 'all') {
-            $successMessage .= " in {$streetFilter}";
+        if (empty($targetUserIds)) {
+            throw new Exception("None of the selected users have this notification preference enabled");
         }
-
-        echo json_encode([
-            'success' => true,
-            'message' => $successMessage,
-            'count' => $insertedCount
-        ]);
 
     } else {
         // Single user notification
-        $userIdInt = intval($userId);
-
-        // Verify user exists and check their preference
+        $userIdInt = intval($userIds[0]);
         $preferenceColumn = $preferenceMap[$type] ?? null;
 
         if ($preferenceColumn) {
@@ -189,40 +201,68 @@ try {
             exit();
         }
 
-        $userName = trim($user['first_name'] . ' ' . $user['middle_name'] . ' ' . $user['last_name']);
-
-        // Insert notification
-        $stmt = $conn->prepare("
-            INSERT INTO notifications 
-            (user_id, type, icon, title, message, is_read, created_at) 
-            VALUES (?, ?, ?, ?, ?, 0, NOW())
-        ");
-
-        $stmt->bind_param("issss", $userIdInt, $type, $icon, $title, $message);
-
-        if (!$stmt->execute()) {
-            throw new Exception("Failed to create notification");
-        }
-
-        // Log to activity_logs
-        $activity = "Notification Created";
-        $description = "Created '$type' notification for user '$userName' (ID: $userIdInt). Title: '$title'";
-
-        $logStmt = $conn->prepare("
-            INSERT INTO activity_logs 
-            (activity, description, created_at) 
-            VALUES (?, ?, NOW())
-        ");
-        $logStmt->bind_param("ss", $activity, $description);
-        $logStmt->execute();
-
-        $conn->commit();
-
-        echo json_encode([
-            'success' => true,
-            'message' => 'Notification sent successfully'
-        ]);
+        $targetUserIds[] = $userIdInt;
+        $userNames[] = trim($user['first_name'] . ' ' . $user['middle_name'] . ' ' . $user['last_name']);
     }
+
+    // Insert notification for each target user
+    $stmt = $conn->prepare("
+        INSERT INTO notifications 
+        (user_id, type, icon, title, message, is_read, created_at) 
+        VALUES (?, ?, ?, ?, ?, 0, NOW())
+    ");
+
+    $insertedCount = 0;
+    foreach ($targetUserIds as $uid) {
+        $stmt->bind_param("issss", $uid, $type, $icon, $title, $message);
+        if ($stmt->execute()) {
+            $insertedCount++;
+        }
+    }
+
+    // Log to activity_logs
+    $activity = "Notification Created";
+    
+    if ($recipientType === 'all') {
+        $streetInfo = ($streetFilter && $streetFilter !== 'all') ? " in {$streetFilter}" : " (all streets)";
+        $description = "Created '$type' notification for all users with preference enabled ($insertedCount users{$streetInfo}). Title: '$title'";
+    } elseif ($recipientType === 'multiple' || count($userNames) > 1) {
+        $userList = implode(', ', array_slice($userNames, 0, 3));
+        if (count($userNames) > 3) {
+            $userList .= ' and ' . (count($userNames) - 3) . ' more';
+        }
+        $description = "Created '$type' notification for multiple users ($insertedCount recipients: $userList). Title: '$title'";
+    } else {
+        $userName = $userNames[0];
+        $description = "Created '$type' notification for user '$userName' (ID: {$targetUserIds[0]}). Title: '$title'";
+    }
+
+    $logStmt = $conn->prepare("
+        INSERT INTO activity_logs 
+        (activity, description, created_at) 
+        VALUES (?, ?, NOW())
+    ");
+    $logStmt->bind_param("ss", $activity, $description);
+    $logStmt->execute();
+
+    $conn->commit();
+
+    // Build success message
+    $successMessage = "Notification sent successfully";
+    if ($insertedCount === 1) {
+        $successMessage = "Notification sent to 1 user successfully";
+    } else {
+        $successMessage = "Notification sent to $insertedCount users successfully";
+        if ($streetFilter && $streetFilter !== 'all') {
+            $successMessage .= " in {$streetFilter}";
+        }
+    }
+
+    echo json_encode([
+        'success' => true,
+        'message' => $successMessage,
+        'count' => $insertedCount
+    ]);
 
 } catch (Exception $e) {
     $conn->rollback();
