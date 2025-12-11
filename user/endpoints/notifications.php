@@ -53,7 +53,7 @@ function getNotifications($conn, $user_id)
     // Apply filters
     if ($filter === 'unread') {
         $query .= " AND is_read = 0";
-    } elseif (in_array($filter, ['waste', 'request', 'announcement', 'alert', 'success'])) {
+    } elseif (in_array($filter, ['waste', 'request', 'announcement', 'alert', 'success', 'safety'])) {
         $query .= " AND type = ?";
         $params[] = $filter;
         $types .= "s";
