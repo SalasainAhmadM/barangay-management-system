@@ -22,7 +22,7 @@ if (empty($report_id)) {
 
 try {
     // First, get the photo path and details for activity log
-    $stmt = $conn->prepare("SELECT photo_path, location, description FROM missed_collections WHERE report_id = ?");
+    $stmt = $conn->prepare("SELECT photo_path, report_type, location, description FROM community_reports WHERE report_id = ?");
     $stmt->bind_param("i", $report_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -35,14 +35,14 @@ try {
     }
 
     // Delete the report from database
-    $stmt = $conn->prepare("DELETE FROM missed_collections WHERE report_id = ?");
+    $stmt = $conn->prepare("DELETE FROM community_reports WHERE report_id = ?");
     $stmt->bind_param("i", $report_id);
 
     if ($stmt->execute()) {
         if ($stmt->affected_rows > 0) {
             // Delete associated photo file if it exists
             if (!empty($report['photo_path'])) {
-                $photo_file = '../../assets/waste_reports/' . $report['photo_path'];
+                $photo_file = '../../assets/community_reports/' . $report['photo_path'];
                 if (file_exists($photo_file)) {
                     unlink($photo_file);
                 }
@@ -50,8 +50,9 @@ try {
 
             // Log activity
             $activity = "Deleted a report";
+            $report_type = $report['report_type'] ?? 'Unknown type';
             $desc_location = $report['location'] ?? 'Unknown location';
-            $description = "Deleted a missed collection report at '{$desc_location}' (Report ID: {$report_id}).";
+            $description = "Deleted a '{$report_type}' report at '{$desc_location}' (Report ID: {$report_id}).";
 
             $log_stmt = $conn->prepare("
                 INSERT INTO activity_logs (activity, description, created_at)

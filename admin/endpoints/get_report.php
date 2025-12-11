@@ -1,3 +1,4 @@
+
 <?php
 // ========== get_report.php ==========
 session_start();
@@ -19,10 +20,10 @@ if (empty($report_id)) {
 
 try {
     $stmt = $conn->prepare("
-        SELECT mc.*, u.first_name, u.middle_name, u.last_name, u.email, u.contact_number, u.image 
-        FROM missed_collections mc
-        LEFT JOIN user u ON mc.user_id = u.id
-        WHERE mc.report_id = ?
+        SELECT cr.*, u.first_name, u.middle_name, u.last_name, u.email, u.contact_number, u.image 
+        FROM community_reports cr
+        LEFT JOIN user u ON cr.user_id = u.id
+        WHERE cr.report_id = ?
     ");
     $stmt->bind_param("i", $report_id);
     $stmt->execute();
@@ -31,7 +32,7 @@ try {
     if ($row = $result->fetch_assoc()) {
         // Prepend path for photo if it exists
         if ($row['photo_path']) {
-            $row['photo_path'] = 'assets/waste_reports/' . $row['photo_path'];
+            $row['photo_path'] = 'assets/community_reports/' . $row['photo_path'];
         }
         echo json_encode(['success' => true, 'report' => $row]);
     } else {

@@ -54,9 +54,9 @@
         <li>
             <a href="waste_management.php" class="<?= ($current_page == 'waste_management.php') ? 'active' : '' ?>">
                 <i class="fa-solid fa-recycle"></i>
-                <span class="links_name">Waste Mgmt</span>
+                <span class="links_name">Report Mgmt</span>
             </a>
-            <span class="tooltip">Waste Management</span>
+            <span class="tooltip">Report Management</span>
         </li>
 
         <li>

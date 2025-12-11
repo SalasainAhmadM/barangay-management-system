@@ -160,7 +160,7 @@ function handleFilterResults(visibleCount, status) {
     }
 }
 
-// Enhanced search reports to work with status filter
+// Enhanced search reports - UPDATED for new column structure
 function searchReports() {
     const filter = document.getElementById('searchReportInput').value.toLowerCase();
     const rows = document.querySelectorAll("#reportsTable tbody tr");
@@ -169,14 +169,15 @@ function searchReports() {
     rows.forEach(row => {
         if (row.querySelector('.no-data')) return;
 
-        const reporter = row.cells[0]?.textContent.toLowerCase() || "";
-        const wasteType = row.cells[1]?.textContent.toLowerCase() || "";
+        // NEW COLUMN ORDER: Report Type (0), Reporter (1), Location (2), Incident Date (3), Status (4)
+        const reportType = row.cells[0]?.textContent.toLowerCase() || "";
+        const reporter = row.cells[1]?.textContent.toLowerCase() || "";
         const location = row.cells[2]?.textContent.toLowerCase() || "";
         const status = row.cells[4]?.textContent.toLowerCase() || "";
 
         // Check if matches search filter
-        const matchesSearch = !filter || reporter.includes(filter) ||
-            wasteType.includes(filter) || location.includes(filter) ||
+        const matchesSearch = !filter || reportType.includes(filter) ||
+            reporter.includes(filter) || location.includes(filter) ||
             status.includes(filter);
 
         // Check if matches status filter
@@ -781,7 +782,7 @@ function deleteSchedule(id) {
     });
 }
 
-// View Report 
+// View Report - UPDATED for community_reports
 function viewReport(id) {
     Swal.fire({
         title: 'Loading...',
@@ -799,7 +800,7 @@ function viewReport(id) {
                 const report = data.report;
 
                 // Format dates
-                const collectionDate = report.collection_date ? new Date(report.collection_date).toLocaleDateString('en-US', {
+                const incidentDate = report.incident_date ? new Date(report.incident_date).toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
@@ -813,20 +814,12 @@ function viewReport(id) {
                     minute: '2-digit'
                 }) : 'N/A';
 
-                const resolvedDate = report.resolved_date ? new Date(report.resolved_date).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                }) : 'N/A';
-
                 // Get reporter profile image path
                 const profileImage = report.image ?
                     `../assets/images/user/${report.image}` :
                     '../assets/images/user.png';
 
-                // Format status with color - Updated for waste report statuses
+                // Format status with color
                 const getStatusStyle = (status) => {
                     switch (status) {
                         case 'resolved':
@@ -842,15 +835,33 @@ function viewReport(id) {
                     }
                 };
 
-                // Photo section
+                // Photo section - UPDATED path
                 const photoHtml = report.photo_path ?
                     `<div class="section-header-simple">Attached Photo</div>
                 <div class="photo-container-simple" style="text-align: center; padding: 10px 0;">
-                    <img src="../${report.photo_path}" alt="Report Photo" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;">
+                    <img src="../assets/community_reports/${report.photo_path}" alt="Report Photo" style="max-width: 100%; border-radius: 8px; border: 1px solid #e5e7eb;">
                 </div>` : '';
 
+                // Conditional fields for Missed Collection
+                const wasteDetailsHtml = report.report_type === 'Missed Collection' && report.waste_type ? `
+                    <div class="info-item-simple">
+                        <div class="info-label-simple">Waste Type</div>
+                        <div class="info-value-simple">${report.waste_type}</div>
+                    </div>
+                    ${report.collection_date ? `
+                    <div class="info-item-simple">
+                        <div class="info-label-simple">Collection Date</div>
+                        <div class="info-value-simple">${new Date(report.collection_date).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        })}</div>
+                    </div>
+                    ` : ''}
+                ` : '';
+
                 Swal.fire({
-                    title: 'Missed Collection Report Details',
+                    title: 'Community Report Details',
                     html: `
                     <div class="resident-details-container-simple">
                         <!-- Reporter Header with Profile Image -->
@@ -900,14 +911,16 @@ function viewReport(id) {
                         <div class="section-header-simple">Report Details</div>
                         <div class="resident-info-grid-simple">
                             <div class="info-item-simple">
-                                <div class="info-label-simple">Waste Type</div>
-                                <div class="info-value-simple">${report.waste_type}</div>
+                                <div class="info-label-simple">Report Type</div>
+                                <div class="info-value-simple">${report.report_type}</div>
                             </div>
                             
                             <div class="info-item-simple">
-                                <div class="info-label-simple">Missed Collection Date</div>
-                                <div class="info-value-simple">${collectionDate}</div>
+                                <div class="info-label-simple">Incident Date</div>
+                                <div class="info-value-simple">${incidentDate}</div>
                             </div>
+                            
+                            ${wasteDetailsHtml}
                             
                             <div class="info-item-simple">
                                 <div class="info-label-simple">Location</div>
@@ -938,13 +951,6 @@ function viewReport(id) {
                                 <div class="info-label-simple">Date Reported</div>
                                 <div class="info-value-simple">${createdDate}</div>
                             </div>
-                            
-                            ${report.resolved_date ? `
-                            <div class="info-item-simple">
-                                <div class="info-label-simple">Date Resolved</div>
-                                <div class="info-value-simple">${resolvedDate}</div>
-                            </div>
-                            ` : ''}
                             
                             ${report.resolution_notes ? `
                             <div class="info-item-simple full-width">
@@ -1134,11 +1140,10 @@ function deleteReport(id) {
     });
 }
 
-// Export Data
+// Export Data - UPDATED for community_reports
 function exportData() {
     const activeTab = new URLSearchParams(window.location.search).get('tab') || 'schedules';
 
-    // Show loading state
     Swal.fire({
         title: 'Generating PDF...',
         text: `Please wait while we export all ${activeTab === 'schedules' ? 'schedules' : 'reports'}`,
@@ -1149,12 +1154,10 @@ function exportData() {
         }
     });
 
-    // Determine which endpoint to fetch from
     const endpoint = activeTab === 'schedules'
         ? './endpoints/get_all_schedules.php'
         : './endpoints/get_all_reports.php';
 
-    // Fetch all data
     fetch(endpoint)
         .then(response => response.json())
         .then(data => {
@@ -1183,15 +1186,13 @@ function exportData() {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF();
 
-            // Title
             doc.setFontSize(16);
             doc.setFont(undefined, 'bold');
             const title = activeTab === 'schedules'
                 ? "Waste Collection Schedules Report"
-                : "Missed Collection Reports";
+                : "Community Reports";
             doc.text(title, 14, 20);
 
-            // Date and time
             doc.setFontSize(10);
             doc.setFont(undefined, 'normal');
             const now = new Date();
@@ -1202,7 +1203,6 @@ function exportData() {
             let columnStyles = {};
 
             if (activeTab === 'schedules') {
-                // Prepare schedules data
                 headers = ["Waste Type", "Collection Days", "Description", "Status"];
                 rows = items.map(schedule => {
                     const wasteType = schedule.waste_type || 'N/A';
@@ -1215,22 +1215,21 @@ function exportData() {
                 });
 
                 columnStyles = {
-                    0: { cellWidth: 40 },  // Waste Type
-                    1: { cellWidth: 50 },  // Collection Days
-                    2: { cellWidth: 60 },  // Description
-                    3: { cellWidth: 30 }   // Status
+                    0: { cellWidth: 40 },
+                    1: { cellWidth: 50 },
+                    2: { cellWidth: 60 },
+                    3: { cellWidth: 30 }
                 };
-
             } else {
-                // Prepare reports data
-                headers = ["Reporter", "Waste Type", "Location", "Collection Date", "Status"];
+                // UPDATED for community_reports
+                headers = ["Report Type", "Reporter", "Location", "Incident Date", "Status"];
                 rows = items.map(report => {
+                    const reportType = report.report_type || 'N/A';
                     const fullName = `${report.first_name || ''} ${report.middle_name || ''} ${report.last_name || ''}`.trim() || 'N/A';
-                    const wasteType = report.waste_type || 'N/A';
-                    const location = (report.location || 'N/A').substring(0, 35) +
-                        (report.location && report.location.length > 35 ? '...' : '');
-                    const collectionDate = report.collection_date
-                        ? new Date(report.collection_date).toLocaleDateString('en-US', {
+                    const location = (report.location || 'N/A').substring(0, 30) +
+                        (report.location && report.location.length > 30 ? '...' : '');
+                    const incidentDate = report.incident_date
+                        ? new Date(report.incident_date).toLocaleDateString('en-US', {
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric'
@@ -1238,19 +1237,18 @@ function exportData() {
                         : 'N/A';
                     const status = report.status ? report.status.charAt(0).toUpperCase() + report.status.slice(1) : 'N/A';
 
-                    return [fullName, wasteType, location, collectionDate, status];
+                    return [reportType, fullName, location, incidentDate, status];
                 });
 
                 columnStyles = {
-                    0: { cellWidth: 40 },  // Reporter
-                    1: { cellWidth: 35 },  // Waste Type
+                    0: { cellWidth: 35 },  // Report Type
+                    1: { cellWidth: 40 },  // Reporter
                     2: { cellWidth: 45 },  // Location
-                    3: { cellWidth: 35 },  // Collection Date
+                    3: { cellWidth: 35 },  // Incident Date
                     4: { cellWidth: 25 }   // Status
                 };
             }
 
-            // Create table
             doc.autoTable({
                 head: [headers],
                 body: rows,
@@ -1268,13 +1266,11 @@ function exportData() {
                 columnStyles: columnStyles
             });
 
-            // Footer with total count
             const finalY = doc.lastAutoTable.finalY || 34;
             doc.setFontSize(9);
             doc.setFont(undefined, 'bold');
             doc.text(`Total ${activeTab === 'schedules' ? 'Schedules' : 'Reports'}: ${rows.length}`, 14, finalY + 10);
 
-            // Add statistics for reports
             if (activeTab === 'reports') {
                 const statusCounts = {
                     pending: items.filter(r => r.status === 'pending').length,
@@ -1292,11 +1288,9 @@ function exportData() {
                 );
             }
 
-            // Save the PDF
-            const filename = `waste_management_${activeTab}_${new Date().toISOString().split('T')[0]}.pdf`;
+            const filename = `community_${activeTab}_${new Date().toISOString().split('T')[0]}.pdf`;
             doc.save(filename);
 
-            // Success notification
             Swal.fire({
                 icon: 'success',
                 title: 'Exported Successfully!',

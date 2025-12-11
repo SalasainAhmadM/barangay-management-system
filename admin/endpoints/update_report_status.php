@@ -31,7 +31,7 @@ if (!in_array($newStatus, $validStatuses)) {
 
 try {
     // Get report details for logging
-    $stmt = $conn->prepare("SELECT location FROM missed_collections WHERE report_id = ?");
+    $stmt = $conn->prepare("SELECT report_type, location FROM community_reports WHERE report_id = ?");
     $stmt->bind_param("i", $report_id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -43,20 +43,12 @@ try {
         exit();
     }
 
-    // Update status
-    if ($newStatus === 'resolved') {
-        $stmt = $conn->prepare("
-            UPDATE missed_collections 
-            SET status = ?, resolution_notes = ?, resolved_date = NOW() 
-            WHERE report_id = ?
-        ");
-    } else {
-        $stmt = $conn->prepare("
-            UPDATE missed_collections 
-            SET status = ?, resolution_notes = ? 
-            WHERE report_id = ?
-        ");
-    }
+    // Update status - Note: community_reports doesn't have resolved_date field
+    $stmt = $conn->prepare("
+        UPDATE community_reports 
+        SET status = ?, resolution_notes = ?, updated_at = NOW() 
+        WHERE report_id = ?
+    ");
 
     $stmt->bind_param("ssi", $newStatus, $resolutionNotes, $report_id);
 
@@ -65,11 +57,12 @@ try {
 
             // ✅ Log activity
             $activity = "Updated report status";
+            $report_type = $report['report_type'] ?? 'Unknown type';
             $location = $report['location'] ?? 'Unknown location';
             $feeText = !empty($resolutionNotes)
                 ? "Resolution notes added."
                 : "No resolution notes.";
-            $description = "Updated report ID {$report_id} status to '{$newStatus}' at '{$location}'. {$feeText}";
+            $description = "Updated report ID {$report_id} (Type: {$report_type}) status to '{$newStatus}' at '{$location}'. {$feeText}";
 
             $log_stmt = $conn->prepare("
                 INSERT INTO activity_logs (activity, description, created_at)

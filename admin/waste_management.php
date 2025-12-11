@@ -41,19 +41,19 @@ try {
     die("Error fetching schedules: " . $e->getMessage());
 }
 
-// Fetch missed collection reports with user info
+// Fetch community reports with user info
 $reports = [];
 $totalReports = 0;
 try {
-    $countStmt = $conn->prepare("SELECT COUNT(*) as total FROM missed_collections");
+    $countStmt = $conn->prepare("SELECT COUNT(*) as total FROM community_reports");
     $countStmt->execute();
     $totalReports = $countStmt->get_result()->fetch_assoc()['total'];
 
     $stmt = $conn->prepare("
-        SELECT mc.*, u.first_name, u.middle_name, u.last_name, u.email, u.contact_number 
-        FROM missed_collections mc
-        LEFT JOIN user u ON mc.user_id = u.id
-        ORDER BY mc.created_at DESC
+        SELECT cr.*, u.first_name, u.middle_name, u.last_name, u.email, u.contact_number, u.image
+        FROM community_reports cr
+        LEFT JOIN user u ON cr.user_id = u.id
+        ORDER BY cr.created_at DESC
         LIMIT ? OFFSET ?
     ");
     $stmt->bind_param("ii", $reportsPerPage, $reportOffset);
@@ -86,11 +86,25 @@ try {
             SUM(CASE WHEN status = 'investigating' THEN 1 ELSE 0 END) as investigating,
             SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved,
             SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
-        FROM missed_collections
+        FROM community_reports
     ");
     $stats = $statsStmt->fetch_assoc();
 } catch (Exception $e) {
     // Keep default stats
+}
+
+// Get report type icon
+function getReportTypeIcon($type) {
+    $icons = [
+        'Missed Collection' => 'fa-trash-alt',
+        'Road/Infrastructure' => 'fa-road',
+        'Street Lighting' => 'fa-lightbulb',
+        'Public Safety' => 'fa-shield-alt',
+        'Noise Complaint' => 'fa-volume-up',
+        'Illegal Dumping' => 'fa-dumpster',
+        'Other' => 'fa-flag'
+    ];
+    return $icons[$type] ?? 'fa-flag';
 }
 ?>
 
@@ -100,7 +114,6 @@ try {
 <head>
     <?php include '../components/header_links.php'; ?>
     <?php include '../components/admin_side_header.php'; ?>
-
 </head>
 
 <body>
@@ -109,7 +122,7 @@ try {
     <section class="home-section">
         <div class="table-container">
             <div class="table-header">
-                <h2 class="table-title">Waste Management</h2>
+                <h2 class="table-title">Community Reports & Waste Management</h2>
                 <div class="table-actions">
                     <button class="btn btn-primary" onclick="addSchedule()">
                         <i class="fas fa-plus"></i> Add Schedule
@@ -127,7 +140,7 @@ try {
                     <i class="fas fa-calendar-alt"></i> Collection Schedules
                 </button>
                 <button class="tab-btn <?= $activeTab === 'reports' ? 'active' : ''; ?>" onclick="switchTab('reports')">
-                    <i class="fas fa-exclamation-triangle"></i> Missed Collections
+                    <i class="fas fa-exclamation-triangle"></i> Community Reports
                 </button>
             </div>
 
@@ -245,9 +258,7 @@ try {
 
                 <!-- Pagination for Schedules -->
                 <?php if ($totalSchedules > 0): ?>
-                    <?php if ($totalSchedules > 0): ?>
-                        <?php renderPagination($schedPage, $totalSchedPages, $totalSchedules, $schedOffset, $schedulesPerPage, 'sched_page', 'schedules'); ?>
-                    <?php endif; ?>
+                    <?php renderPagination($schedPage, $totalSchedPages, $totalSchedules, $schedOffset, $schedulesPerPage, 'sched_page', 'schedules'); ?>
                 <?php endif; ?>
             </div>
 
@@ -295,10 +306,10 @@ try {
                     <table class="residents-table" id="reportsTable">
                         <thead>
                             <tr>
+                                <th>Report Type</th>
                                 <th>Reporter</th>
-                                <th>Waste Type</th>
                                 <th>Location</th>
-                                <th>Collection Date</th>
+                                <th>Incident Date</th>
                                 <th>Status</th>
                                 <th>Reported Date</th>
                                 <th>Actions</th>
@@ -309,15 +320,20 @@ try {
                                 <?php foreach ($reports as $report): ?>
                                     <tr>
                                         <td>
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <i class="fas <?= getReportTypeIcon($report['report_type']); ?>" 
+                                                   style="color: #6366f1; font-size: 16px;"></i>
+                                                <span><?= htmlspecialchars($report['report_type']); ?></span>
+                                            </div>
+                                        </td>
+                                        <td>
                                             <div class="resident-name">
                                                 <?= htmlspecialchars($report['first_name'] . ' ' . $report['last_name']); ?>
                                             </div>
-                                            <div class="resident-email"><?= htmlspecialchars($report['email'] ?? 'N/A'); ?>
-                                            </div>
+                                            <div class="resident-email"><?= htmlspecialchars($report['email'] ?? 'N/A'); ?></div>
                                         </td>
-                                        <td><?= htmlspecialchars($report['waste_type']); ?></td>
                                         <td><?= htmlspecialchars($report['location']); ?></td>
-                                        <td><?= date("M d, Y", strtotime($report['collection_date'])); ?></td>
+                                        <td><?= date("M d, Y", strtotime($report['incident_date'])); ?></td>
                                         <td>
                                             <span class="status-badge <?= htmlspecialchars($report['status']); ?>">
                                                 <?= ucfirst($report['status']); ?>
@@ -362,19 +378,21 @@ try {
                             <div class="resident-card">
                                 <div class="card-header">
                                     <div>
-                                        <div class="resident-name">
+                                        <div class="resident-name" style="display: flex; align-items: center; gap: 8px;">
+                                            <i class="fas <?= getReportTypeIcon($report['report_type']); ?>" 
+                                               style="color: #6366f1;"></i>
+                                            <?= htmlspecialchars($report['report_type']); ?>
+                                        </div>
+                                        <div class="resident-email">
                                             <?= htmlspecialchars($report['first_name'] . ' ' . $report['last_name']); ?>
                                         </div>
-                                        <div class="resident-email"><?= htmlspecialchars($report['email'] ?? 'N/A'); ?></div>
                                     </div>
                                 </div>
                                 <div class="card-body">
-                                    <div class="card-field">Waste Type:</div>
-                                    <div class="card-value"><?= htmlspecialchars($report['waste_type']); ?></div>
                                     <div class="card-field">Location:</div>
                                     <div class="card-value"><?= htmlspecialchars($report['location']); ?></div>
-                                    <div class="card-field">Collection Date:</div>
-                                    <div class="card-value"><?= date("M d, Y", strtotime($report['collection_date'])); ?></div>
+                                    <div class="card-field">Incident Date:</div>
+                                    <div class="card-value"><?= date("M d, Y", strtotime($report['incident_date'])); ?></div>
                                     <div class="card-field">Status:</div>
                                     <div class="card-value">
                                         <span class="card-status <?= htmlspecialchars($report['status']); ?>">

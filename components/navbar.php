@@ -37,8 +37,7 @@
         <li><a href="index.php" class="<?= $currentPage == 'index.php' ? 'active' : '' ?>">Home</a></li>
         <li><a href="certificates.php"
                 class="<?= $currentPage == 'certificates.php' ? 'active' : '' ?>">Certificates</a></li>
-        <li><a href="waste_management.php" class="<?= $currentPage == 'waste_management.php' ? 'active' : '' ?>">Waste
-                Management</a></li>
+        <li><a href="waste_management.php" class="<?= $currentPage == 'waste_management.php' ? 'active' : '' ?>">Reports</a></li>
         <li><a href="notifications.php"
                 class="<?= $currentPage == 'notifications.php' ? 'active' : '' ?>">Notifications</a></li>
     </ul>
