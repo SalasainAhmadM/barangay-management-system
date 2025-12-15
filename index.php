@@ -628,34 +628,19 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
             Swal.fire({
                 title: 'Reset Password',
                 html: `
-                <div class="swal-form">
-                    <div class="form-group">
-                        <label for="fp-email" class="form-label">Email Address *</label>
-                        <input type="email" id="fp-email" class="swal2-input" placeholder="Enter your email address" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="fp-newpass" class="form-label">New Password *</label>
-                        <div style="position: relative;">
-                            <input type="password" id="fp-newpass" class="swal2-input" placeholder="Enter new password" required style="padding-right: 40px;">
-                            <i class="fas fa-eye password-toggle" onclick="togglePasswordForgot('fp-newpass', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
+                    <div class="swal-form">
+                        <div class="form-group">
+                            <label for="fp-email" class="form-label">Email Address *</label>
+                            <input type="email" id="fp-email" class="swal2-input" placeholder="Enter your registered email" required>
                         </div>
-                        <div id="fp-password-strength" style="margin-top: 5px; font-size: 12px;"></div>
+                        <p style="font-size: 13px; color: #666; margin-top: 10px;">
+                            We'll send a One-Time Password (OTP) to your email address.
+                        </p>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="fp-confirmpass" class="form-label">Confirm New Password *</label>
-                        <div style="position: relative;">
-                            <input type="password" id="fp-confirmpass" class="swal2-input" placeholder="Confirm new password" required style="padding-right: 40px;">
-                            <i class="fas fa-eye password-toggle" onclick="togglePasswordForgot('fp-confirmpass', this)" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #666;"></i>
-                        </div>
-                        <div id="fp-password-match" style="margin-top: 5px; font-size: 12px;"></div>
-                    </div>
-                </div>
-            `,
+                `,
                 focusConfirm: false,
                 showCancelButton: true,
-                confirmButtonText: 'Reset Password',
+                confirmButtonText: 'Send OTP',
                 cancelButtonText: 'Cancel',
                 didOpen: () => {
                     document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
@@ -663,32 +648,25 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
                 },
                 preConfirm: () => {
                     const email = document.getElementById('fp-email').value.trim();
-                    const newPass = document.getElementById('fp-newpass').value;
-                    const confirmPass = document.getElementById('fp-confirmpass').value;
-
-                    if (!email || !newPass || !confirmPass) {
-                        Swal.showValidationMessage('All fields are required');
+                    
+                    if (!email) {
+                        Swal.showValidationMessage('Email address is required');
                         return false;
                     }
-
+                    
                     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                     if (!emailPattern.test(email)) {
                         Swal.showValidationMessage('Please enter a valid email address');
                         return false;
                     }
-
-                    if (newPass !== confirmPass) {
-                        Swal.showValidationMessage('Passwords do not match');
-                        return false;
-                    }
-
-                    return { email: email, password: newPass };
+                    
+                    return { email: email };
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
                     Swal.fire({
-                        title: 'Resetting Password...',
-                        text: 'Please wait while we process your request.',
+                        title: 'Sending OTP...',
+                        text: 'Please wait while we send the OTP to your email.',
                         allowOutsideClick: false,
                         didOpen: () => {
                             Swal.showLoading();
@@ -696,50 +674,56 @@ $fieldErrors = $_SESSION['field_errors'] ?? [];
                             document.body.classList.remove("swal2-shown", "swal2-height-auto");
                         }
                     });
-
+                    
                     fetch('./conn/endpoint/forgotpassword.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(result.value)
                     })
-                        .then(res => res.json())
-                        .then(data => {
-                            if (data.success) {
-                                Swal.fire({
-                                    title: 'Success!',
-                                    text: 'Your password has been reset successfully!',
-                                    icon: 'success',
-                                    confirmButtonText: 'OK',
-                                    didOpen: () => {
-                                        document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
-                                        document.body.classList.remove("swal2-shown", "swal2-height-auto");
-                                    }
-                                });
-                            } else {
-                                Swal.fire({
-                                    title: 'Error',
-                                    text: data.message || 'Something went wrong. Please try again.',
-                                    icon: 'error',
-                                    confirmButtonText: 'OK',
-                                    didOpen: () => {
-                                        document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
-                                        document.body.classList.remove("swal2-shown", "swal2-height-auto");
-                                    }
-                                });
-                            }
-                        })
-                        .catch(() => {
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
                             Swal.fire({
-                                title: 'Error',
-                                text: 'Unable to reset password. Please check your connection and try again.',
+                                icon: 'success',
+                                title: 'OTP Sent!',
+                                html: `
+                                    <p>We've sent a 6-digit OTP to your email address.</p>
+                                    <p><strong>The OTP will expire in 15 minutes.</strong></p>
+                                    <p>Click the link in the email or the button below to continue.</p>
+                                `,
+                                confirmButtonText: 'Continue to Reset Password',
+                                didOpen: () => {
+                                    document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                                    document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                                }
+                            }).then(() => {
+                                window.location.href = 'reset_password.php';
+                            });
+                        } else {
+                            Swal.fire({
                                 icon: 'error',
+                                title: 'Error',
+                                text: data.message || 'Unable to send OTP. Please try again.',
                                 confirmButtonText: 'OK',
                                 didOpen: () => {
                                     document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
                                     document.body.classList.remove("swal2-shown", "swal2-height-auto");
                                 }
                             });
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Unable to process your request. Please check your connection and try again.',
+                            confirmButtonText: 'OK',
+                            didOpen: () => {
+                                document.documentElement.classList.remove("swal2-shown", "swal2-height-auto");
+                                document.body.classList.remove("swal2-shown", "swal2-height-auto");
+                            }
                         });
+                    });
                 }
             });
         }

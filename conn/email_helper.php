@@ -474,4 +474,149 @@ Best regards,
 This is an automated message. Please do not reply to this email.
 © " . date('Y') . " {$systemName}. All rights reserved.";
 }
+
+function sendPasswordResetOTP($recipientEmail, $recipientName, $otp) {
+    try {
+        require_once __DIR__ . '/email_config.php';
+        
+        $mail = new PHPMailer(true);
+        
+        // Server settings
+        $mail->isSMTP();
+        $mail->Host       = SMTP_HOST;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = SMTP_USERNAME;
+        $mail->Password   = SMTP_PASSWORD;
+        $mail->SMTPSecure = SMTP_SECURE;
+        $mail->Port       = SMTP_PORT;
+        $mail->Timeout    = 10;
+        
+        // Disable SSL certificate verification
+        $mail->SMTPOptions = array(
+            'ssl' => array(
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            )
+        );
+        
+        // Recipients
+        $mail->setFrom(FROM_EMAIL, FROM_NAME);
+        $mail->addAddress($recipientEmail, $recipientName);
+        
+        // Content
+        $mail->isHTML(true);
+        $mail->Subject = 'Password Reset OTP - ' . SYSTEM_NAME;
+        $mail->Body = generatePasswordResetOTPTemplate($recipientName, $otp);
+        $mail->AltBody = generatePasswordResetOTPPlainText($recipientName, $otp);
+        
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log("OTP email sending failed: " . $e->getMessage());
+        return false;
+    }
+}
+
+function generatePasswordResetOTPTemplate($name, $otp) {
+    $systemName = SYSTEM_NAME;
+    $resetLink = "http://localhost:8080/barangay-management-system/reset_password.php";
+    
+    return "<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+        .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+        .otp-box { background: white; padding: 30px; margin: 20px 0; border-radius: 10px; border: 2px solid #667eea; text-align: center; }
+        .otp-code { font-size: 36px; font-weight: bold; color: #667eea; letter-spacing: 8px; margin: 15px 0; font-family: 'Courier New', monospace; }
+        .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 5px; }
+        .action-button { display: inline-block; padding: 15px 40px; background: #667eea; color: white; text-decoration: none; border-radius: 5px; margin-top: 20px; font-weight: bold; font-size: 16px; }
+        .action-button:hover { background: #5568d3; }
+        .info-text { color: #666; font-size: 14px; margin: 10px 0; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee; color: #666; font-size: 14px; }
+        .security-note { background: #f8f9fa; padding: 15px; margin: 20px 0; border-radius: 5px; border-left: 4px solid #28a745; }
+    </style>
+</head>
+<body>
+    <div class='header'>
+        <h1>🔐 Password Reset Request</h1>
+    </div>
+    <div class='content'>
+        <p>Dear <strong>{$name}</strong>,</p>
+        
+        <p>We received a request to reset your password for your {$systemName} account. Use the OTP code below to proceed with your password reset.</p>
+        
+        <div class='otp-box'>
+            <p style='margin: 0; color: #666; font-size: 14px;'>Your One-Time Password (OTP)</p>
+            <div class='otp-code'>{$otp}</div>
+            <p class='info-text'>This OTP is valid for <strong>15 minutes</strong></p>
+        </div>
+        
+        <div style='text-align: center;'>
+            <a href='{$resetLink}' class='action-button'>Reset Password Now</a>
+        </div>
+        
+        <div class='warning-box'>
+            <strong>⏱️ Important:</strong>
+            <p style='margin: 10px 0 0 0;'>This OTP will expire in 15 minutes. If you did not request this password reset, please ignore this email or contact support if you have concerns.</p>
+        </div>
+        
+        <div class='security-note'>
+            <strong>🛡️ Security Tips:</strong>
+            <ul style='margin: 10px 0; padding-left: 20px;'>
+                <li>Never share your OTP with anyone</li>
+                <li>Our team will never ask for your OTP</li>
+                <li>Make sure you're on the official website before entering your OTP</li>
+            </ul>
+        </div>
+        
+        <p>If you're having trouble with the button above, copy and paste this link into your browser:</p>
+        <p style='word-break: break-all; color: #667eea;'>{$resetLink}</p>
+        
+        <p>Best regards,<br><strong>{$systemName} Team</strong></p>
+    </div>
+    <div class='footer'>
+        <p>This is an automated message. Please do not reply to this email.</p>
+        <p>&copy; " . date('Y') . " {$systemName}. All rights reserved.</p>
+    </div>
+</body>
+</html>";
+}
+
+function generatePasswordResetOTPPlainText($name, $otp) {
+    $systemName = SYSTEM_NAME;
+    $resetLink = "http://localhost:8080/barangay-management-system/reset_password.php";
+    
+    return "Password Reset Request - {$systemName}
+
+Dear {$name},
+
+We received a request to reset your password for your {$systemName} account. Use the OTP code below to proceed with your password reset.
+
+Your One-Time Password (OTP): {$otp}
+
+This OTP is valid for 15 minutes.
+
+Reset your password here: {$resetLink}
+
+Important:
+This OTP will expire in 15 minutes. If you did not request this password reset, please ignore this email or contact support if you have concerns.
+
+Security Tips:
+- Never share your OTP with anyone
+- Our team will never ask for your OTP
+- Make sure you're on the official website before entering your OTP
+
+Best regards,
+{$systemName} Team
+
+---
+This is an automated message. Please do not reply to this email.
+© " . date('Y') . " {$systemName}. All rights reserved.";
+}
+
 ?>
+
